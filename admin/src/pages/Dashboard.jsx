@@ -15,24 +15,24 @@ import SalesOrderModal from '../components/SalesOrderModal.jsx';
 // SalesOrders.jsx + TransferOrders.jsx; the single-file layout was
 // kept for codebase uniformity.
 
-const COLOR_TOP = '#8e2715';   // Sentry red (top performer per card)
-const COLOR_OTHER = '#c4722a'; // Copper (every other user)
+const COLOR_TOP = '#C2410C';   // SEA accent orange (top performer per card)
+const COLOR_OTHER = '#6B7785'; // Steel gray (every other user)
 
 const EVENT_LABELS = {
   // picking is measured in distinct orders, not units.
-  picking:       { title: 'Picking',      unit: 'orders' },
-  packing:       { title: 'Packing',      unit: 'units' },
-  shipped:       { title: 'Shipped',      unit: 'orders' },
-  received_skus: { title: 'Received',     unit: 'unique SKUs' },
-  putaway_skus:  { title: 'Put Away',     unit: 'unique SKUs' },
+  picking:       { title: 'Separação',      unit: 'pedidos' },
+  packing:       { title: 'Embalagem',      unit: 'unidades' },
+  shipped:       { title: 'Expedido',      unit: 'pedidos' },
+  received_skus: { title: 'Recebido',     unit: 'SKUs únicos' },
+  putaway_skus:  { title: 'Armazenagem',     unit: 'SKUs únicos' },
 };
 
 const RANGE_PRESETS = [
-  { key: 'today',     label: 'Today' },
-  { key: 'yesterday', label: 'Yesterday' },
-  { key: 'last_7d',   label: 'Last 7d' },
-  { key: 'last_30d',  label: 'Last 30d' },
-  { key: 'custom',    label: 'Custom' },
+  { key: 'today',     label: 'Hoje' },
+  { key: 'yesterday', label: 'Ontem' },
+  { key: 'last_7d',   label: 'Últimos 7 dias' },
+  { key: 'last_30d',  label: 'Últimos 30 dias' },
+  { key: 'custom',    label: 'Personalizado' },
 ];
 
 function isoDate(d) {
@@ -65,7 +65,7 @@ function rangeForPreset(key, customStart, customEnd) {
 
 function downloadProductivityCsv(payload) {
   const events = payload.events_visible || [];
-  const headerCells = ['User', ...events.map((slug) => EVENT_LABELS[slug]?.title || slug), 'Total'];
+  const headerCells = ['Usuário', ...events.map((slug) => EVENT_LABELS[slug]?.title || slug), 'Total'];
   const rows = [headerCells.join(',')];
   for (const u of payload.users || []) {
     const cells = [
@@ -104,7 +104,7 @@ function EventCard({ slug, payload, onExpand, isExpanded }) {
       </div>
       <div style={styles.cardSubheader}>{meta.unit}</div>
       {users.length === 0 ? (
-        <div style={styles.cardEmpty}>No data for this range.</div>
+        <div style={styles.cardEmpty}>Sem dados para este período.</div>
       ) : (
         <div style={styles.barChart}>
           {users.map((u, idx) => {
@@ -133,7 +133,7 @@ function ProductivityTable({ payload }) {
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
       <thead>
         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-          <th style={{ ...styles.th, textAlign: 'left' }}>User</th>
+          <th style={{ ...styles.th, textAlign: 'left' }}>Usuário</th>
           {events.map((slug) => (
             <th key={slug} style={{ ...styles.th, textAlign: 'right' }}>
               {EVENT_LABELS[slug]?.title || slug}
@@ -159,7 +159,7 @@ function ProductivityTable({ payload }) {
         {(payload.users || []).length === 0 && (
           <tr>
             <td colSpan={events.length + 2} style={{ ...styles.td, color: 'var(--text-secondary)' }}>
-              No data for this range.
+              Sem dados para este período.
             </td>
           </tr>
         )}
@@ -179,35 +179,35 @@ export default function Dashboard() {
   const [tab, setTab] = useState('productivity');
   return (
     <div>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Painel" />
       <div className="data-tabs" style={{ marginBottom: 16 }}>
         <button
           type="button"
           className={`data-tab${tab === 'productivity' ? ' active' : ''}`}
           onClick={() => setTab('productivity')}
         >
-          Productivity
+          Produtividade
         </button>
         <button
           type="button"
           className={`data-tab${tab === 'received' ? ' active' : ''}`}
           onClick={() => setTab('received')}
         >
-          Received
+          Recebido
         </button>
         <button
           type="button"
           className={`data-tab${tab === 'shipping' ? ' active' : ''}`}
           onClick={() => setTab('shipping')}
         >
-          Marketplace Health
+          Saúde dos marketplaces
         </button>
         <button
           type="button"
           className={`data-tab${tab === 'local-pickup' ? ' active' : ''}`}
           onClick={() => setTab('local-pickup')}
         >
-          Local Pickup
+          Retirada no local
         </button>
       </div>
       {tab === 'productivity' && <ProductivityView warehouseId={warehouseId} />}
@@ -273,7 +273,7 @@ function ProductivityView({ warehouseId }) {
     } else {
       const data = await res?.json();
       setPayload(null);
-      setError(data?.error || 'Failed to load productivity');
+      setError(data?.error || 'Falha ao carregar a produtividade');
     }
   }
 
@@ -332,7 +332,7 @@ function ProductivityView({ warehouseId }) {
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
             />
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>to</span>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>até</span>
             <input
               type="date"
               className="form-input"
@@ -347,28 +347,28 @@ function ProductivityView({ warehouseId }) {
             className={`btn btn-sm${view === 'charts' ? ' btn-primary' : ''}`}
             onClick={() => setView('charts')}
           >
-            Charts
+            Gráficos
           </button>
           <button
             className={`btn btn-sm${view === 'table' ? ' btn-primary' : ''}`}
             onClick={() => setView('table')}
           >
-            Table
+            Tabela
           </button>
           {view === 'table' && payload && (
             <button
               className="btn btn-sm"
               onClick={() => downloadProductivityCsv(payload)}
-              title="Download CSV"
+              title="Baixar CSV"
             >
-              Export CSV
+              Exportar CSV
             </button>
           )}
           <button
             className="btn btn-sm"
             onClick={() => setShowSettings(true)}
-            title="Dashboard settings"
-            aria-label="Dashboard settings"
+            title="Configurações do painel"
+            aria-label="Configurações do painel"
           >
             &#9881;
           </button>
@@ -379,14 +379,14 @@ function ProductivityView({ warehouseId }) {
 
       {!payload ? (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Loading...
+          Carregando...
         </div>
       ) : view === 'table' ? (
         <ProductivityTable payload={payload} />
       ) : expandedSlug ? (
         <div>
           <button className="btn btn-sm" onClick={() => setExpandedSlug(null)} style={{ marginBottom: 12 }}>
-            &larr; Back to grid
+            ← Voltar para a grade
           </button>
           <div style={styles.expandedShell}>
             <EventCard
@@ -412,15 +412,15 @@ function ProductivityView({ warehouseId }) {
 
       {showSettings && (
         <Modal
-          title="Dashboard settings"
+          title="Configurações do painel"
           onClose={() => setShowSettings(false)}
-          footer={<button className="btn" onClick={() => setShowSettings(false)}>Close</button>}
+          footer={<button className="btn" onClick={() => setShowSettings(false)}>Fechar</button>}
         >
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            Per-user preferences. Saves on every change. {savingPrefs && '(saving...)'}
+            Preferências por usuário. Salvas a cada alteração. {savingPrefs && '(saving...)'}
           </p>
           <div className="form-group">
-            <label>Default range</label>
+            <label>Período padrão</label>
             <select
               className="form-select"
               value={preferences.default_range}
@@ -432,18 +432,18 @@ function ProductivityView({ warehouseId }) {
             </select>
           </div>
           <div className="form-group">
-            <label>Default view</label>
+            <label>Visualização padrão</label>
             <select
               className="form-select"
               value={preferences.default_view}
               onChange={(e) => savePreferences({ default_view: e.target.value })}
             >
-              <option value="charts">Charts</option>
-              <option value="table">Table</option>
+              <option value="charts">Gráficos</option>
+              <option value="table">Tabela</option>
             </select>
           </div>
           <div className="form-group">
-            <label>Chart order</label>
+            <label>Ordem dos gráficos</label>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {(preferences.chart_order || []).map((slug, idx) => (
                 <li
@@ -461,13 +461,13 @@ function ProductivityView({ warehouseId }) {
                     className="btn btn-sm"
                     onClick={() => reorderChart(slug, -1)}
                     disabled={idx === 0}
-                    aria-label="Move up"
+                    aria-label="Mover para cima"
                   >&#8593;</button>
                   <button
                     className="btn btn-sm"
                     onClick={() => reorderChart(slug, 1)}
                     disabled={idx === preferences.chart_order.length - 1}
-                    aria-label="Move down"
+                    aria-label="Mover para baixo"
                   >&#8595;</button>
                 </li>
               ))}
@@ -550,7 +550,7 @@ function RangeControls({
             value={customStart}
             onChange={(e) => setCustomStart(e.target.value)}
           />
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>to</span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>até</span>
           <input
             type="date"
             className="form-input"
@@ -563,7 +563,7 @@ function RangeControls({
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
         {trailingChildren}
         <button className="btn btn-sm" onClick={onRefresh} disabled={loading}>
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? 'Carregando…' : 'Atualizar'}
         </button>
       </div>
     </div>
@@ -620,15 +620,15 @@ function ReceivedTodayView({ warehouseId }) {
         display: 'flex', gap: 16, marginBottom: 16, fontSize: 13,
         color: 'var(--text-secondary)', flexWrap: 'wrap', alignItems: 'center',
       }}>
-        <span><strong style={{ color: 'var(--text)' }}>{rows.length}</strong> POs received</span>
-        <span><strong style={{ color: 'var(--text)' }}>{totalLines}</strong> lines</span>
-        <span><strong style={{ color: 'var(--text)' }}>{totalUnits}</strong> units</span>
-        <span><strong style={{ color: 'var(--text)' }}>{distinctReceivers.size}</strong> receivers active</span>
+        <span><strong style={{ color: 'var(--text)' }}>{rows.length}</strong> Pedidos de compra recebidos</span>
+        <span><strong style={{ color: 'var(--text)' }}>{totalLines}</strong> linhas</span>
+        <span><strong style={{ color: 'var(--text)' }}>{totalUnits}</strong> unidades</span>
+        <span><strong style={{ color: 'var(--text)' }}>{distinctReceivers.size}</strong> recebedores ativos</span>
       </div>
 
       {!loading && rows.length === 0 && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          No POs received units in this range.
+          Nenhum pedido de compra recebeu unidades neste período.
         </p>
       )}
 
@@ -636,13 +636,13 @@ function ReceivedTodayView({ warehouseId }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>PO #</th>
-              <th>Vendor</th>
+              <th>PC nº</th>
+              <th>Fornecedor</th>
               <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Lines</th>
-              <th style={{ textAlign: 'right' }}>Units</th>
-              <th>Receiver(s)</th>
-              <th>Last received</th>
+              <th style={{ textAlign: 'right' }}>Linhas</th>
+              <th style={{ textAlign: 'right' }}>Unidades</th>
+              <th>Recebedor(es)</th>
+              <th>Último recebimento</th>
             </tr>
           </thead>
           <tbody>
@@ -720,13 +720,12 @@ function ShippingHealthView({ warehouseId }) {
       />
 
       <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px 0' }}>
-        Marketplace Breakdown
+        Distribuição por marketplace
       </h3>
 
       {rows.length === 0 && !loading && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          No marketplace channels are configured. Add one per channel under
-          Settings &gt; Marketplace Health to see its health bubble here.
+          Nenhum canal de marketplace configurado. Adicione um por canal em Configurações &gt; Saúde dos marketplaces para ver o indicador aqui.
         </p>
       )}
 
@@ -751,7 +750,7 @@ function ShippingHealthView({ warehouseId }) {
       }} />
 
       <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px 0' }}>
-        Orders that need to ship today
+        Pedidos que precisam ser expedidos hoje
       </h3>
 
       <div style={{
@@ -771,27 +770,27 @@ function ShippingHealthView({ warehouseId }) {
 
       {focused && (
         <Modal
-          title={`${focused.label} - orders that need to ship today`}
+          title={`${focused.label} - pedidos que precisam ser expedidos hoje`}
           onClose={() => setFocused(null)}
           size="wide"
           footer={
             <button className="btn btn-primary" onClick={() => setFocused(null)}>
-              Close
+              Fechar
             </button>
           }
         >
           {(focused.orders || []).length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              No orders to show.
+              Nenhum pedido para exibir.
             </p>
           ) : (
             <table className="lines-table">
               <thead>
                 <tr>
-                  <th>SO #</th>
-                  <th>Customer</th>
+                  <th>PV nº</th>
+                  <th>Cliente</th>
                   <th>Status</th>
-                  <th>Ship by</th>
+                  <th>Expedir até</th>
                 </tr>
               </thead>
               <tbody>
@@ -845,7 +844,7 @@ function MarketplaceTotalsCard({ row }) {
             color: 'var(--text-secondary)',
             textTransform: 'uppercase', letterSpacing: 0.4,
           }}>
-            Orders Received
+            Pedidos recebidos
           </div>
         </div>
         <div style={{ textAlign: 'center' }}>
@@ -862,7 +861,7 @@ function MarketplaceTotalsCard({ row }) {
             color: 'var(--text-secondary)',
             textTransform: 'uppercase', letterSpacing: 0.4,
           }}>
-            Orders Shipped
+            Pedidos expedidos
           </div>
         </div>
       </div>
@@ -899,7 +898,7 @@ function ShipTodayBubble({ row, onClick }) {
         className="card"
         onClick={onClick}
         style={{ ...sharedStyle, cursor: 'pointer' }}
-        title="Show the SO list behind this count"
+        title="Mostrar a lista de pedidos por trás desta contagem"
       >
         {label}
         <span style={{
@@ -921,8 +920,8 @@ function ShipTodayBubble({ row, onClick }) {
           fontSize: 44, lineHeight: 1, fontWeight: 700,
           color: '#1f9d55',
         }}
-        aria-label="caught up"
-        title="No orders need to ship for this channel"
+        aria-label="em dia"
+        title="Nenhum pedido precisa ser expedido para este canal"
       >
         &#10003;
       </span>
@@ -947,13 +946,13 @@ function ShipTodayBubble({ row, onClick }) {
 // 'Open + Picked' (OPEN,PICKED) is the active pickup worklist on one screen --
 // the comma-separated value rides the backend's multi-status IN filter.
 const LOCAL_PICKUP_STATUS_OPTIONS = [
-  { label: 'All statuses', value: 'All' },
-  { label: 'Open + Picked', value: 'OPEN,PICKED' },
-  { label: 'OPEN', value: 'OPEN' },
-  { label: 'PICKED', value: 'PICKED' },
-  { label: 'PACKED', value: 'PACKED' },
-  { label: 'SHIPPED', value: 'SHIPPED' },
-  { label: 'CANCELLED', value: 'CANCELLED' },
+  { label: 'Todos os status', value: 'All' },
+  { label: 'Abertos + separados', value: 'OPEN,PICKED' },
+  { label: 'Aberto', value: 'OPEN' },
+  { label: 'Separado', value: 'PICKED' },
+  { label: 'Embalado', value: 'PACKED' },
+  { label: 'Expedido', value: 'SHIPPED' },
+  { label: 'Cancelado', value: 'CANCELLED' },
 ];
 const SHIPPABLE_STATUSES = new Set(['PICKED', 'PACKED']);
 
@@ -1007,7 +1006,7 @@ function LocalPickupView({ warehouseId }) {
     if (!res) return;
     if (res.status === 403) { setForbidden(true); setRows([]); setTotal(0); return; }
     setForbidden(false);
-    if (!res.ok) { setError('Could not load local pickup orders.'); return; }
+    if (!res.ok) { setError('Não foi possível carregar os pedidos de retirada no local.'); return; }
     const data = await res.json();
     setRows(data.sales_orders || []);
     setTotal(data.total ?? (data.sales_orders || []).length);
@@ -1019,17 +1018,17 @@ function LocalPickupView({ warehouseId }) {
   function requestPickup(so) {
     if (!(isAdmin || hasSOFullEdit)) {
       setAlertMsg({
-        title: 'Permission needed',
-        message: `You can't mark ${so.so_number} picked up. This needs the `
-          + 'ADMIN role or the so-full-edit override on your account.',
+        title: 'Permissão necessária',
+        message: `Você não pode marcar ${so.so_number} retirado. Isso exige a `
+          + 'função ADMIN ou a permissão so-full-edit na sua conta.',
       });
       return;
     }
     if (!SHIPPABLE_STATUSES.has(so.status)) {
       setAlertMsg({
-        title: 'Not ready for pickup',
-        message: `${so.so_number} is ${so.status}, not picked yet. An order `
-          + 'must be PICKED or PACKED before it can be marked picked up.',
+        title: 'Não está pronto para retirada',
+        message: `${so.so_number} está ${so.status}, ainda não separado. Um pedido `
+          + 'deve estar SEPARADO ou EMBALADO antes de ser marcado como retirado.',
       });
       return;
     }
@@ -1051,10 +1050,10 @@ function LocalPickupView({ warehouseId }) {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       setAlertMsg({
-        title: 'Could not mark picked up',
+        title: 'Não foi possível marcar como retirado',
         message: res.status === 403
-          ? `Not allowed: marking ${so.so_number} picked up needs ADMIN or the so-full-edit override.`
-          : (data.error || `Could not mark ${so.so_number} picked up (status ${res.status}).`),
+          ? `Não permitido: marcar ${so.so_number} retirado exige ADMIN ou a permissão so-full-edit.`
+          : (data.error || `Não foi possível marcar ${so.so_number} retirado (status ${res.status}).`),
       });
       return;
     }
@@ -1062,14 +1061,12 @@ function LocalPickupView({ warehouseId }) {
   }
 
   if (!warehouseId) {
-    return <div style={{ padding: 24, color: 'var(--text-secondary)' }}>Select a warehouse.</div>;
+    return <div style={{ padding: 24, color: 'var(--text-secondary)' }}>Selecione um armazém.</div>;
   }
   if (forbidden) {
     return (
       <div style={{ padding: 24, color: 'var(--text-secondary)', maxWidth: 520 }}>
-        You do not have access to sales orders. Ask an admin to grant the
-        Sales Orders page permission, plus the so-full-edit override to mark
-        pickups complete.
+        Você não tem acesso aos pedidos de venda. Peça a um administrador a permissão da página Pedidos de venda, além da permissão so-full-edit para concluir retiradas.
       </div>
     );
   }
@@ -1080,7 +1077,7 @@ function LocalPickupView({ warehouseId }) {
         <input
           className="form-input"
           style={{ width: 280 }}
-          placeholder="Search by customer or order #"
+          placeholder="Buscar por cliente ou nº do pedido"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -1095,29 +1092,29 @@ function LocalPickupView({ warehouseId }) {
           ))}
         </select>
         <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-secondary)' }}>
-          {loading ? 'Loading…' : `${rows.length} order${rows.length === 1 ? '' : 's'}`}
+          {loading ? 'Carregando…' : `${rows.length} pedido${rows.length === 1 ? '' : 's'}`}
         </span>
-        <button className="btn btn-sm" onClick={load} disabled={loading}>Refresh</button>
+        <button className="btn btn-sm" onClick={load} disabled={loading}>Atualizar</button>
       </div>
 
       {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
       {total > rows.length && (
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          Showing {rows.length} of {total}. Narrow with the status filter or search.
+          Exibindo {rows.length} de {total}. Refine com o filtro de status ou a busca.
         </div>
       )}
 
       {!loading && rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No local pickup orders match.</p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhum pedido de retirada no local corresponde.</p>
       ) : (
         <table className="data-table">
           <thead>
             <tr>
-              <th>Order #</th>
-              <th>Customer</th>
+              <th>Pedido nº</th>
+              <th>Cliente</th>
               <th>Status</th>
-              <th>Order Date</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
+              <th>Data do pedido</th>
+              <th style={{ textAlign: 'right' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -1135,7 +1132,7 @@ function LocalPickupView({ warehouseId }) {
                       type="button"
                       className="related-number"
                       onClick={() => setOpenSoId(so.so_id)}
-                      title="Open this order"
+                      title="Abrir este pedido"
                     >
                       {so.so_number}
                     </button>
@@ -1152,20 +1149,20 @@ function LocalPickupView({ warehouseId }) {
                       style={{ marginRight: 8 }}
                       onClick={() => setEditing(so)}
                       disabled={!canEdit}
-                      title={canEdit ? 'Edit order' : 'Editing a picked order needs ADMIN or so-full-edit'}
+                      title={canEdit ? 'Editar pedido' : 'Editar um pedido separado exige ADMIN ou so-full-edit'}
                     >
-                      Edit
+                      Editar
                     </button>
                     {status === 'SHIPPED' ? (
-                      <span style={{ fontSize: 12, color: '#1f9d55', fontWeight: 600 }}>Picked up &#10003;</span>
+                      <span style={{ fontSize: 12, color: '#1f9d55', fontWeight: 600 }}>Retirado ✓</span>
                     ) : (
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => requestPickup(so)}
                         disabled={shippingId === so.so_id}
-                        title="Mark this order picked up (ships it)"
+                        title="Marcar este pedido como retirado (expede o pedido)"
                       >
-                        {shippingId === so.so_id ? 'Working…' : 'Picked Up?'}
+                        {shippingId === so.so_id ? 'Processando…' : 'Retirado?'}
                       </button>
                     )}
                   </td>
@@ -1194,30 +1191,29 @@ function LocalPickupView({ warehouseId }) {
 
       {confirming && (
         <Modal
-          title="Mark picked up?"
+          title="Marcar como retirado?"
           onClose={() => (shippingId == null ? setConfirming(null) : null)}
           footer={(
             <>
               <button className="btn" onClick={() => setConfirming(null)} disabled={shippingId != null}>
-                Cancel
+                Cancelar
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => doPickup(confirming)}
                 disabled={shippingId != null}
               >
-                {shippingId != null ? 'Working…' : 'Yes, mark picked up'}
+                {shippingId != null ? 'Processando…' : 'Sim, marcar como retirado'}
               </button>
             </>
           )}
         >
           <p style={{ marginTop: 0 }}>
-            Mark order <strong>{confirming.so_number}</strong>
-            {confirming.customer_name ? ` (${confirming.customer_name})` : ''} as picked up?
+            Marcar pedido <strong>{confirming.so_number}</strong>
+            {confirming.customer_name ? ` (${confirming.customer_name})` : ''} como retirado?
           </p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 0 }}>
-            This marks it <strong>SHIPPED</strong> -- it records the handoff and releases the
-            order. It cannot be undone from here.
+            Isso o marca como <strong>EXPEDIDO</strong> -- isso registra a entrega e libera o pedido. Não pode ser desfeito daqui.
           </p>
         </Modal>
       )}
@@ -1270,8 +1266,8 @@ function LocalPickupEditModal({ so, canEditAll, onClose, onSaved }) {
       const data = await res.json().catch(() => ({}));
       setError(
         res.status === 403
-          ? 'Not allowed: editing a picked order needs ADMIN or the so-full-edit override.'
-          : (data.error || 'Could not save changes.'),
+          ? 'Não permitido: editar um pedido separado exige ADMIN ou a permissão so-full-edit.'
+          : (data.error || 'Não foi possível salvar as alterações.'),
       );
       return;
     }
@@ -1280,53 +1276,53 @@ function LocalPickupEditModal({ so, canEditAll, onClose, onSaved }) {
 
   return (
     <Modal
-      title={`Edit ${so.so_number}`}
+      title={`Editar ${so.so_number}`}
       onClose={onClose}
       footer={(
         <>
-          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={save} disabled={saving || !editable}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Salvando…' : 'Salvar'}
           </button>
         </>
       )}
     >
       {!editable && (
         <div className="form-error" style={{ marginBottom: 12 }}>
-          This order is {so.status}; editing it needs ADMIN or the so-full-edit override.
+          Este pedido está {so.status}; editá-lo exige ADMIN ou a permissão so-full-edit.
         </div>
       )}
       {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
       <div className="form-group">
-        <label>Customer name</label>
+        <label>Nome do cliente</label>
         <input
           className="form-input" disabled={!editable} value={form.customer_name}
           onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
         />
       </div>
       <div className="form-group">
-        <label>Customer phone</label>
+        <label>Telefone do cliente</label>
         <input
           className="form-input" disabled={!editable} value={form.customer_phone}
           onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
         />
       </div>
       <div className="form-group">
-        <label>Ship method</label>
+        <label>Método de envio</label>
         <input
           className="form-input" disabled={!editable} value={form.ship_method}
           onChange={(e) => setForm({ ...form, ship_method: e.target.value })}
         />
       </div>
       <div className="form-group">
-        <label>Pickup / ship address</label>
+        <label>Endereço de retirada / entrega</label>
         <input
           className="form-input" disabled={!editable} value={form.ship_address}
           onChange={(e) => setForm({ ...form, ship_address: e.target.value })}
         />
       </div>
       <div className="form-group">
-        <label>Priority</label>
+        <label>Prioridade</label>
         <input
           type="number" min="0" max="10" className="form-input" disabled={!editable}
           value={form.priority}

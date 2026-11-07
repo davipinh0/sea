@@ -102,7 +102,7 @@ class TestLoginLockout:
                 assert resp.status_code == 401
         # 5th attempt triggers lockout
         assert resp.status_code == 429
-        assert "locked" in resp.get_json()["error"].lower()
+        assert "bloqueada" in resp.get_json()["error"].lower()
 
     def test_locked_account_rejects_correct_password(self, client):
         _reset_lockout()
@@ -129,7 +129,7 @@ class TestLoginLockout:
         _reset_lockout()
         resp = client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
         error_msg = resp.get_json()["error"]
-        assert "Invalid username or password" in error_msg
+        assert "Usuário ou senha inválidos" in error_msg
         assert "remaining" not in error_msg
 
     def test_lockout_isolated_per_user_same_ip(self, client):
@@ -251,7 +251,7 @@ class TestWarehouseAuthorization:
             headers=headers,
         )
         assert resp.status_code == 403
-        assert "Access denied" in resp.get_json()["error"]
+        assert "Acesso negado" in resp.get_json()["error"]
 
     def test_user_blocked_from_other_warehouse_post(self, client):
         """Non-admin POST with wrong warehouse_id in body should get 403."""
@@ -326,7 +326,7 @@ class TestV103WarehouseIdSourceMismatch:
         )
         assert resp.status_code == 400
         data = resp.get_json()
-        assert "mismatch" in data["error"].lower()
+        assert "divergente" in data["error"].lower()
         assert data["sources"] == {"path": 5, "body": 1}
 
     def test_path_and_query_mismatch_is_400(self, client):
@@ -392,7 +392,7 @@ class TestChangePassword:
             "new_password": "newadmin1",
         }, headers=auth_headers)
         assert resp.status_code == 403
-        assert "incorrect" in resp.get_json()["error"].lower()
+        assert "incorreta" in resp.get_json()["error"].lower()
 
     def test_change_password_weak_new(self, client, auth_headers):
         resp = client.post("/api/auth/change-password", json={
@@ -464,7 +464,7 @@ class TestTokenInvalidation:
         # Old token should now be rejected
         resp = client.get("/api/auth/me", headers=old_headers)
         assert resp.status_code == 401
-        assert "password change" in resp.get_json()["error"].lower()
+        assert "troca de senha" in resp.get_json()["error"].lower()
 
     def test_new_token_works_after_password_change(self, client, auth_headers):
         _reset_lockout()

@@ -136,13 +136,13 @@ describe('InboundActivity', () => {
 
     // Set a source_system filter + resource select.
     fireEvent.change(
-      within(container).getByPlaceholderText(/exact match/i),
+      within(container).getByPlaceholderText(/correspondência exata/i),
       { target: { value: 'fabric' } },
     );
     const resourceSelect = within(container).getAllByRole('combobox')[0];
     fireEvent.change(resourceSelect, { target: { value: 'sales_orders' } });
 
-    fireEvent.click(within(container).getByRole('button', { name: /apply/i }));
+    fireEvent.click(within(container).getByRole('button', { name: /Aplicar/i }));
     await waitFor(() => {
       const calls = apiGetMock.mock.calls;
       const hit = calls.find(
@@ -161,7 +161,7 @@ describe('InboundActivity', () => {
     await waitFor(() =>
       expect(within(container).getByText('SO-1')).toBeInTheDocument()
     );
-    const viewButtons = within(container).getAllByRole('button', { name: /view/i });
+    const viewButtons = within(container).getAllByRole('button', { name: /Ver/i });
     fireEvent.click(viewButtons[0]);
 
     await waitFor(() => {
@@ -172,8 +172,8 @@ describe('InboundActivity', () => {
     // Modal renders payload pre blocks. baseElement covers the
     // portal-rendered modal which lives outside `container`.
     await waitFor(() => {
-      expect(within(baseElement).getByText(/source payload/i)).toBeInTheDocument();
-      expect(within(baseElement).getByText(/canonical payload/i)).toBeInTheDocument();
+      expect(within(baseElement).getByText(/Payload de origem/i)).toBeInTheDocument();
+      expect(within(baseElement).getByText(/Payload canônico/i)).toBeInTheDocument();
     });
   });
 });

@@ -51,7 +51,7 @@ def list_pick_batches():
     """
     warehouse_id = request.args.get("warehouse_id", type=int)
     if warehouse_id is None:
-        return jsonify({"error": "warehouse_id is required"}), 400
+        return jsonify({"error": "warehouse_id é obrigatório"}), 400
     ok, denied = check_warehouse_access(warehouse_id)
     if not ok:
         return denied
@@ -166,7 +166,7 @@ def delete_pick_batch(batch_id):
         {"bid": batch_id},
     ).fetchone()
     if not batch:
-        return jsonify({"error": "Batch not found"}), 404
+        return jsonify({"error": "Lote não encontrado"}), 404
 
     ok, denied = check_warehouse_access(batch.warehouse_id)
     if not ok:
@@ -187,8 +187,7 @@ def delete_pick_batch(batch_id):
         return jsonify({
             "error": "to_batch_not_deletable",
             "detail": (
-                "This is a transfer-order pick batch. Release it from the "
-                "Transfer Orders screen, not here."
+                "Este é um lote de separação de ordem de transferência. Libere-o na tela Ordens de transferência, não aqui."
             ),
         }), 409
 
@@ -212,7 +211,7 @@ def delete_pick_batch(batch_id):
     g.db.commit()
 
     return jsonify({
-        "message": "Batch released",
+        "message": "Lote liberado",
         "batch_id": batch_id,
         "released_tasks": result["released_tasks"],
         "released_orders": [r.so_number for r in freed],

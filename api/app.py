@@ -442,7 +442,7 @@ def create_app():
     # Prevent stack trace leakage in production
     @app.errorhandler(500)
     def internal_error(e):
-        return {"error": "Internal server error"}, 500
+        return {"error": "Erro interno do servidor"}, 500
 
     # Register blueprints
     from routes.auth import auth_bp

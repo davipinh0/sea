@@ -73,9 +73,9 @@ describe('POSActivity', () => {
     const { container, findByText, getAllByText } = render(<MemoryRouter><POSActivity /></MemoryRouter>);
 
     await findByText('$11,222.27');               // net revenue hero
-    await findByText('Phone Orders');              // channel KPI (unique; filter says "Phone Order")
-    await findByText('This Week');
-    await findByText('Avg Sale');
+    await findByText('Pedidos por telefone');              // channel KPI (unique; filter says "Phone Order")
+    await findByText('Esta semana');
+    await findByText('Ticket médio');
     await waitFor(() => {
       expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2); // pace + week charts
       expect(container.querySelectorAll('.pos-bar').length).toBeGreaterThan(0);   // weekly bars
@@ -96,7 +96,7 @@ describe('POSActivity', () => {
       active_terminals: [],
     });
     const { findByText } = render(<MemoryRouter><POSActivity /></MemoryRouter>);
-    await findByText('No POS revenue today or yesterday.');
-    await findByText('No revenue this week or last.');
+    await findByText('Sem receita PDV hoje ou ontem.');
+    await findByText('Sem receita nesta semana ou na anterior.');
   });
 });

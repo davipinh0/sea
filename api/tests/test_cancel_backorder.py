@@ -116,7 +116,7 @@ class TestValidation:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "Not a backorder" in resp.get_json()["error"]
+        assert "Não é um PV de pendência" in resp.get_json()["error"]
 
     def test_already_cancelled_bo_rejected(self, client, auth_headers):
         bo_so_id = _partial_fulfill_seed_so(client, auth_headers)
@@ -134,7 +134,7 @@ class TestValidation:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "already cancelled" in resp.get_json()["error"].lower()
+        assert "já cancelada" in resp.get_json()["error"].lower()
 
     def test_invalid_reason_rejected(self, client, auth_headers):
         bo_so_id = _partial_fulfill_seed_so(client, auth_headers)
@@ -144,7 +144,7 @@ class TestValidation:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "Allowed:" in resp.get_json()["error"]
+        assert "Permitidos:" in resp.get_json()["error"]
 
 
 class TestParentCancelCascade:

@@ -65,7 +65,7 @@ export function shipMethodDisplay(so, { fallback = '-' } = {}) {
   const actual = normalizeCarrier(so && so.carrier);
   const implied = carrierFromShipMethod(method);
   if (method && actual && implied && implied !== actual) {
-    return { text: `${method} (shipped ${actual})`, diverged: true };
+    return { text: `${method} (expedido ${actual})`, diverged: true };
   }
   return { text: method || fallback, diverged: false };
 }

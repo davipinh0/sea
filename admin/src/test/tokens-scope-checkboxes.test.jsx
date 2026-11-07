@@ -114,7 +114,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
 
   async function openModal(container) {
     const newBtn = await waitFor(() =>
-      within(container).getByRole('button', { name: /new token/i })
+      within(container).getByRole('button', { name: /Novo token/i })
     );
     fireEvent.click(newBtn);
     // Scope-catalog + warehouses fire on modal open.
@@ -164,7 +164,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     // Four "All" buttons -- one per list. v1.7.0 added inbound_resources
     // alongside warehouses / event_types / endpoints.
     const allBtns = await waitFor(() => {
-      const btns = within(container).getAllByRole('button', { name: /^All$/ });
+      const btns = within(container).getAllByRole('button', { name: /^Todos$/ });
       expect(btns.length).toBe(4);
       return btns;
     });
@@ -174,11 +174,11 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     // After clicking All on every list, the "N / M selected" counter
     // should read 2 / 2 (warehouses), 7 / 7 (event_types), 5 / 5
     // (endpoints), 5 / 5 (inbound_resources).
-    expect(within(container).getByText('2 / 2 selected')).toBeInTheDocument();
-    expect(within(container).getByText('7 / 7 selected')).toBeInTheDocument();
+    expect(within(container).getByText('2 / 2 selecionado(s)')).toBeInTheDocument();
+    expect(within(container).getByText('7 / 7 selecionado(s)')).toBeInTheDocument();
     // 5 / 5 appears twice (endpoints + inbound_resources both have 5
     // options). Use queryAllByText to assert at least one instance.
-    expect(within(container).queryAllByText('5 / 5 selected').length).toBe(2);
+    expect(within(container).queryAllByText('5 / 5 selecionado(s)').length).toBe(2);
   });
 
   it('submits the correct array payload', async () => {
@@ -199,7 +199,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     const ep1 = within(container).getByRole('checkbox', { name: /events\.poll/ });
     fireEvent.click(ep1);
 
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(1));
     const [path, body] = apiPostMock.mock.calls[0];
@@ -228,12 +228,12 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     fireEvent.click(within(container).getByRole('checkbox', { name: /APT-LAB/ }));
     fireEvent.click(within(container).getByRole('checkbox', { name: /receipt\.completed/ }));
 
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
 
     // POST must NOT fire; admin sees an inline error.
     expect(apiPostMock).not.toHaveBeenCalled();
     expect(
-      within(container).getByText(/at least one direction is required/i)
+      within(container).getByText(/pelo menos uma direção/i)
     ).toBeInTheDocument();
   });
 
@@ -247,7 +247,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     });
     // Flip the advanced toggle.
     const advToggle = within(container).getByRole('checkbox', {
-      name: /advanced: paste comma-separated values/i,
+      name: /Avançado: colar valores separados por vírgula/i,
     });
     fireEvent.click(advToggle);
 
@@ -265,7 +265,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
       { target: { value: 'snapshot.inventory, events.poll' } },
     );
 
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(1));
     const [, body] = apiPostMock.mock.calls[0];
@@ -285,7 +285,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
 
     // Flip advanced on; paste endpoints text; flip advanced off.
     const advToggle = within(container).getByRole('checkbox', {
-      name: /advanced: paste comma-separated values/i,
+      name: /Avançado: colar valores separados por vírgula/i,
     });
     fireEvent.click(advToggle);
     fireEvent.change(
@@ -311,7 +311,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
       <MemoryRouter><Tokens /></MemoryRouter>
     );
     await openModal(container);
-    const select = within(container).getByLabelText(/source system/i);
+    const select = within(container).getByLabelText(/Sistema de origem/i);
     const options = Array.from(select.querySelectorAll('option')).map(
       (o) => o.value,
     );
@@ -345,7 +345,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
       target: { value: 'inbound-only' },
     });
     // Source system select.
-    fireEvent.change(within(container).getByLabelText(/source system/i), {
+    fireEvent.change(within(container).getByLabelText(/Sistema de origem/i), {
       target: { value: 'fabric' },
     });
     // Pick one inbound resource.
@@ -354,7 +354,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     );
     // No outbound endpoints selected -- should still submit because
     // inbound is set.
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(1));
     const [, body] = apiPostMock.mock.calls[0];
@@ -375,18 +375,18 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     fireEvent.change(within(container).getByPlaceholderText('fabric-prod'), {
       target: { value: 'half-configured' },
     });
-    fireEvent.change(within(container).getByLabelText(/source system/i), {
+    fireEvent.change(within(container).getByLabelText(/Sistema de origem/i), {
       target: { value: 'fabric' },
     });
     // Pick an outbound endpoint so we don't trip the
     // "at least one direction" rule first.
     fireEvent.click(within(container).getByRole('checkbox', { name: /events\.poll/ }));
 
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
     expect(apiPostMock).not.toHaveBeenCalled();
     expect(
       within(container).getByText(
-        /source system and inbound resources must be set together/i
+        /sistema de origem e recursos de entrada devem ser definidos juntos/i
       )
     ).toBeInTheDocument();
   });
@@ -399,7 +399,7 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     fireEvent.change(within(container).getByPlaceholderText('fabric-prod'), {
       target: { value: 'override-token' },
     });
-    fireEvent.change(within(container).getByLabelText(/source system/i), {
+    fireEvent.change(within(container).getByLabelText(/Sistema de origem/i), {
       target: { value: 'fabric' },
     });
     fireEvent.click(
@@ -407,10 +407,10 @@ describe('Tokens create-modal checkbox scope pickers (#159)', () => {
     );
     fireEvent.click(
       within(container).getByRole('checkbox', {
-        name: /allow mapping_overrides/i,
+        name: /permitir mapping_overrides/i,
       })
     );
-    fireEvent.click(within(container).getByRole('button', { name: /^Create$/ }));
+    fireEvent.click(within(container).getByRole('button', { name: /^Criar$/ }));
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(1));
     const [, body] = apiPostMock.mock.calls[0];

@@ -31,7 +31,7 @@ export function scrubLogString(input) {
 export function logBoundaryError(error, errorInfo) {
   const isProd = typeof import.meta !== 'undefined' && import.meta?.env?.PROD;
   if (isProd) {
-    const name = (error && error.name) || 'Error';
+    const name = (error && error.name) || 'Erro';
     const message = scrubLogString(error && error.message);
     // eslint-disable-next-line no-console
     console.error(`[ErrorBoundary] ${name}: ${message}`);

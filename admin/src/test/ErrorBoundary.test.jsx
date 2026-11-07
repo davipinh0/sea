@@ -44,9 +44,9 @@ describe('ErrorBoundary', () => {
         <ProblemChild />
       </ErrorBoundary>
     );
-    expect(screen.getByText('Something went wrong')).toBeTruthy();
-    expect(screen.getByText('This section encountered an error. Try refreshing.')).toBeTruthy();
-    expect(screen.getByText('Retry')).toBeTruthy();
+    expect(screen.getByText('Algo deu errado')).toBeTruthy();
+    expect(screen.getByText('Esta seção encontrou um erro. Tente atualizar a página.')).toBeTruthy();
+    expect(screen.getByText('Tentar novamente')).toBeTruthy();
   });
 
   it('shows custom fallbackMessage', () => {
@@ -74,11 +74,11 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeTruthy();
+    expect(screen.getByText('Algo deu errado')).toBeTruthy();
 
     // Fix the child before clicking retry
     shouldThrow = false;
-    fireEvent.click(screen.getByText('Retry'));
+    fireEvent.click(screen.getByText('Tentar novamente'));
 
     expect(screen.getByText('Recovered')).toBeTruthy();
   });

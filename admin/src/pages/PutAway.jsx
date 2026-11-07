@@ -50,7 +50,7 @@ export default function PutAway() {
   }, [warehouseId]);
 
   function exportAll() {
-    const header = ['Bin', 'SKU', 'Item Name', 'UPC', 'Quantity', 'Suggested Bin', 'Lot'];
+    const header = ['Endereço', 'SKU', 'Nome do material', 'UPC', 'Quantidade', 'Endereço sugerido', 'Lote'];
     const rows = [];
     for (const b of bins) {
       for (const item of b.items) {
@@ -65,7 +65,7 @@ export default function PutAway() {
   }
 
   function exportBin(bin) {
-    const header = ['SKU', 'Item Name', 'UPC', 'Quantity', 'Suggested Bin', 'Lot'];
+    const header = ['SKU', 'Nome do material', 'UPC', 'Quantidade', 'Endereço sugerido', 'Lote'];
     const rows = bin.items.map((item) => [
       item.sku, item.item_name, item.upc || '',
       item.quantity_on_hand, item.suggested_bin || '', item.lot_number || '',
@@ -80,14 +80,14 @@ export default function PutAway() {
 
   return (
     <div>
-      <PageHeader title="Put-Away">
+      <PageHeader title="Armazenagem">
         <button
           className="btn"
           onClick={exportAll}
           disabled={bins.length === 0}
-          title="Export every staging bin and its items to CSV"
+          title="Exportar todos os endereços de staging e seus materiais para CSV"
         >
-          Export All (CSV)
+          Exportar tudo (CSV)
         </button>
       </PageHeader>
 
@@ -97,18 +97,18 @@ export default function PutAway() {
       }}>
         <span>
           <strong style={{ color: 'var(--text)' }}>{binsWithItems}</strong>
-          {' / '}{bins.length} staging bins with items
+          {' / '}{bins.length} endereços de staging com materiais
         </span>
-        <span><strong style={{ color: 'var(--text)' }}>{totalSkus}</strong> total SKU rows</span>
-        <span><strong style={{ color: 'var(--text)' }}>{totalQty}</strong> total units</span>
+        <span><strong style={{ color: 'var(--text)' }}>{totalSkus}</strong> linhas de SKU no total</span>
+        <span><strong style={{ color: 'var(--text)' }}>{totalQty}</strong> unidades no total</span>
       </div>
 
       {loading && (
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading…</p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Carregando…</p>
       )}
       {!loading && bins.length === 0 && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          No staging bins exist in this warehouse.
+          Nenhum endereço de staging neste armazém.
         </p>
       )}
 
@@ -123,8 +123,8 @@ export default function PutAway() {
               onClick={isEmpty ? undefined : () => setFocusedBin(b)}
               disabled={isEmpty}
               title={isEmpty
-                ? `${b.bin_code} - empty`
-                : `${b.bin_code} - ${b.sku_count} SKU${b.sku_count === 1 ? '' : 's'}, ${b.total_qty} units`}
+                ? `${b.bin_code} - vazio`
+                : `${b.bin_code} - ${b.sku_count} SKU${b.sku_count === 1 ? '' : 's'}, ${b.total_qty} unidades`}
             >
               <div className="putaway-tile-label">{b.bin_code}</div>
               <div className="putaway-tile-count">
@@ -137,15 +137,15 @@ export default function PutAway() {
 
       {focusedBin && (
         <Modal
-          title={`${focusedBin.bin_code} - ${focusedBin.sku_count} SKUs, ${focusedBin.total_qty} units`}
+          title={`${focusedBin.bin_code} - ${focusedBin.sku_count} SKUs, ${focusedBin.total_qty} unidades`}
           onClose={() => setFocusedBin(null)}
           size="wide"
           footer={
             <>
               <button className="btn" onClick={() => exportBin(focusedBin)}>
-                Export {focusedBin.bin_code} (CSV)
+                Exportar {focusedBin.bin_code} (CSV)
               </button>
-              <button className="btn btn-primary" onClick={() => setFocusedBin(null)}>Close</button>
+              <button className="btn btn-primary" onClick={() => setFocusedBin(null)}>Fechar</button>
             </>
           }
         >
@@ -153,11 +153,11 @@ export default function PutAway() {
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Item Name</th>
+                <th>Nome do material</th>
                 <th>UPC</th>
-                <th style={{ textAlign: 'right' }}>Qty</th>
-                <th>Suggested Bin</th>
-                <th>Lot</th>
+                <th style={{ textAlign: 'right' }}>Qtd.</th>
+                <th>Endereço sugerido</th>
+                <th>Lote</th>
               </tr>
             </thead>
             <tbody>

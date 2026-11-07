@@ -213,7 +213,7 @@ def suggest_bin(item_id):
     ).fetchone()
 
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     is_admin = g.current_user.get("role") == "ADMIN"
     allowed_wh = g.current_user.get("warehouse_ids", [])
@@ -329,21 +329,21 @@ def confirm_putaway(validated):
         {"item_id": item_id},
     ).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     from_bin = g.db.execute(
         text("SELECT bin_id, bin_code, warehouse_id FROM bins WHERE bin_id = :bin_id"),
         {"bin_id": from_bin_id},
     ).fetchone()
     if not from_bin:
-        return jsonify({"error": "Source bin not found"}), 404
+        return jsonify({"error": "Endereço de origem não encontrado"}), 404
 
     to_bin = g.db.execute(
         text("SELECT bin_id, bin_code FROM bins WHERE bin_id = :bin_id"),
         {"bin_id": to_bin_id},
     ).fetchone()
     if not to_bin:
-        return jsonify({"error": "Destination bin not found"}), 404
+        return jsonify({"error": "Endereço de destino não encontrado"}), 404
 
     username = g.current_user["username"]
     warehouse_id = from_bin.warehouse_id
@@ -403,7 +403,7 @@ def confirm_putaway(validated):
     g.db.commit()
 
     return jsonify({
-        "message": "Put-away confirmed",
+        "message": "Armazenagem confirmada",
         "transfer_id": transfer_id,
         "item": item.sku,
         "from_bin": from_bin.bin_code,
@@ -427,14 +427,14 @@ def update_preferred(validated):
         {"item_id": item_id},
     ).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     bin_row = g.db.execute(
         text("SELECT bin_id, bin_code, bin_type, warehouse_id FROM bins WHERE bin_id = :bin_id"),
         {"bin_id": bin_id},
     ).fetchone()
     if not bin_row:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
 
     # A preferred bin is an item's home pick location, so it must be
     # a Pickable bin. Staging / PickableStaging bins hold transient
@@ -447,10 +447,7 @@ def update_preferred(validated):
     if bin_row.bin_type != BIN_PICKABLE:
         return jsonify({
             "error": (
-                f"Bin {bin_row.bin_code} is a {bin_row.bin_type} bin; "
-                "preferred bins must be Pickable. Staging and "
-                "PickableStaging bins hold transient receiving stock and "
-                "cannot be an item's home pick location."
+                f"O endereço {bin_row.bin_code} é do tipo {bin_row.bin_type}; endereços preferenciais devem ser Pickable. Endereços Staging e PickableStaging guardam estoque transitório de recebimento e não podem ser a posição de separação padrão de um material."
             )
         }), 400
 
@@ -537,7 +534,7 @@ def update_preferred(validated):
     g.db.commit()
 
     return jsonify({
-        "message": f"Preferred bin for {item.sku} {'set to' if not old_bin_code else 'changed to'} {bin_row.bin_code}",
+        "message": f"Endereço preferencial de {item.sku} {'definido como' if not old_bin_code else 'alterado para'} {bin_row.bin_code}",
         "item_id": item_id,
         "bin_id": bin_id,
         "bin_code": bin_row.bin_code,

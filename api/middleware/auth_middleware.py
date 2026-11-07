@@ -62,11 +62,11 @@ def require_auth(f):
         # exempt because bearer tokens don't auto-attach cross-origin.
         if source == "cookie" and request.method in CSRF_PROTECTED_METHODS:
             if not csrf_token_matches():
-                return jsonify({"error": "CSRF token missing or invalid"}), 403
+                return jsonify({"error": "Token CSRF ausente ou inválido"}), 403
 
         payload = decode_token(token)
         if payload is None:
-            return jsonify({"error": "Token expired"}), 401
+            return jsonify({"error": "Sessão expirada"}), 401
 
         # Verify the user is still active and refresh role/warehouse_ids from DB.
         # This ensures that deactivated accounts and role/warehouse changes take
@@ -106,7 +106,7 @@ def require_auth(f):
         if row.password_changed_at and payload.get("iat"):
             changed_ts = int(row.password_changed_at.timestamp())
             if payload["iat"] < changed_ts:
-                return jsonify({"error": "Token invalidated by password change"}), 401
+                return jsonify({"error": "Sessão invalidada pela troca de senha"}), 401
 
         # Overwrite JWT claims with live DB values so downstream role/warehouse
         # checks always reflect the current state.
@@ -124,7 +124,7 @@ def require_auth(f):
         if row.must_change_password and request.endpoint not in FORCED_CHANGE_ALLOWED_ENDPOINTS:
             return jsonify({
                 "error": "password_change_required",
-                "message": "Admin must change password before accessing other resources",
+                "message": "O administrador precisa alterar a senha antes de acessar outros recursos",
             }), 403
 
         # Warehouse authorization: non-admin users can only access assigned
@@ -160,16 +160,16 @@ def require_auth(f):
                 try:
                     normalized = {src: int(v) for src, v in candidates}
                 except (TypeError, ValueError):
-                    return jsonify({"error": "Invalid warehouse_id"}), 400
+                    return jsonify({"error": "warehouse_id inválido"}), 400
                 if len(set(normalized.values())) > 1:
                     return jsonify({
-                        "error": "warehouse_id mismatch across request",
+                        "error": "warehouse_id divergente na requisição",
                         "sources": normalized,
                     }), 400
                 req_wid_int = next(iter(normalized.values()))
 
             if req_wid_int is not None and req_wid_int not in allowed:
-                return jsonify({"error": "Access denied for this warehouse"}), 403
+                return jsonify({"error": "Acesso negado a este armazém"}), 403
 
         return f(*args, **kwargs)
 
@@ -188,7 +188,7 @@ def check_warehouse_access(warehouse_id):
         return True, None
     allowed = user.get("warehouse_ids") or []
     if warehouse_id is not None and int(warehouse_id) not in allowed:
-        return False, (jsonify({"error": "Access denied for this warehouse"}), 403)
+        return False, (jsonify({"error": "Acesso negado a este armazém"}), 403)
     return True, None
 
 

@@ -7,6 +7,8 @@ bcrypt==4.2.1
 python-dotenv==1.2.2
 gunicorn==23.0.0
 celery[redis]==5.4.0
+# Pinned: kombu>=5.6 requires redis-py>=6.1 and crashes the Celery worker with redis 5.2.1.
+kombu==5.4.2
 redis==5.2.1
 cryptography==50.0.0
 pydantic==2.11.3

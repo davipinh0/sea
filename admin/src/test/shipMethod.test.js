@@ -47,7 +47,7 @@ describe('shipMethodDisplay', () => {
   it('annotates a USPS-named method that shipped UPS (the reported bug)', () => {
     const d = shipMethodDisplay({ ship_method: 'USPS Ground Advantage', carrier: 'UPS', tracking_number: '1Z3Y4A390321365319' });
     expect(d.diverged).toBe(true);
-    expect(d.text).toBe('USPS Ground Advantage (shipped UPS)');
+    expect(d.text).toBe('USPS Ground Advantage (expedido UPS)');
   });
 
   it('leaves a matching carrier untouched', () => {

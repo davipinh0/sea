@@ -6,9 +6,9 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 
 const FILTER_OPTIONS = [
-  { label: 'Active', value: 'active' },
-  { label: 'Archived', value: 'archived' },
-  { label: 'All', value: 'all' },
+  { label: 'Ativo', value: 'active' },
+  { label: 'Arquivados', value: 'archived' },
+  { label: 'Todos', value: 'all' },
 ];
 
 export default function Items() {
@@ -112,7 +112,7 @@ export default function Items() {
       loadItems();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to save');
+      setError(data?.error || 'Falha ao salvar');
     }
   }
 
@@ -132,7 +132,7 @@ export default function Items() {
       loadItems();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to delete item');
+      setError(data?.error || 'Falha ao excluir material');
     }
   }
 
@@ -143,40 +143,40 @@ export default function Items() {
       loadItems();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to update item');
+      setError(data?.error || 'Falha ao atualizar material');
     }
   }
 
   const columns = [
     { key: 'sku', label: 'SKU', mono: true },
-    { key: 'item_name', label: 'Item Name' },
+    { key: 'item_name', label: 'Nome do material' },
     { key: 'upc', label: 'UPC', mono: true, render: (r) => r.upc || '-' },
     { key: 'mpn', label: 'MPN', mono: true, render: (r) => r.mpn || '-' },
-    { key: 'default_bin_code', label: 'Default Bin', mono: true, render: (r) => r.default_bin_code || '\u2013' },
-    { key: 'category', label: 'Category', render: (r) => r.category || '-' },
-    { key: 'weight_lbs', label: 'Weight', render: (r) => r.weight_lbs ? `${r.weight_lbs} lb` : '-' },
-    { key: 'is_active', label: 'Active', render: (r) => r.is_active ? 'Yes' : 'No' },
+    { key: 'default_bin_code', label: 'Endereço padrão', mono: true, render: (r) => r.default_bin_code || '\u2013' },
+    { key: 'category', label: 'Categoria', render: (r) => r.category || '-' },
+    { key: 'weight_lbs', label: 'Peso', render: (r) => r.weight_lbs ? `${r.weight_lbs} lb` : '-' },
+    { key: 'is_active', label: 'Ativo', render: (r) => r.is_active ? 'Sim' : 'Não' },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
-        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
-        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteItem(r.id || r.item_id); }} aria-label="Delete" title="Delete">&#128465;</button>
+        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
+        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteItem(r.id || r.item_id); }} aria-label="Excluir" title="Excluir">&#128465;</button>
       </div>
     )},
   ];
 
   const invCols = [
-    { key: 'bin_code', label: 'Bin', mono: true },
-    { key: 'quantity_on_hand', label: 'On Hand' },
-    { key: 'quantity_allocated', label: 'Allocated' },
+    { key: 'bin_code', label: 'Endereço', mono: true },
+    { key: 'quantity_on_hand', label: 'Em estoque' },
+    { key: 'quantity_allocated', label: 'Alocado' },
   ];
 
   return (
     <div>
-      <PageHeader title="Items">
-        <button className="btn btn-primary" onClick={openCreate}>New Item</button>
+      <PageHeader title="Materiais">
+        <button className="btn btn-primary" onClick={openCreate}>Novo material</button>
       </PageHeader>
       <div className="filter-bar">
-        <input className="form-input" placeholder="Search by SKU, name, UPC, or MPN..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <input className="form-input" placeholder="Buscar por SKU, nome, UPC ou MPN..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         <select
           className="form-select"
           value={filter}
@@ -192,29 +192,29 @@ export default function Items() {
 
       {detail && !showModal && (
         <Modal title={detail.item_name || detail.sku} onClose={() => setDetail(null)}
-          footer={<button className="btn" onClick={() => setDetail(null)}>Close</button>}
+          footer={<button className="btn" onClick={() => setDetail(null)}>Fechar</button>}
         >
           <div className="detail-grid">
             <span className="detail-label">SKU</span><span className="mono">{detail.sku}</span>
             <span className="detail-label">UPC</span><span className="mono">{detail.upc || '-'}</span>
             <span className="detail-label">MPN</span><span className="mono">{detail.mpn || '-'}</span>
-            <span className="detail-label">Category</span><span>{detail.category || '-'}</span>
-            <span className="detail-label">Weight</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} lb` : '-'}</span>
-            <span className="detail-label">Active</span><span>{detail.is_active ? 'Yes' : 'No'}</span>
+            <span className="detail-label">Categoria</span><span>{detail.category || '-'}</span>
+            <span className="detail-label">Peso</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} lb` : '-'}</span>
+            <span className="detail-label">Ativo</span><span>{detail.is_active ? 'Sim' : 'Não'}</span>
           </div>
           {detail.preferred_bins && detail.preferred_bins.length > 0 && (
             <>
-              <div className="section-title">Preferred Bins</div>
+              <div className="section-title">Endereços preferenciais</div>
               <DataTable rowKey="preferred_bin_id" columns={[
-                { key: 'bin_code', label: 'Bin', mono: true },
-                { key: 'zone_name', label: 'Zone' },
-                { key: 'priority', label: 'Priority' },
+                { key: 'bin_code', label: 'Endereço', mono: true },
+                { key: 'zone_name', label: 'Zona' },
+                { key: 'priority', label: 'Prioridade' },
               ]} data={detail.preferred_bins} />
             </>
           )}
           {detail.inventory && detail.inventory.length > 0 && (
             <>
-              <div className="section-title">Inventory locations</div>
+              <div className="section-title">Localizações no estoque</div>
               <DataTable rowKey="inventory_id" columns={invCols} data={detail.inventory} />
             </>
           )}
@@ -222,19 +222,19 @@ export default function Items() {
       )}
 
       {showModal && (
-        <Modal title={editId ? 'Edit Item' : 'New Item'} onClose={() => setShowModal(false)}
+        <Modal title={editId ? 'Editar material' : 'Novo material'} onClose={() => setShowModal(false)}
           footer={
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', gap: 4 }}>
                 {editId && (
                   <button className="btn btn-sm" onClick={() => toggleArchive(form)}>
-                    {form.is_active ? 'Archive' : 'Restore'}
+                    {form.is_active ? 'Arquivar' : 'Restaurar'}
                   </button>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={save}>Save</button>
+                <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={save}>Salvar</button>
               </div>
             </div>
           }
@@ -255,16 +255,16 @@ export default function Items() {
             <input className="form-input" value={form.mpn || ''} onChange={(e) => setForm({ ...form, mpn: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Item Name</label>
+            <label>Nome do material</label>
             <input className="form-input" value={form.item_name || ''} onChange={(e) => setForm({ ...form, item_name: e.target.value })} />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Category</label>
+              <label>Categoria</label>
               <input className="form-input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Weight (lb)</label>
+              <label>Peso (lb)</label>
               <input className="form-input" type="number" step="0.01" value={form.weight_lbs ?? form.weight ?? ''} onChange={(e) => setForm({ ...form, weight_lbs: e.target.value, weight: e.target.value })} />
             </div>
           </div>
@@ -272,16 +272,16 @@ export default function Items() {
       )}
 
       {showDeleteConfirm && (
-        <Modal title="Delete Item" onClose={() => setShowDeleteConfirm(null)}
+        <Modal title="Excluir material" onClose={() => setShowDeleteConfirm(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={confirmDeleteItem}>Delete</button>
+              <button className="btn" onClick={() => setShowDeleteConfirm(null)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={confirmDeleteItem}>Excluir</button>
             </>
           }
         >
-          <p style={{ fontSize: 14, marginBottom: 8 }}>Are you sure? This action cannot be undone.</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>The item and all associated data will be permanently deleted.</p>
+          <p style={{ fontSize: 14, marginBottom: 8 }}>Tem certeza? Esta ação não pode ser desfeita.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O material e todos os dados associados serão excluídos permanentemente.</p>
         </Modal>
       )}
     </div>

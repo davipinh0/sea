@@ -68,7 +68,7 @@ def validate_body(schema_class):
                 if request.mimetype != "application/json":
                     return jsonify({
                         "error": "unsupported_media_type",
-                        "message": "Content-Type must be application/json",
+                        "message": "Content-Type deve ser application/json",
                     }), 415
             raw = request.get_json(silent=True) or {}
             if isinstance(raw, dict):
@@ -81,7 +81,7 @@ def validate_body(schema_class):
                             {
                                 "type": "extra_forbidden",
                                 "loc": [k],
-                                "msg": f"Unknown field: {k}",
+                                "msg": f"Campo desconhecido: {k}",
                             }
                             for k in extras
                         ],

@@ -34,7 +34,7 @@ def lookup_item(barcode):
     ).fetchone()
 
     if not item_row:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     item = {
         "item_id": item_row.item_id,
@@ -108,7 +108,7 @@ def lookup_bin(barcode):
     ).fetchone()
 
     if not bin_row:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
 
     bin_data = {
         "bin_id": bin_row.bin_id,
@@ -178,7 +178,7 @@ def lookup_so(barcode):
     ).fetchone()
 
     if not so_row:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     # Fetch SO lines for detail display
     lines = g.db.execute(

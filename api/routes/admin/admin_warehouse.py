@@ -63,7 +63,7 @@ def get_warehouse(warehouse_id):
         {"wid": warehouse_id},
     ).fetchone()
     if not wh:
-        return jsonify({"error": "Warehouse not found"}), 404
+        return jsonify({"error": "Armazém não encontrado"}), 404
 
     zones = g.db.execute(
         text("SELECT zone_id, warehouse_id, zone_code, zone_name, zone_type, is_active FROM zones WHERE warehouse_id = :wid ORDER BY zone_id"),
@@ -88,7 +88,7 @@ def create_warehouse(validated):
 
     dup = g.db.execute(text("SELECT 1 FROM warehouses WHERE warehouse_code = :c"), {"c": data["warehouse_code"]}).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate warehouse_code: {data['warehouse_code']}"}), 400
+        return jsonify({"error": f"warehouse_code duplicado: {data['warehouse_code']}"}), 400
 
     result = g.db.execute(
         text("INSERT INTO warehouses (warehouse_code, warehouse_name, address) VALUES (:code, :name, :addr) RETURNING warehouse_id, warehouse_code, warehouse_name, address, is_active, created_at"),
@@ -112,7 +112,7 @@ def update_warehouse(warehouse_id, validated):
 
     wh = g.db.execute(text("SELECT warehouse_id FROM warehouses WHERE warehouse_id = :wid"), {"wid": warehouse_id}).fetchone()
     if not wh:
-        return jsonify({"error": "Warehouse not found"}), 404
+        return jsonify({"error": "Armazém não encontrado"}), 404
 
     ALLOWED_FIELDS = {"warehouse_code", "warehouse_name", "address", "is_active"}
     fields, params = [], {"wid": warehouse_id}
@@ -122,7 +122,7 @@ def update_warehouse(warehouse_id, validated):
             params[col] = data[col]
 
     if not fields:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     g.db.execute(text(f"UPDATE warehouses SET {', '.join(fields)} WHERE warehouse_id = :wid"), params)
     g.db.commit()
@@ -144,7 +144,7 @@ def update_warehouse(warehouse_id, validated):
 def delete_warehouse(warehouse_id):
     wh = g.db.execute(text("SELECT warehouse_id FROM warehouses WHERE warehouse_id = :wid"), {"wid": warehouse_id}).fetchone()
     if not wh:
-        return jsonify({"error": "Warehouse not found"}), 404
+        return jsonify({"error": "Armazém não encontrado"}), 404
 
     # Check for existing inventory
     has_inv = g.db.execute(
@@ -152,7 +152,7 @@ def delete_warehouse(warehouse_id):
         {"wid": warehouse_id},
     ).fetchone()
     if has_inv:
-        return jsonify({"error": "Cannot delete warehouse with existing inventory"}), 400
+        return jsonify({"error": "Não é possível excluir armazém com estoque existente"}), 400
 
     # Check for bins
     has_bins = g.db.execute(
@@ -160,7 +160,7 @@ def delete_warehouse(warehouse_id):
         {"wid": warehouse_id},
     ).fetchone()
     if has_bins:
-        return jsonify({"error": "Cannot delete warehouse with existing bins. Remove all bins first."}), 400
+        return jsonify({"error": "Não é possível excluir armazém com endereços existentes. Remova todos os endereços primeiro."}), 400
 
     # Check for zones
     has_zones = g.db.execute(
@@ -168,12 +168,12 @@ def delete_warehouse(warehouse_id):
         {"wid": warehouse_id},
     ).fetchone()
     if has_zones:
-        return jsonify({"error": "Cannot delete warehouse with existing zones. Remove all zones first."}), 400
+        return jsonify({"error": "Não é possível excluir armazém com zonas existentes. Remova todas as zonas primeiro."}), 400
 
     # Hard delete
     g.db.execute(text("DELETE FROM warehouses WHERE warehouse_id = :wid"), {"wid": warehouse_id})
     g.db.commit()
-    return jsonify({"message": "Warehouse deleted"})
+    return jsonify({"message": "Armazém excluído"})
 
 
 # ── Zones ─────────────────────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ def create_zone(validated):
         {"wid": data["warehouse_id"], "code": data["zone_code"]},
     ).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate zone_code '{data['zone_code']}' in warehouse {data['warehouse_id']}"}), 400
+        return jsonify({"error": f"zone_code duplicado '{data['zone_code']}' no armazém {data['warehouse_id']}"}), 400
 
     result = g.db.execute(
         text("INSERT INTO zones (warehouse_id, zone_code, zone_name, zone_type) VALUES (:wid, :code, :name, :type) RETURNING zone_id, warehouse_id, zone_code, zone_name, zone_type, is_active"),
@@ -246,7 +246,7 @@ def update_zone(zone_id, validated):
 
     existing = g.db.execute(text("SELECT zone_id FROM zones WHERE zone_id = :zid"), {"zid": zone_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Zone not found"}), 404
+        return jsonify({"error": "Zona não encontrada"}), 404
 
     ALLOWED_FIELDS = {"zone_code", "zone_name", "zone_type", "is_active"}
     fields, params = [], {"zid": zone_id}
@@ -256,7 +256,7 @@ def update_zone(zone_id, validated):
             params[col] = data[col]
 
     if not fields:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     g.db.execute(text(f"UPDATE zones SET {', '.join(fields)} WHERE zone_id = :zid"), params)
     g.db.commit()
@@ -279,7 +279,7 @@ def delete_zone(zone_id):
         {"zid": zone_id},
     ).fetchone()
     if not existing:
-        return jsonify({"error": "Zone not found"}), 404
+        return jsonify({"error": "Zona não encontrada"}), 404
 
     bin_count = g.db.execute(
         text("SELECT COUNT(*) FROM bins WHERE zone_id = :zid"),
@@ -287,13 +287,12 @@ def delete_zone(zone_id):
     ).scalar()
     if bin_count:
         return jsonify({
-            "error": f"Zone cannot be deleted because {bin_count} bin(s) are assigned to it. "
-                     "Reassign or delete the bins first."
+            "error": f"A zona não pode ser excluída porque {bin_count} endereço(s) estão atribuídos a ela. Reatribua ou exclua os endereços primeiro."
         }), 409
 
     g.db.execute(text("DELETE FROM zones WHERE zone_id = :zid"), {"zid": zone_id})
     g.db.commit()
-    return jsonify({"message": "Zone deleted"})
+    return jsonify({"message": "Zona excluída"})
 
 
 # ── Bins ──────────────────────────────────────────────────────────────────────
@@ -373,7 +372,7 @@ def get_bin(bin_id):
         {"bid": bin_id},
     ).fetchone()
     if not b:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
 
     inv_rows = g.db.execute(
         text("""
@@ -413,7 +412,7 @@ def create_bin(validated):
         {"wid": data["warehouse_id"], "code": data["bin_code"]},
     ).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate bin_code '{data['bin_code']}' in warehouse {data['warehouse_id']}"}), 400
+        return jsonify({"error": f"bin_code duplicado '{data['bin_code']}' no armazém {data['warehouse_id']}"}), 400
 
     result = g.db.execute(
         text("""
@@ -450,7 +449,7 @@ def update_bin(bin_id, validated):
 
     existing = g.db.execute(text("SELECT bin_id FROM bins WHERE bin_id = :bid"), {"bid": bin_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
 
     ALLOWED_FIELDS = {"bin_code", "bin_barcode", "bin_type", "aisle", "row_num", "level_num", "position_num", "pick_sequence", "putaway_sequence", "is_active", "zone_id"}
     fields, params = [], {"bid": bin_id}
@@ -460,7 +459,7 @@ def update_bin(bin_id, validated):
             params[col] = data[col]
 
     if not fields:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     g.db.execute(text(f"UPDATE bins SET {', '.join(fields)} WHERE bin_id = :bid"), params)
     g.db.commit()
@@ -489,7 +488,7 @@ def update_bin(bin_id, validated):
 def delete_bin(bin_id):
     existing = g.db.execute(text("SELECT bin_id, bin_code FROM bins WHERE bin_id = :bid"), {"bid": bin_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
 
     inv = g.db.execute(
         text("SELECT COUNT(*) FROM inventory WHERE bin_id = :bid AND quantity_on_hand > 0"),
@@ -497,8 +496,7 @@ def delete_bin(bin_id):
     ).scalar()
     if inv:
         return jsonify({
-            "error": f"Bin cannot be deleted because {inv} inventory record(s) remain with quantity on hand. "
-                     "Move or adjust the inventory to zero first."
+            "error": f"O endereço não pode ser excluído porque {inv} registro(s) de estoque ainda têm quantidade em mãos. Mova ou ajuste o estoque para zero primeiro."
         }), 409
 
     pref = g.db.execute(
@@ -507,14 +505,13 @@ def delete_bin(bin_id):
     ).scalar()
     if pref:
         return jsonify({
-            "error": f"Bin cannot be deleted because {pref} preferred-bin mapping(s) reference it. "
-                     "Remove them from the Preferred Bins page first."
+            "error": f"O endereço não pode ser excluído porque {pref} vínculo(s) de endereço preferencial o referenciam. Remova-os na página Endereços preferenciais primeiro."
         }), 409
 
     g.db.execute(text("DELETE FROM inventory WHERE bin_id = :bid"), {"bid": bin_id})
     g.db.execute(text("DELETE FROM bins WHERE bin_id = :bid"), {"bid": bin_id})
     g.db.commit()
-    return jsonify({"message": "Bin deleted"})
+    return jsonify({"message": "Endereço excluído"})
 
 
 # ── Inter-Warehouse Transfers ────────────────────────────────────────────────
@@ -537,7 +534,7 @@ def create_inter_warehouse_transfer(validated):
     # Validate item exists
     item = g.db.execute(text("SELECT item_id, sku FROM items WHERE item_id = :iid"), {"iid": item_id}).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     # Validate source bin exists in source warehouse
     from_bin = g.db.execute(
@@ -545,7 +542,7 @@ def create_inter_warehouse_transfer(validated):
         {"bid": from_bin_id, "wid": from_warehouse_id},
     ).fetchone()
     if not from_bin:
-        return jsonify({"error": "Source bin not found in the specified source warehouse"}), 404
+        return jsonify({"error": "Endereço de origem não encontrado no armazém de origem informado"}), 404
 
     # Validate destination bin exists in destination warehouse
     to_bin = g.db.execute(
@@ -553,7 +550,7 @@ def create_inter_warehouse_transfer(validated):
         {"bid": to_bin_id, "wid": to_warehouse_id},
     ).fetchone()
     if not to_bin:
-        return jsonify({"error": "Destination bin not found in the specified destination warehouse"}), 404
+        return jsonify({"error": "Endereço de destino não encontrado no armazém de destino informado"}), 404
 
     # Validate sufficient inventory in source bin
     source_inv = g.db.execute(
@@ -562,7 +559,7 @@ def create_inter_warehouse_transfer(validated):
     ).fetchone()
     available = source_inv.quantity_on_hand if source_inv else 0
     if available < quantity:
-        return jsonify({"error": f"Insufficient inventory in source bin. Available: {available}"}), 400
+        return jsonify({"error": f"Estoque insuficiente no endereço de origem. Disponível: {available}"}), 400
 
     # Decrement source
     new_source_qty = available - quantity

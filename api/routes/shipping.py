@@ -26,9 +26,9 @@ def _require_packing(db):
 def get_order(barcode):
     """Look up an order for shipping. Respects the require_packing setting."""
     if not barcode or not barcode.strip():
-        return jsonify({"error": "Barcode is required"}), 400
+        return jsonify({"error": "O código de barras é obrigatório"}), 400
     if len(barcode) > 100:
-        return jsonify({"error": "Barcode too long (max 100 characters)"}), 400
+        return jsonify({"error": "Código de barras longo demais (máx. 100 caracteres)"}), 400
 
     # V-026: scope at SELECT time so wrong-warehouse looks like not-found.
     scope_clause, scope_params = warehouse_scope_clause("warehouse_id")
@@ -47,15 +47,15 @@ def get_order(barcode):
     ).fetchone()
 
     if not so:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Pedido não encontrado"}), 404
 
     packing_required = _require_packing(g.db)
     allowed_statuses = [SO_PACKED] if packing_required else [SO_PICKED, SO_PACKED]
 
     if so.status not in allowed_statuses:
         if packing_required and so.status == SO_PICKED:
-            return jsonify({"error": "Order must be packed before shipping"}), 400
-        return jsonify({"error": f"Order is not ready for shipping. Current status: {so.status}"}), 400
+            return jsonify({"error": "O pedido precisa ser embalado antes da expedição"}), 400
+        return jsonify({"error": f"O pedido não está pronto para expedição. Status atual: {so.status}"}), 400
 
     # Get item summary
     lines = g.db.execute(
@@ -133,15 +133,15 @@ def fulfill(validated):
     ).fetchone()
 
     if not so:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Pedido não encontrado"}), 404
 
     packing_required = _require_packing(g.db)
     allowed_statuses = [SO_PACKED] if packing_required else [SO_PICKED, SO_PACKED]
 
     if so.status not in allowed_statuses:
         if packing_required:
-            return jsonify({"error": f"Order must be packed before shipping. Current status: {so.status}"}), 400
-        return jsonify({"error": f"Order is not ready for shipping. Current status: {so.status}"}), 400
+            return jsonify({"error": f"O pedido precisa ser embalado antes da expedição. Status atual: {so.status}"}), 400
+        return jsonify({"error": f"O pedido não está pronto para expedição. Status atual: {so.status}"}), 400
 
     try:
         result = record_ship(
@@ -164,7 +164,7 @@ def fulfill(validated):
     g.db.commit()
 
     return jsonify({
-        "message": "Shipment fulfilled",
+        "message": "Remessa concluída",
         "fulfillment_id": result["fulfillment_id"],
         "so_number": so.so_number,
         "tracking_number": tracking_number,

@@ -38,7 +38,7 @@ def move(validated):
         {"iid": item_id},
     ).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     # Validate bins
     from_bin = g.db.execute(
@@ -46,18 +46,18 @@ def move(validated):
         {"bid": from_bin_id},
     ).fetchone()
     if not from_bin:
-        return jsonify({"error": "Source bin not found"}), 404
+        return jsonify({"error": "Endereço de origem não encontrado"}), 404
 
     to_bin = g.db.execute(
         text("SELECT bin_id, bin_code, warehouse_id FROM bins WHERE bin_id = :bid"),
         {"bid": to_bin_id},
     ).fetchone()
     if not to_bin:
-        return jsonify({"error": "Destination bin not found"}), 404
+        return jsonify({"error": "Endereço de destino não encontrado"}), 404
 
 
     if to_bin.warehouse_id != from_bin.warehouse_id:
-        return jsonify({"error": "Cross-warehouse moves are not allowed here. Use the admin inter-warehouse transfer."}), 400
+        return jsonify({"error": "Movimentações entre armazéns não são permitidas aqui. Use a transferência entre armazéns do admin."}), 400
 
     username = g.current_user["username"]
     warehouse_id = from_bin.warehouse_id
@@ -167,7 +167,7 @@ def move(validated):
     g.db.commit()
 
     return jsonify({
-        "message": "Transfer completed",
+        "message": "Transferência concluída",
         "transfer_id": transfer_id,
         "item": {
             "sku": item.sku,

@@ -51,7 +51,7 @@ export default function Zones() {
       loadZones();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to save');
+      setError(data?.error || 'Falha ao salvar');
     }
   }
 
@@ -65,55 +65,55 @@ export default function Zones() {
       loadZones();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to delete zone');
+      setError(data?.error || 'Falha ao excluir zona');
       setDeleteTarget(null);
     }
   }
 
   const columns = [
-    { key: 'zone_code', label: 'Zone Code', mono: true },
-    { key: 'zone_name', label: 'Zone Name' },
-    { key: 'zone_type', label: 'Type' },
-    { key: 'is_active', label: 'Active', render: (r) => r.is_active ? 'Yes' : 'No' },
+    { key: 'zone_code', label: 'Código da zona', mono: true },
+    { key: 'zone_name', label: 'Nome da zona' },
+    { key: 'zone_type', label: 'Tipo' },
+    { key: 'is_active', label: 'Ativo', render: (r) => r.is_active ? 'Sim' : 'Não' },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
-        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
-        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} aria-label="Delete" title="Delete">&#128465;</button>
+        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
+        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} aria-label="Excluir" title="Excluir">&#128465;</button>
       </div>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Zones">
-        <button className="btn btn-primary" onClick={openCreate}>New Zone</button>
+      <PageHeader title="Zonas">
+        <button className="btn btn-primary" onClick={openCreate}>Nova zona</button>
       </PageHeader>
-      <DataTable rowKey="zone_id" columns={columns} data={zones} emptyMessage="No zones found" />
+      <DataTable rowKey="zone_id" columns={columns} data={zones} emptyMessage="Nenhuma zona encontrada" />
 
       {showModal && (
         <Modal
-          title={editId ? 'Edit Zone' : 'New Zone'}
+          title={editId ? 'Editar zona' : 'Nova zona'}
           onClose={() => { setShowModal(false); setError(''); }}
           footer={
             <>
-              <button className="btn" onClick={() => { setShowModal(false); setError(''); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={save}>Save</button>
+              <button className="btn" onClick={() => { setShowModal(false); setError(''); }}>Cancelar</button>
+              <button className="btn btn-primary" onClick={save}>Salvar</button>
             </>
           }
         >
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
           <div className="form-group">
-            <label>Zone Code</label>
+            <label>Código da zona</label>
             <input className="form-input" value={form.zone_code || ''} onChange={(e) => setForm({ ...form, zone_code: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Zone Name</label>
+            <label>Nome da zona</label>
             <input className="form-input" value={form.zone_name || ''} onChange={(e) => setForm({ ...form, zone_name: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Type</label>
+            <label>Tipo</label>
             <select className="form-select" value={form.zone_type || ''} onChange={(e) => setForm({ ...form, zone_type: e.target.value })}>
-              <option value="">Select type</option>
+              <option value="">Selecione o tipo</option>
               {ZONE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -122,18 +122,17 @@ export default function Zones() {
 
       {deleteTarget && (
         <Modal
-          title={`Delete zone ${deleteTarget.zone_code || ''}?`}
+          title={`Excluir zona ${deleteTarget.zone_code || ''}?`}
           onClose={() => setDeleteTarget(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={deleteZone}>Delete</button>
+              <button className="btn" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={deleteZone}>Excluir</button>
             </>
           }
         >
           <p style={{ fontSize: 13 }}>
-            This permanently removes the zone. Bins assigned to it must be
-            reassigned or deleted first.
+            Isto remove a zona permanentemente. Os endereços atribuídos a ela devem ser reatribuídos ou excluídos antes.
           </p>
           {error && <div className="form-error" style={{ marginTop: 12 }}>{error}</div>}
         </Modal>

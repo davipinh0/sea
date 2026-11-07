@@ -32,9 +32,9 @@ class ErrorBoundary extends React.Component {
           borderRadius: '8px',
           margin: '1rem'
         }}>
-          <h2 style={{ color: '#8e2716' }}>Something went wrong</h2>
+          <h2 style={{ color: '#8e2716' }}>Algo deu errado</h2>
           <p style={{ color: '#666' }}>
-            {this.props.fallbackMessage || 'This section encountered an error. Try refreshing.'}
+            {this.props.fallbackMessage || 'Esta seção encontrou um erro. Tente atualizar a página.'}
           </p>
           <button
             onClick={this.reset}
@@ -47,7 +47,7 @@ class ErrorBoundary extends React.Component {
               cursor: 'pointer'
             }}
           >
-            Retry
+            Tentar novamente
           </button>
         </div>
       );

@@ -1,3 +1,5 @@
+import { statusLabel } from '../utils/statusLabel.js';
+
 const STATUS_MAP = {
   OPEN: 'tag-info',
   'Ready to pick': 'tag-info',
@@ -21,5 +23,5 @@ const STATUS_MAP = {
 export default function StatusTag({ status }) {
   if (!status) return null;
   const cls = STATUS_MAP[status] || 'tag-gray';
-  return <span className={`tag ${cls}`}>{status}</span>;
+  return <span className={`tag ${cls}`} title={status}>{statusLabel(status)}</span>;
 }

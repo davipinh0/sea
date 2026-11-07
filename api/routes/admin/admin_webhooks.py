@@ -223,10 +223,7 @@ def _check_url_tombstone(canonical_url: str, acknowledge_url_reuse: bool):
             "error": "url_reuse_tombstone",
             "tombstone_id": int(tombstone_row.tombstone_id),
             "detail": (
-                "this delivery_url was associated with a previously-"
-                "deleted subscription. Re-submit with "
-                "acknowledge_url_reuse=true to confirm intentional "
-                "reuse."
+                "esta delivery_url estava associada a uma assinatura excluída anteriormente. Reenvie com acknowledge_url_reuse=true para confirmar a reutilização intencional."
             ),
         }
     )
@@ -249,16 +246,14 @@ def create_webhook(validated):
 
     parsed_url = urlparse(validated.delivery_url)
     if parsed_url.scheme not in ("http", "https"):
-        return jsonify({"error": "delivery_url must be http or https"}), 400
+        return jsonify({"error": "delivery_url deve ser http ou https"}), 400
     if parsed_url.scheme == "http" and not _http_webhooks_allowed():
         return (
             jsonify(
                 {
                     "error": "https_required",
                     "detail": (
-                        "delivery_url must use https. Set "
-                        "SENTRY_ALLOW_HTTP_WEBHOOKS=true to relax this in "
-                        "dev / CI; production refuses the opt-out."
+                        "delivery_url deve usar https. Defina SENTRY_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
                     ),
                 }
             ),
@@ -545,7 +540,7 @@ def update_webhook(validated, subscription_id):
     if validated.delivery_url is not None:
         parsed = urlparse(validated.delivery_url)
         if parsed.scheme not in ("http", "https"):
-            return jsonify({"error": "delivery_url must be http or https"}), 400
+            return jsonify({"error": "delivery_url deve ser http ou https"}), 400
         if parsed.scheme == "http" and not _http_webhooks_allowed():
             return jsonify({"error": "https_required"}), 400
         try:
@@ -729,9 +724,7 @@ def update_webhook(validated, subscription_id):
                     {
                         "error": "cannot_modify_revoked_subscription",
                         "detail": (
-                            "this subscription is revoked. Status changes "
-                            "out of revoked are not supported via PATCH; "
-                            "create a new subscription instead."
+                            "esta assinatura está revogada. Mudar o status de revoked não é suportado via PATCH; crie uma nova assinatura."
                         ),
                     }
                 ),
@@ -889,9 +882,7 @@ def rotate_webhook_secret(subscription_id):
                 {
                     "error": "cannot_rotate_revoked_subscription",
                     "detail": (
-                        "the subscription is revoked. Resume / un-revoke "
-                        "before rotating; a revoked subscription is not "
-                        "actively dispatching."
+                        "a assinatura está revogada. Retome / desfaça a revogação antes de rotacionar; uma assinatura revogada não está enviando."
                     ),
                 }
             ),
@@ -1036,11 +1027,7 @@ def delete_webhook(subscription_id):
                         "error": "live_deliveries_block_hard_delete",
                         "live_count": int(live.n),
                         "detail": (
-                            "the subscription has pending or in_flight "
-                            "delivery rows; hard delete is refused while "
-                            "any live row references it. Soft-delete to "
-                            "stop dispatch, then re-issue with ?purge=true "
-                            "after the deliveries terminate."
+                            "a assinatura tem entregas pending ou in_flight; a exclusão definitiva é recusada enquanto houver registro ativo referenciando-a. Faça a exclusão lógica para parar o envio e repita com ?purge=true após as entregas terminarem."
                         ),
                     }
                 ),
@@ -1208,8 +1195,7 @@ def list_dlq(subscription_id):
                 {
                     "error": "invalid_pagination",
                     "detail": (
-                        f"limit must be in [1, {_DLQ_LIMIT_MAX}]; "
-                        f"offset must be >= 0"
+                        f"limit deve estar em [1, {_DLQ_LIMIT_MAX}]; offset deve ser >= 0"
                     ),
                 }
             ),
@@ -1359,8 +1345,7 @@ def replay_single(subscription_id, delivery_id):
                 {
                     "error": "delivery_subscription_mismatch",
                     "detail": (
-                        "delivery_id does not belong to the subscription "
-                        "in the URL path."
+                        "delivery_id não pertence à assinatura informada na URL."
                     ),
                 }
             ),
@@ -1373,9 +1358,7 @@ def replay_single(subscription_id, delivery_id):
                 {
                     "error": "cannot_replay_to_revoked_subscription",
                     "detail": (
-                        "the subscription is revoked. Resume / un-revoke "
-                        "before replaying; a revoked subscription is not "
-                        "actively dispatching."
+                        "a assinatura está revogada. Retome / desfaça a revogação antes de reenviar; uma assinatura revogada não está enviando."
                     ),
                 }
             ),
@@ -1551,8 +1534,7 @@ def replay_batch(validated, subscription_id):
                 {
                     "error": "cannot_replay_to_revoked_subscription",
                     "detail": (
-                        "the subscription is revoked. Resume / un-revoke "
-                        "before replaying."
+                        "a assinatura está revogada. Retome / desfaça a revogação antes de reenviar."
                     ),
                 }
             ),
@@ -1619,11 +1601,7 @@ def replay_batch(validated, subscription_id):
                     "global_budget": global_budget,
                     "global_window_s": global_window_s,
                     "detail": (
-                        "the aggregate replay-batch budget for the "
-                        "deployment is full; wait for the rolling "
-                        "window to clear before retrying. The per-"
-                        "subscription 60s timer is the operator-error "
-                        "bucket; this is the abuse / fan-out bucket."
+                        "o orçamento agregado de reenvio em lote da implantação está cheio; aguarde a janela móvel liberar antes de tentar novamente. O temporizador de 60s por assinatura é o limite de erro do operador; este é o limite de abuso / fan-out."
                     ),
                 }
             ),
@@ -1680,9 +1658,7 @@ def replay_batch(validated, subscription_id):
                     "impact_count": impact,
                     "hard_cap": hard_cap,
                     "detail": (
-                        "the matched batch exceeds the per-call cap. "
-                        "Re-submit with acknowledge_large_replay=true to "
-                        "confirm intentional replay at this size."
+                        "o lote correspondente excede o limite por chamada. Reenvie com acknowledge_large_replay=true para confirmar o reenvio intencional neste tamanho."
                     ),
                 }
             ),
@@ -1721,11 +1697,7 @@ def replay_batch(validated, subscription_id):
                     "pending_ceiling": pending_ceiling,
                     "gap": (current_pending + impact) - pending_ceiling,
                     "detail": (
-                        "this replay would push pending+in_flight past "
-                        "the subscription's pending_ceiling. The ceiling "
-                        "is the safety rail; lift pending_ceiling via "
-                        "PATCH or wait for the backlog to drain before "
-                        "retrying."
+                        "este reenvio levaria pending+in_flight acima do pending_ceiling da assinatura. O limite é a proteção; aumente pending_ceiling via PATCH ou aguarde a fila esvaziar antes de tentar novamente."
                     ),
                 }
             ),
@@ -2065,8 +2037,7 @@ def list_webhook_errors():
                 {
                     "error": "invalid_pagination",
                     "detail": (
-                        f"limit must be in [1, {_WEBHOOK_ERRORS_LIMIT_MAX}]; "
-                        f"offset must be >= 0"
+                        f"limit deve estar em [1, {_WEBHOOK_ERRORS_LIMIT_MAX}]; offset deve ser >= 0"
                     ),
                 }
             ),

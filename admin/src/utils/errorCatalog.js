@@ -13,36 +13,36 @@
 
 export const ERROR_CATALOG = {
   timeout: {
-    short_message: 'Consumer endpoint did not respond in time',
-    description: 'The consumer\'s webhook endpoint did not respond within the dispatch timeout (default 10s). The dispatcher abandoned the attempt and will retry per the exponential backoff schedule.',
+    short_message: 'O endpoint do consumidor não respondeu a tempo',
+    description: 'O endpoint de webhook do consumidor não respondeu dentro do tempo limite de envio (padrão 10s). O dispatcher abandonou a tentativa e tentará novamente com backoff exponencial.',
   },
   connection: {
-    short_message: 'Could not connect to consumer endpoint',
-    description: 'The TCP connection to the consumer\'s endpoint failed before any HTTP exchange. The hostname may be unresolvable, the port may be closed, or a firewall may be dropping the request.',
+    short_message: 'Não foi possível conectar ao endpoint do consumidor',
+    description: 'A conexão TCP com o endpoint do consumidor falhou antes de qualquer troca HTTP. O hostname pode não resolver, a porta pode estar fechada ou um firewall pode estar bloqueando a requisição.',
   },
   tls: {
-    short_message: 'TLS handshake failed',
-    description: 'The TLS handshake to the consumer\'s endpoint failed. The consumer may be presenting an expired or self-signed certificate, the cipher suites may not overlap, or the consumer\'s hostname may not match its certificate.',
+    short_message: 'Falha no handshake TLS',
+    description: 'O handshake TLS com o endpoint do consumidor falhou. O consumidor pode estar apresentando um certificado expirado ou autoassinado, as cifras podem não ser compatíveis ou o hostname pode não corresponder ao certificado.',
   },
   ssrf_rejected: {
-    short_message: 'Delivery URL resolved to a private or internal IP',
-    description: 'The dispatcher\'s SSRF guard rejected the delivery_url because its DNS resolution returned a private (RFC1918), loopback, or cloud-IMDS address. The dispatcher refuses to POST to internal targets to defend against DNS rebinding and split-horizon DNS attacks.',
+    short_message: 'A URL de entrega resolveu para um IP privado ou interno',
+    description: 'A proteção contra SSRF do dispatcher rejeitou a delivery_url porque a resolução DNS retornou um endereço privado (RFC1918), de loopback ou de IMDS da nuvem. O dispatcher se recusa a enviar para destinos internos para se defender de ataques de DNS rebinding e split-horizon DNS.',
   },
   redirected: {
-    short_message: 'Consumer endpoint returned a 3xx redirect',
-    description: 'The consumer\'s endpoint returned a 3xx redirect response. The dispatcher does not follow redirects (allow_redirects=False is a security invariant). The delivery is treated as a failure and the retry schedule applies.',
+    short_message: 'O endpoint do consumidor retornou um redirecionamento 3xx',
+    description: 'O endpoint do consumidor retornou um redirecionamento 3xx. O dispatcher não segue redirecionamentos (allow_redirects=False é uma regra de segurança). A entrega é tratada como falha e a política de novas tentativas se aplica.',
   },
   '4xx': {
-    short_message: 'Consumer rejected the request (4xx response)',
-    description: 'The consumer\'s endpoint returned a 4xx HTTP response. The consumer rejected the payload, the signature, the headers, or the request shape.',
+    short_message: 'O consumidor rejeitou a requisição (resposta 4xx)',
+    description: 'O endpoint do consumidor retornou uma resposta HTTP 4xx. O consumidor rejeitou o payload, a assinatura, os cabeçalhos ou o formato da requisição.',
   },
   '5xx': {
-    short_message: 'Consumer endpoint returned a server error (5xx)',
-    description: 'The consumer\'s endpoint returned a 5xx HTTP response. The consumer accepted the request but failed to process it. The dispatcher will retry per the exponential backoff schedule; sustained 5xx auto-pauses the subscription via the DLQ ceiling.',
+    short_message: 'O endpoint do consumidor retornou um erro de servidor (5xx)',
+    description: 'O endpoint do consumidor retornou uma resposta HTTP 5xx. O consumidor aceitou a requisição, mas falhou ao processá-la. O dispatcher tentará novamente com backoff exponencial; 5xx persistentes pausam a assinatura automaticamente pelo limite da DLQ.',
   },
   unknown: {
-    short_message: 'Delivery failed (unclassified)',
-    description: 'The dispatcher could not classify the failure into one of the documented error_kinds. This usually indicates a library exception the classification layer did not recognize.',
+    short_message: 'Falha na entrega (não classificada)',
+    description: 'O dispatcher não conseguiu classificar a falha em nenhum dos error_kinds documentados. Isso geralmente indica uma exceção de biblioteca que a camada de classificação não reconheceu.',
   },
 };
 

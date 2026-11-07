@@ -54,7 +54,7 @@ export default function Layout() {
       </main>
       {permError && (
         <Modal
-          title="Permissions Error"
+          title="Erro de permissão"
           onClose={dismissPermError}
           footer={
             <button className="btn btn-primary" onClick={dismissPermError}>
@@ -63,15 +63,15 @@ export default function Layout() {
           }
         >
           <p style={{ fontSize: 14, marginBottom: 12 }}>
-            You do not have permission to access this resource.
+            Você não tem permissão para acessar este recurso.
           </p>
           {permError.page_key && (
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-              Page: <span className="mono">{permError.page_key}</span>
+              Página: <span className="mono">{permError.page_key}</span>
             </p>
           )}
           <p style={{ fontSize: 13 }}>
-            Contact an administrator if you need access.
+            Contate um administrador se precisar de acesso.
           </p>
         </Modal>
       )}

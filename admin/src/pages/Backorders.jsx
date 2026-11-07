@@ -27,15 +27,15 @@ import { formatDateOnly } from '../utils/date.js';
 // navigation and can be linked to.
 
 const TABS = [
-  { key: 'waiting', label: 'Waiting' },
-  { key: 'ready-to-ship', label: 'Ready to Ship' },
+  { key: 'waiting', label: 'Aguardando' },
+  { key: 'ready-to-ship', label: 'Pronto para expedir' },
 ];
 
 const CANCEL_REASONS = [
-  { value: 'found', label: 'Found in warehouse' },
-  { value: 'customer_asked', label: 'Customer asked to cancel' },
-  { value: 'refunded', label: 'Refunded' },
-  { value: 'other', label: 'Other' },
+  { value: 'found', label: 'Encontrado no armazém' },
+  { value: 'customer_asked', label: 'Cliente pediu cancelamento' },
+  { value: 'refunded', label: 'Reembolsado' },
+  { value: 'other', label: 'Outro' },
 ];
 
 
@@ -45,13 +45,13 @@ const CANCEL_REASONS = [
 // rendered explicitly: "no open PO" has to read differently from a field that
 // did not load.
 function OrderedLine({ openPo }) {
-  if (!openPo) return <div>not on an open PO</div>;
+  if (!openPo) return <div>não está em um pedido de compra aberto</div>;
   return (
     <div>
-      on <span className="mono">{openPo.po_number}</span>
+      em <span className="mono">{openPo.po_number}</span>
       {openPo.expected_date
-        ? `, expected ${formatDateOnly(openPo.expected_date)}`
-        : ', no expected date'}
+        ? `, previsto ${formatDateOnly(openPo.expected_date)}`
+        : ', sem data prevista'}
     </div>
   );
 }
@@ -60,7 +60,7 @@ function OrderedLine({ openPo }) {
 // working the queue, so the name sits under the mono SKU line.
 function ItemsCell({ items }) {
   if (!items || items.length === 0) {
-    return <span style={{ color: 'var(--text-secondary)' }}>(none)</span>;
+    return <span style={{ color: 'var(--text-secondary)' }}>(nenhum)</span>;
   }
   return (
     <div style={{ fontSize: 12, lineHeight: 1.4 }}>
@@ -125,7 +125,7 @@ export default function Backorders() {
       setRows(data.backorders || []);
     } else {
       setRows([]);
-      setActionError('Failed to load backorders.');
+      setActionError('Falha ao carregar pendências.');
     }
     setLoading(false);
   }, [tab, warehouseId]);
@@ -157,12 +157,12 @@ export default function Backorders() {
     if (!res?.ok) {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON */ }
-      setCancelError(data?.error || 'Failed to cancel backorder.');
+      setCancelError(data?.error || 'Falha ao cancelar pendência.');
       return;
     }
     const soNumber = cancelTarget.so_number;
     closeCancel();
-    setSuccessBanner(`Backorder ${soNumber} cancelled (${cancelReason}).`);
+    setSuccessBanner(`Pendência ${soNumber} cancelada (${cancelReason}).`);
     setTimeout(() => setSuccessBanner(''), 6000);
     load();
   }
@@ -171,13 +171,13 @@ export default function Backorders() {
   // "Fulfillable since" so the operator can prioritise the longest-
   // waiting ready batch first.
   const baseColumns = [
-    { key: 'so_number', label: 'Backorder #', mono: true },
-    { key: 'parent_so_number', label: 'Parent SO', mono: true,
+    { key: 'so_number', label: 'Pendência nº', mono: true },
+    { key: 'parent_so_number', label: 'PV de origem', mono: true,
       render: (r) => r.parent_so_number || <span style={{ color: 'var(--text-secondary)' }}>-</span> },
-    { key: 'customer_name', label: 'Customer',
+    { key: 'customer_name', label: 'Cliente',
       render: (r) => r.customer_name || <span style={{ color: 'var(--text-secondary)' }}>-</span> },
-    { key: 'items', label: 'Items', render: (r) => <ItemsCell items={r.items} /> },
-    { key: 'days_waiting', label: 'Days waiting',
+    { key: 'items', label: 'Materiais', render: (r) => <ItemsCell items={r.items} /> },
+    { key: 'days_waiting', label: 'Dias aguardando',
       render: (r) => (
         <span className="mono">
           {r.days_waiting}
@@ -188,7 +188,7 @@ export default function Backorders() {
 
   const readyColumn = {
     key: 'fulfillable_since',
-    label: 'Fulfillable since',
+    label: 'Atendível desde',
     render: (r) => r.fulfillable_since
       ? new Date(r.fulfillable_since).toLocaleDateString()
       : <span style={{ color: 'var(--text-secondary)' }}>-</span>,
@@ -201,9 +201,9 @@ export default function Backorders() {
       <button
         className="btn btn-sm btn-danger"
         onClick={(e) => { e.stopPropagation(); openCancel(r); }}
-        title="Cancel this backorder"
+        title="Cancelar esta pendência"
       >
-        Cancel
+        Cancelar
       </button>
     ),
   };
@@ -221,7 +221,7 @@ export default function Backorders() {
 
   return (
     <div>
-      <PageHeader title="Backorders" />
+      <PageHeader title="Pendências" />
       {successBanner && (
         <div
           role="status"
@@ -261,8 +261,8 @@ export default function Backorders() {
           data={rows}
           loading={loading}
           emptyMessage={tab === 'waiting'
-            ? 'No backorders waiting for stock.'
-            : 'No backorders are ready to ship right now.'}
+            ? 'Nenhuma pendência aguardando estoque.'
+            : 'Nenhuma pendência pronta para expedir agora.'}
           onRowClick={openRow}
           clickColumn="so_number"
         />
@@ -286,19 +286,19 @@ export default function Backorders() {
 
       {cancelTarget && (
         <Modal
-          title={`Cancel backorder ${cancelTarget.so_number}?`}
+          title={`Cancelar pendência ${cancelTarget.so_number}?`}
           onClose={closeCancel}
           footer={
             <>
               <button className="btn" onClick={closeCancel} disabled={cancelSubmitting}>
-                Keep Backorder
+                Manter pendência
               </button>
               <button
                 className="btn btn-danger"
                 onClick={submitCancel}
                 disabled={cancelSubmitting}
               >
-                {cancelSubmitting ? 'Cancelling...' : 'Cancel Backorder'}
+                {cancelSubmitting ? 'Cancelando...' : 'Cancelar pendência'}
               </button>
             </>
           }
@@ -307,13 +307,10 @@ export default function Backorders() {
             <div className="form-error" style={{ marginBottom: 12 }}>{cancelError}</div>
           )}
           <p style={{ fontSize: 13, marginBottom: 12 }}>
-            Cancelling will mark <strong>{cancelTarget.so_number}</strong> as
-            CANCELLED. The parent SO (<span className="mono">{cancelTarget.parent_so_number}</span>)
-            is unaffected. A backorder.cancelled event fires on the
-            integration outbox + Teams channel.
+            Cancelar marcará <strong>{cancelTarget.so_number}</strong> como CANCELADA. O PV de origem (<span className="mono">{cancelTarget.parent_so_number}</span>) não é afetado. Um evento backorder.cancelled é disparado na fila de integração + canal do Teams.
           </p>
           <div className="form-group">
-            <label>Reason</label>
+            <label>Motivo</label>
             <select
               className="form-select"
               value={cancelReason}

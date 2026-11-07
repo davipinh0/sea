@@ -6,8 +6,9 @@ import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import SalesOrderModal from '../components/SalesOrderModal.jsx';
+import { statusLabel } from '../utils/statusLabel.js';
 
-const STATUS_OPTIONS = ['All', 'OPEN', 'PICKED', 'PACKED', 'SHIPPED', 'CANCELLED', 'REFUNDED'];
+const STATUS_OPTIONS = ['Todos', 'OPEN', 'PICKED', 'PACKED', 'SHIPPED', 'CANCELLED', 'REFUNDED'];
 
 export default function SalesOrders() {
   const [searchParams] = useSearchParams();
@@ -84,19 +85,19 @@ export default function SalesOrders() {
   }
 
   const columns = [
-    { key: 'so_number', label: 'SO Number', mono: true },
-    { key: 'customer_name', label: 'Customer' },
-    { key: 'ship_by_date', label: 'Ship By', mono: true, render: (r) => r.ship_by_date ? formatDateOnly(r.ship_by_date) : '-' },
+    { key: 'so_number', label: 'Número do PV', mono: true },
+    { key: 'customer_name', label: 'Cliente' },
+    { key: 'ship_by_date', label: 'Expedir até', mono: true, render: (r) => r.ship_by_date ? formatDateOnly(r.ship_by_date) : '-' },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
-    { key: 'created_at', label: 'Created', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-' },
+    { key: 'created_at', label: 'Criado', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-' },
     { key: 'actions', label: '', render: (r) => (
-      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
+      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Sales Orders" />
+      <PageHeader title="Pedidos de venda" />
       {successBanner && (
         <div
           role="status"
@@ -117,12 +118,12 @@ export default function SalesOrders() {
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Status:</label>
         <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ width: 160 }}>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
         <input
           className="form-input"
           style={{ maxWidth: 320 }}
-          placeholder="Search by SO number or customer"
+          placeholder="Buscar por número do PV ou cliente"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
@@ -136,7 +137,7 @@ export default function SalesOrders() {
         onPageChange={setPage}
         onRowClick={openView}
         clickColumn="so_number"
-        emptyMessage="No sales orders found"
+        emptyMessage="Nenhum pedido de venda encontrado"
       />
 
       <SalesOrderModal

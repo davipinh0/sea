@@ -451,7 +451,7 @@ class TestAdjustmentSelfApproval:
             headers=auth_headers,
         )
         assert resp.status_code == 403
-        assert "Cannot approve your own cycle count" in resp.get_json()["error"]
+        assert "Você não pode aprovar a sua própria contagem cíclica" in resp.get_json()["error"]
 
 
 class TestPendingAdjustmentsList:

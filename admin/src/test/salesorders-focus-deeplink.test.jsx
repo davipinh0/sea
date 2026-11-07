@@ -76,10 +76,10 @@ describe('?focus= deep-link', () => {
     wire();
     renderAt('/sales-orders?focus=SO-FOCUS-77');
 
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
     // The edit form's Save button is the tell; it must not be here.
-    expect(screen.queryByText('Save')).toBeNull();
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-FOCUS-77');
+    expect(screen.queryByText('Salvar')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-FOCUS-77');
   });
 
   it('shows the order note without the operator entering edit mode', async () => {
@@ -88,15 +88,15 @@ describe('?focus= deep-link', () => {
     wire();
     renderAt('/sales-orders?focus=SO-FOCUS-77');
 
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
     expect(screen.getByText('Leave at the back door')).toBeTruthy();
-    expect(screen.queryByText('Save')).toBeNull();
+    expect(screen.queryByText('Salvar')).toBeNull();
   });
 
   it('matches so_number case-insensitively', async () => {
     wire();
     renderAt('/sales-orders?focus=so-focus-77');
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
   });
 
   it('does nothing when focus matches no order', async () => {
@@ -108,18 +108,18 @@ describe('?focus= deep-link', () => {
     });
     renderAt('/sales-orders?focus=SO-NOPE');
     await waitFor(() => expect(apiGetMock).toHaveBeenCalled());
-    expect(screen.queryByText('Order Summary')).toBeNull();
-    expect(screen.queryByText('Save')).toBeNull();
+    expect(screen.queryByText('Resumo do pedido')).toBeNull();
+    expect(screen.queryByText('Salvar')).toBeNull();
   });
 
   it('the row pencil still reaches the edit form', async () => {
     wire();
     renderAt('/sales-orders');
-    const pencil = await screen.findByLabelText('Edit');
+    const pencil = await screen.findByLabelText('Editar');
 
     await act(async () => { fireEvent.click(pencil); });
 
-    await waitFor(() => expect(screen.getByText('Save')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Salvar')).toBeTruthy());
   });
 
   it('a plain row click opens the view, same as the deep-link', async () => {
@@ -129,7 +129,7 @@ describe('?focus= deep-link', () => {
 
     await act(async () => { fireEvent.click(cell); });
 
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
-    expect(screen.queryByText('Save')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
+    expect(screen.queryByText('Salvar')).toBeNull();
   });
 });

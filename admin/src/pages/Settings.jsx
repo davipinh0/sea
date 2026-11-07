@@ -152,10 +152,10 @@ export default function Settings() {
     const res = await api.put('/admin/settings', { settings: draftSettings });
     if (res?.ok) {
       setSavedSettings({ ...draftSettings });
-      setSettingsSuccess('Settings saved');
+      setSettingsSuccess('Configurações salvas');
     } else {
       const data = await res?.json();
-      setSettingsError(data?.error || 'Failed to save settings');
+      setSettingsError(data?.error || 'Falha ao salvar as configurações');
     }
     setSettingsSaving(false);
   }
@@ -253,7 +253,7 @@ export default function Settings() {
     for (let i = 0; i < entries.length; i++) {
       const itemId = ids[i];
       if (!itemId) {
-        setFormError(`Unknown SKU: ${entries[i].sku}`);
+        setFormError(`SKU desconhecido: ${entries[i].sku}`);
         return;
       }
       resolved.push({ item_id: itemId, quantity_ordered: Number(entries[i].quantity_ordered) });
@@ -262,17 +262,17 @@ export default function Settings() {
       po_number: poForm.po_number,
       warehouse_id: poForm.warehouse_id || warehouseId,
       vendor_name: poForm.vendor_name || null,
-      notes: poForm.vendor_address ? `Vendor address: ${poForm.vendor_address}` : null,
+      notes: poForm.vendor_address ? `Endereço do fornecedor: ${poForm.vendor_address}` : null,
       lines: resolved,
     };
     const res = await api.post('/admin/purchase-orders', body);
     if (res?.ok) {
-      setFormSuccess('PO created');
+      setFormSuccess('PC criado');
       setShowPO(false);
       setPoForm({ po_number: '', vendor_name: '', vendor_address: '', warehouse_id: warehouseId, lines: [{ sku: '', quantity_ordered: '' }] });
     } else {
       const data = await res?.json();
-      setFormError(data?.error || 'Failed to create PO');
+      setFormError(data?.error || 'Falha ao criar PC');
     }
   }
 
@@ -293,7 +293,7 @@ export default function Settings() {
     for (let i = 0; i < entries.length; i++) {
       const itemId = ids[i];
       if (!itemId) {
-        setFormError(`Unknown SKU: ${entries[i].sku}`);
+        setFormError(`SKU desconhecido: ${entries[i].sku}`);
         return;
       }
       resolved.push({ item_id: itemId, quantity_ordered: Number(entries[i].quantity_ordered) });
@@ -309,12 +309,12 @@ export default function Settings() {
     };
     const res = await api.post('/admin/sales-orders', body);
     if (res?.ok) {
-      setFormSuccess('SO created');
+      setFormSuccess('PV criado');
       setShowSO(false);
       setSoForm({ order_number: '', customer_name: '', address_line_1: '', address_line_2: '', city: '', state: '', zip: '', phone: '', warehouse_id: warehouseId, lines: [{ sku: '', quantity_ordered: '' }] });
     } else {
       const data = await res?.json();
-      setFormError(data?.error || 'Failed to create SO');
+      setFormError(data?.error || 'Falha ao criar PV');
     }
   }
 
@@ -330,36 +330,36 @@ export default function Settings() {
           <option key={k} value={k.toUpperCase()} />
         ))}
       </datalist>
-      <PageHeader title="Settings" />
+      <PageHeader title="Configurações" />
 
       {formSuccess && <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: 'var(--radius)', fontSize: 13 }}>{formSuccess}</div>}
 
       {/* Warehouse config */}
       <div className="settings-section">
-        <h3>Warehouse</h3>
+        <h3>Armazém</h3>
         {warehouse && !editingWh && (
           <div>
             <div className="detail-grid" style={{ marginBottom: 12 }}>
-              <span className="detail-label">Name</span><span>{warehouse.warehouse_name}</span>
-              <span className="detail-label">Code</span><span className="mono">{warehouse.warehouse_code}</span>
-              <span className="detail-label">Address</span><span>{warehouse.address || '-'}</span>
+              <span className="detail-label">Nome</span><span>{warehouse.warehouse_name}</span>
+              <span className="detail-label">Código</span><span className="mono">{warehouse.warehouse_code}</span>
+              <span className="detail-label">Endereço postal</span><span>{warehouse.address || '-'}</span>
             </div>
-            <button className="btn btn-sm" onClick={() => setEditingWh(true)}>Edit</button>
+            <button className="btn btn-sm" onClick={() => setEditingWh(true)}>Editar</button>
           </div>
         )}
         {editingWh && (
           <div>
             <div className="form-group">
-              <label>Name</label>
+              <label>Nome</label>
               <input className="form-input" value={whForm.warehouse_name || ''} onChange={(e) => setWhForm({ ...whForm, warehouse_name: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Address</label>
+              <label>Endereço postal</label>
               <input className="form-input" value={whForm.address || ''} onChange={(e) => setWhForm({ ...whForm, address: e.target.value })} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => setEditingWh(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveWarehouse}>Save</button>
+              <button className="btn" onClick={() => setEditingWh(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveWarehouse}>Salvar</button>
             </div>
           </div>
         )}
@@ -367,17 +367,17 @@ export default function Settings() {
 
       {/* Manual PO/SO */}
       <div className="settings-section">
-        <h3>Manual Entry</h3>
-        <p className="settings-note">For standalone deployments or testing only. In production, POs and SOs come from your ERP.</p>
+        <h3>Cadastro manual</h3>
+        <p className="settings-note">Apenas para implantações independentes ou testes. Em produção, PCs e PVs vêm do seu ERP.</p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn" onClick={openPoModal}>Create Purchase Order</button>
-          <button className="btn" onClick={openSoModal}>Create Sales Order</button>
+          <button className="btn" onClick={openPoModal}>Criar pedido de compra</button>
+          <button className="btn" onClick={openSoModal}>Criar pedido de venda</button>
         </div>
       </div>
 
       {/* Fulfillment Workflow */}
       <div className="settings-section">
-        <h3>Fulfillment Workflow</h3>
+        <h3>Fluxo de atendimento</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -385,25 +385,25 @@ export default function Settings() {
               checked={toBool(draftSettings.require_packing_before_shipping)}
               onChange={(e) => updateDraft('require_packing_before_shipping', String(e.target.checked))}
             />
-            Require packing before shipping
+            Exigir embalagem antes da expedição
           </label>
         </div>
-        <p className="settings-note">When enabled, orders must be packed before they can be shipped. When disabled, picked orders can be shipped directly.</p>
+        <p className="settings-note">Quando ligado, os pedidos precisam ser embalados antes da expedição. Quando desligado, pedidos separados podem ser expedidos diretamente.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', marginTop: 8 }}>
-          <label style={{ fontSize: 13, whiteSpace: 'nowrap' }}>Default Receiving Bin</label>
+          <label style={{ fontSize: 13, whiteSpace: 'nowrap' }}>Endereço padrão de recebimento</label>
           <select
             className="form-select"
             style={{ width: 200 }}
             value={draftSettings.default_receiving_bin || ''}
             onChange={(e) => updateDraft('default_receiving_bin', e.target.value)}
           >
-            <option value="">Select bin...</option>
+            <option value="">Selecione o endereço...</option>
             {receivingBins.map((b) => (
               <option key={b.bin_id} value={String(b.bin_id)}>{b.bin_code}</option>
             ))}
           </select>
         </div>
-        <p className="settings-note">The default bin where received items are staged. Mobile users can override this per session.</p>
+        <p className="settings-note">Endereço padrão onde os materiais recebidos ficam em staging. Usuários do app móvel podem alterar por sessão.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', marginTop: 8 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -411,15 +411,15 @@ export default function Settings() {
               checked={toBool(draftSettings.allow_over_receiving)}
               onChange={(e) => updateDraft('allow_over_receiving', String(e.target.checked))}
             />
-            Allow over-receiving
+            Permitir recebimento acima do pedido
           </label>
         </div>
-        <p className="settings-note">When enabled, users can receive more than the PO quantity (with a warning). When disabled, over-receiving is blocked.</p>
+        <p className="settings-note">Quando ligado, os usuários podem receber mais do que a quantidade do PC (com aviso). Quando desligado, o recebimento acima do pedido é bloqueado.</p>
       </div>
 
       {/* Mobile App Settings */}
       <div className="settings-section">
-        <h3>Mobile App</h3>
+        <h3>Aplicativo móvel</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -427,15 +427,15 @@ export default function Settings() {
               checked={toBool(draftSettings.count_show_expected)}
               onChange={(e) => updateDraft('count_show_expected', String(e.target.checked))}
             />
-            Show expected quantities during cycle counts
+            Mostrar quantidades esperadas nas contagens cíclicas
           </label>
         </div>
-        <p className="settings-note">When disabled, counters won't see expected quantities - useful for blind counts.</p>
+        <p className="settings-note">Quando desligado, os contadores não veem as quantidades esperadas - útil para contagens cegas.</p>
       </div>
 
       {/* Inventory */}
       <div className="settings-section">
-        <h3>Inventory</h3>
+        <h3>Estoque</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -443,14 +443,14 @@ export default function Settings() {
               checked={toBool(draftSettings.require_count_approval_separation)}
               onChange={(e) => updateDraft('require_count_approval_separation', String(e.target.checked))}
             />
-            Require separate approver for cycle count adjustments
+            Exigir aprovador separado para ajustes de contagem cíclica
           </label>
         </div>
-        <p className="settings-note">When enabled, the admin who performed a cycle count cannot approve the resulting adjustments. A different admin must review and approve.</p>
+        <p className="settings-note">Quando ligado, o administrador que fez a contagem cíclica não pode aprovar os ajustes resultantes. Outro administrador deve revisar e aprovar.</p>
       </div>
 
       <div className="settings-section">
-        <h3>POS</h3>
+        <h3>PDV</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -458,14 +458,14 @@ export default function Settings() {
               checked={toBool(draftSettings.pos_activity_enabled)}
               onChange={(e) => updateDraft('pos_activity_enabled', String(e.target.checked))}
             />
-            Show the POS Activity dashboard
+            Mostrar o painel Atividade PDV
           </label>
         </div>
-        <p className="settings-note">Adds a POS Activity tab to the Outbound nav with point-of-sale order activity and daily KPIs. Off by default; enable it for deployments that use the POS checkout surface.</p>
+        <p className="settings-note">Adiciona a aba Atividade PDV no menu Saída, com a atividade de pedidos do ponto de venda e indicadores diários. Desligado por padrão; ative-o em implantações que usam o checkout PDV.</p>
       </div>
 
       <div className="settings-section">
-        <h3>Fraud Review</h3>
+        <h3>Análise de fraude</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
             <input
@@ -473,21 +473,17 @@ export default function Settings() {
               checked={toBool(draftSettings.fraud_review_billing_shipping)}
               onChange={(e) => updateDraft('fraud_review_billing_shipping', String(e.target.checked))}
             />
-            Auto-flag orders where billing and shipping addresses differ
+            Sinalizar automaticamente pedidos com endereço de cobrança diferente do de entrega
           </label>
         </div>
-        <p className="settings-note">One built-in heuristic for the Outbound &gt; Fraud queue: when on, an inbound order whose billing and shipping addresses diverge (street / city / state / postal, both sides populated) lands in FRAUD_REVIEW and is held out of picking until a CSR clears it. Off by default. A CSR can always flag or clear an order manually regardless of this setting.</p>
+        <p className="settings-note">Uma heurística embutida para a fila Saída &gt; Fraude: quando ligada, um pedido recebido cujos endereços de cobrança e entrega divergem (rua / cidade / estado / CEP, ambos preenchidos) vai para FRAUD_REVIEW e fica fora da separação até um atendente liberá-lo. Desligado por padrão. Um atendente sempre pode sinalizar ou liberar um pedido manualmente, independentemente desta configuração.</p>
       </div>
 
       <div className="settings-section">
-        <h3>Marketplace Health</h3>
+        <h3>Saúde dos marketplaces</h3>
         <p className="settings-note">
-          Channels shown on the Dashboard &gt; Marketplace Health view. Origin is
-          matched verbatim against each sales order's <code>order_origin</code>
-          value (the label the inbound channel mapping writes, or
-          &quot;Phone Order&quot; for POS phone orders); Label is the display name
-          on the bubble. With no channels configured the view shows nothing -- add
-          one row per channel you want a health bubble for.
+          Canais exibidos em Painel &gt; Saúde dos marketplaces. A origem é comparada literalmente com o campo do pedido de venda <code>order_origin</code>
+          (o rótulo gravado pelo mapeamento do canal de entrada, ou "Phone Order" para pedidos por telefone no PDV); Rótulo é o nome exibido no indicador. Sem canais configurados a visualização fica vazia -- adicione uma linha por canal que deve ter indicador.
         </p>
         {bubbleRows().map((b, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, padding: '4px 0', maxWidth: 560, alignItems: 'center' }}>
@@ -503,64 +499,63 @@ export default function Settings() {
               style={{ flex: 1 }}
               value={b.label || ''}
               onChange={(e) => updateBubble(i, 'label', e.target.value)}
-              placeholder="Display label (e.g. Amazon)"
+              placeholder="Rótulo de exibição (ex.: Amazon)"
             />
             <button type="button" className="btn btn-secondary" onClick={() => removeBubble(i)}>
-              Remove
+              Remover
             </button>
           </div>
         ))}
         <div style={{ padding: '8px 0' }}>
           <button type="button" className="btn btn-secondary" onClick={addBubble}>
-            Add channel
+            Adicionar canal
           </button>
         </div>
       </div>
 
       {/* Picking Ticket branding */}
       <div className="settings-section">
-        <h3>Picking Ticket</h3>
+        <h3>Ficha de separação</h3>
         <p className="settings-note">
-          Branding for the printable packing slip (Outbound &gt; Picking Tickets).
-          All fields are optional; leave them blank for a clean, unbranded slip.
+          Identidade visual do romaneio imprimível (Saída &gt; Fichas de separação). Todos os campos são opcionais; deixe-os em branco para um romaneio limpo, sem marca.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0', maxWidth: 480 }}>
-          <label style={{ fontSize: 13 }}>Company name</label>
+          <label style={{ fontSize: 13 }}>Nome da empresa</label>
           <input
             className="form-input"
             value={draftSettings.picking_ticket_company_name || ''}
             onChange={(e) => updateDraft('picking_ticket_company_name', e.target.value)}
-            placeholder="e.g. Acme Distribution"
+            placeholder="ex.: Distribuidora Exemplo"
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0', maxWidth: 480 }}>
-          <label style={{ fontSize: 13 }}>Company address</label>
+          <label style={{ fontSize: 13 }}>Endereço da empresa</label>
           <textarea
             className="form-input"
             rows={4}
             value={draftSettings.picking_ticket_company_address || ''}
             onChange={(e) => updateDraft('picking_ticket_company_address', e.target.value)}
-            placeholder={'One line per row, e.g.\n123 Warehouse Way\nSuite 100\nCity ST 00000'}
+            placeholder={'Uma linha por item, ex.:\nRua do Armazém, 123\nGalpão 100\nCidade UF 00000-000'}
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0', maxWidth: 480 }}>
-          <label style={{ fontSize: 13 }}>Logo URL</label>
+          <label style={{ fontSize: 13 }}>URL do logo</label>
           <input
             className="form-input"
             value={draftSettings.picking_ticket_logo_url || ''}
             onChange={(e) => updateDraft('picking_ticket_logo_url', e.target.value)}
             placeholder="/picking-tickets/logo.png or https://..."
           />
-          <p className="settings-note">Path or URL to a logo image shown in the slip header. Blank hides it.</p>
+          <p className="settings-note">Caminho ou URL de uma imagem de logo exibida no cabeçalho do romaneio. Em branco, oculta.</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0', maxWidth: 480 }}>
-          <label style={{ fontSize: 13 }}>Returns text</label>
+          <label style={{ fontSize: 13 }}>Texto de devoluções</label>
           <textarea
             className="form-input"
             rows={3}
             value={draftSettings.picking_ticket_returns_text || ''}
             onChange={(e) => updateDraft('picking_ticket_returns_text', e.target.value)}
-            placeholder="e.g. Returns accepted within 30 days. See example.com/returns."
+            placeholder="ex.: Devoluções aceitas em até 30 dias. Veja exemplo.com/devolucoes."
           />
         </div>
       </div>
@@ -568,46 +563,46 @@ export default function Settings() {
       {/* Save button */}
       <div className="settings-section" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button className="btn btn-primary" onClick={saveSettings} disabled={!hasUnsavedChanges || settingsSaving}>
-          {settingsSaving ? 'Saving...' : 'Save Settings'}
+          {settingsSaving ? 'Salvando...' : 'Salvar configurações'}
         </button>
-        {hasUnsavedChanges && <span style={{ fontSize: 12, color: 'var(--copper)' }}>Unsaved changes</span>}
+        {hasUnsavedChanges && <span style={{ fontSize: 12, color: 'var(--copper)' }}>Alterações não salvas</span>}
         {settingsSuccess && <span style={{ fontSize: 12, color: 'var(--success)' }}>{settingsSuccess}</span>}
         {settingsError && <span style={{ fontSize: 12, color: 'var(--danger)' }}>{settingsError}</span>}
       </div>
 
       {/* About */}
       <div className="settings-section">
-        <h3>About</h3>
+        <h3>Sobre</h3>
         <div className="detail-grid">
-          <span className="detail-label">Version</span><span className="mono">1.37.0</span>
-          <span className="detail-label">Repository</span><span><a href="https://github.com/hightower-systems/sentry-wms" target="_blank" rel="noopener noreferrer">github.com/hightower-systems/sentry-wms</a></span>
+          <span className="detail-label">Versão</span><span className="mono">1.37.0</span>
+          <span className="detail-label">Repositório</span><span><a href="https://github.com/hightower-systems/sentry-wms" target="_blank" rel="noopener noreferrer">github.com/hightower-systems/sentry-wms</a></span>
         </div>
       </div>
 
       {/* PO Modal */}
       {showPO && (
-        <Modal title="Create Purchase Order" onClose={closePoModal}
-          footer={<><button className="btn" onClick={closePoModal}>Cancel</button><button className="btn btn-primary" onClick={createPO}>Create PO</button></>}
+        <Modal title="Criar pedido de compra" onClose={closePoModal}
+          footer={<><button className="btn" onClick={closePoModal}>Cancelar</button><button className="btn btn-primary" onClick={createPO}>Criar PC</button></>}
         >
           {formError && <div className="form-error" style={{ marginBottom: 12 }}>{formError}</div>}
           <div className="form-row">
             <div className="form-group">
-              <label>PO Number</label>
+              <label>Número do PC</label>
               <input className="form-input" value={poForm.po_number} onChange={(e) => setPoForm({ ...poForm, po_number: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Vendor</label>
+              <label>Fornecedor</label>
               <input className="form-input" value={poForm.vendor_name} onChange={(e) => setPoForm({ ...poForm, vendor_name: e.target.value })} />
             </div>
           </div>
           <div className="form-group">
-            <label>Vendor Address</label>
-            <input className="form-input" value={poForm.vendor_address} onChange={(e) => setPoForm({ ...poForm, vendor_address: e.target.value })} placeholder="Optional" />
+            <label>Endereço do fornecedor</label>
+            <input className="form-input" value={poForm.vendor_address} onChange={(e) => setPoForm({ ...poForm, vendor_address: e.target.value })} placeholder="Opcional" />
           </div>
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Lines</label>
-              <button className="btn btn-sm" onClick={addPOLine}>+ Line</button>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Linhas</label>
+              <button className="btn btn-sm" onClick={addPOLine}>+ Linha</button>
             </div>
             {poForm.lines.map((line, i) => (
               <div className="form-row" key={i} style={{ marginBottom: 8 }}>
@@ -615,7 +610,7 @@ export default function Settings() {
                   <input className="form-input" list="settings-sku-datalist" placeholder="SKU" value={line.sku} onChange={(e) => updatePOLine(i, 'sku', e.target.value)} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <input className="form-input" type="number" placeholder="Qty ordered" value={line.quantity_ordered} onChange={(e) => updatePOLine(i, 'quantity_ordered', e.target.value)} />
+                  <input className="form-input" type="number" placeholder="Qtd. pedida" value={line.quantity_ordered} onChange={(e) => updatePOLine(i, 'quantity_ordered', e.target.value)} />
                 </div>
               </div>
             ))}
@@ -625,52 +620,52 @@ export default function Settings() {
 
       {/* SO Modal */}
       {showSO && (
-        <Modal title="Create Sales Order" onClose={closeSoModal}
-          footer={<><button className="btn" onClick={closeSoModal}>Cancel</button><button className="btn btn-primary" onClick={createSO}>Create SO</button></>}
+        <Modal title="Criar pedido de venda" onClose={closeSoModal}
+          footer={<><button className="btn" onClick={closeSoModal}>Cancelar</button><button className="btn btn-primary" onClick={createSO}>Criar PV</button></>}
         >
           {formError && <div className="form-error" style={{ marginBottom: 12 }}>{formError}</div>}
           <div className="form-row">
             <div className="form-group">
-              <label>SO Number</label>
+              <label>Número do PV</label>
               <input className="form-input" value={soForm.order_number} onChange={(e) => setSoForm({ ...soForm, order_number: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Customer</label>
+              <label>Cliente</label>
               <input className="form-input" value={soForm.customer_name} onChange={(e) => setSoForm({ ...soForm, customer_name: e.target.value })} />
             </div>
           </div>
           <div className="form-group">
-            <label>Address Line 1</label>
+            <label>Endereço linha 1</label>
             <input className="form-input" value={soForm.address_line_1} onChange={(e) => setSoForm({ ...soForm, address_line_1: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Address Line 2</label>
+            <label>Endereço linha 2</label>
             <input className="form-input" value={soForm.address_line_2} onChange={(e) => setSoForm({ ...soForm, address_line_2: e.target.value })} />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>City</label>
+              <label>Cidade</label>
               <input className="form-input" value={soForm.city} onChange={(e) => setSoForm({ ...soForm, city: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>State</label>
+              <label>Estado</label>
               <input className="form-input" value={soForm.state} onChange={(e) => setSoForm({ ...soForm, state: e.target.value })} />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Zip</label>
+              <label>CEP</label>
               <input className="form-input" value={soForm.zip} onChange={(e) => setSoForm({ ...soForm, zip: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Phone</label>
+              <label>Telefone</label>
               <input className="form-input" value={soForm.phone} onChange={(e) => setSoForm({ ...soForm, phone: e.target.value })} />
             </div>
           </div>
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Lines</label>
-              <button className="btn btn-sm" onClick={addSOLine}>+ Line</button>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Linhas</label>
+              <button className="btn btn-sm" onClick={addSOLine}>+ Linha</button>
             </div>
             {soForm.lines.map((line, i) => (
               <div className="form-row" key={i} style={{ marginBottom: 8 }}>
@@ -678,7 +673,7 @@ export default function Settings() {
                   <input className="form-input" list="settings-sku-datalist" placeholder="SKU" value={line.sku} onChange={(e) => updateSOLine(i, 'sku', e.target.value)} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <input className="form-input" type="number" placeholder="Quantity" value={line.quantity_ordered} onChange={(e) => updateSOLine(i, 'quantity_ordered', e.target.value)} />
+                  <input className="form-input" type="number" placeholder="Quantidade" value={line.quantity_ordered} onChange={(e) => updateSOLine(i, 'quantity_ordered', e.target.value)} />
                 </div>
               </div>
             ))}

@@ -273,7 +273,7 @@ class TestShipTransitionEmission:
             request_id,
         )
         assert resp.status_code == 422, resp.get_json()
-        assert "PICKED or PACKED" in resp.get_json()["error"]
+        assert "SEPARADO ou EMBALADO" in resp.get_json()["error"]
         assert _query_event_rows(request_id) == []
         assert _fulfillment_rows(2) == []
 

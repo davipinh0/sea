@@ -40,7 +40,7 @@ class TestWarehouseIdInPath:
         headers = _create_user_and_login(client, "wh_path_blocked", [1])
         resp = client.get("/api/putaway/pending/999", headers=headers)
         assert resp.status_code == 403
-        assert "Access denied" in resp.get_json()["error"]
+        assert "Acesso negado" in resp.get_json()["error"]
 
     def test_non_admin_allowed_into_assigned_warehouse_via_path(self, client):
         headers = _create_user_and_login(client, "wh_path_allowed", [1])

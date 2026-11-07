@@ -71,8 +71,8 @@ async function openModal(cfg) {
   // view: it was the one path that reached the edit form by surprise, and
   // the Teams adaptive card landed operators there. The gates under test
   // are unchanged; only the route to the form is.
-  fireEvent.click(await screen.findByLabelText('Edit'));
-  await screen.findByText('Save');
+  fireEvent.click(await screen.findByLabelText('Editar'));
+  await screen.findByText('Salvar');
 }
 
 describe('SalesOrders fulfillment-action gates by order_type', () => {
@@ -82,15 +82,15 @@ describe('SalesOrders fulfillment-action gates by order_type', () => {
     'shows Partially Fulfill + Admin Pick for an OPEN %s',
     async (order_type) => {
       await openModal({ order_type });
-      expect(screen.queryByText('Partially Fulfill')).toBeTruthy();
-      expect(screen.queryByText('Admin Pick')).toBeTruthy();
+      expect(screen.queryByText('Atender parcialmente')).toBeTruthy();
+      expect(screen.queryByText('Separação admin')).toBeTruthy();
     },
   );
 
   it('hides Partially Fulfill for a backorder but keeps Admin Pick', async () => {
     await openModal({ order_type: 'backorder' });
-    expect(screen.queryByText('Partially Fulfill')).toBeNull();
-    expect(screen.queryByText('Admin Pick')).toBeTruthy();
+    expect(screen.queryByText('Atender parcialmente')).toBeNull();
+    expect(screen.queryByText('Separação admin')).toBeTruthy();
   });
 
   it('hides all three fulfillment actions for a return', async () => {
@@ -98,9 +98,9 @@ describe('SalesOrders fulfillment-action gates by order_type', () => {
       order_type: 'return',
       pick_tasks: [{ pick_task_id: 1, quantity_picked: 1 }],
     });
-    expect(screen.queryByText('Partially Fulfill')).toBeNull();
-    expect(screen.queryByText('Admin Pick')).toBeNull();
-    expect(screen.queryByText('Release Picked Quantities')).toBeNull();
+    expect(screen.queryByText('Atender parcialmente')).toBeNull();
+    expect(screen.queryByText('Separação admin')).toBeNull();
+    expect(screen.queryByText('Liberar quantidades separadas')).toBeNull();
   });
 
   it('shows Release Picked Quantities for a non-return SO with picks', async () => {
@@ -108,6 +108,6 @@ describe('SalesOrders fulfillment-action gates by order_type', () => {
       order_type: 'exchange', status: 'PICKED',
       pick_tasks: [{ pick_task_id: 1, quantity_picked: 1 }],
     });
-    expect(screen.queryByText('Release Picked Quantities')).toBeTruthy();
+    expect(screen.queryByText('Liberar quantidades separadas')).toBeTruthy();
   });
 });

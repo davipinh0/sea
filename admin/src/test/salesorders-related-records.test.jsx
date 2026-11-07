@@ -105,7 +105,7 @@ async function openViewModal(soNumber = 'SO-1') {
   );
   const cell = await screen.findByText(soNumber);
   await act(async () => { fireEvent.click(cell); });
-  await screen.findByText('Order Summary');
+  await screen.findByText('Resumo do pedido');
 }
 
 async function openRelatedTab() {
@@ -151,9 +151,9 @@ describe('Related Records tab', () => {
     }
     // "return" is an RMA to the people using this screen.
     expect(screen.getByText('RMA')).toBeTruthy();
-    expect(screen.getByText('Backorder')).toBeTruthy();
-    expect(screen.getByText('Refund')).toBeTruthy();
-    expect(screen.getByText('Exchange')).toBeTruthy();
+    expect(screen.getByText('Pendência')).toBeTruthy();
+    expect(screen.getByText('Reembolso')).toBeTruthy();
+    expect(screen.getByText('Troca')).toBeTruthy();
   });
 
   it('marks the current record and makes it unclickable', async () => {
@@ -167,7 +167,7 @@ describe('Related Records tab', () => {
     expect(screen.getByTestId('related-row-1').className).toContain('current');
     expect(screen.getByTestId('related-open-1').disabled).toBe(true);
     expect(screen.getByTestId('related-open-2').disabled).toBe(false);
-    expect(screen.getByText('YOU ARE HERE')).toBeTruthy();
+    expect(screen.getByText('VOCÊ ESTÁ AQUI')).toBeTruthy();
   });
 
   it('indents a grandchild deeper than its parent', async () => {
@@ -206,15 +206,15 @@ describe('Related Records tab', () => {
     await act(async () => { fireEvent.click(screen.getByTestId('related-open-2')); });
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2 }).textContent)
-        .toBe('SO SO-1-RMA');
+        .toBe('PV SO-1-RMA');
     });
 
     const back = screen.getByTestId('modal-back');
-    expect(back.getAttribute('title')).toBe('Back to SO-1');
+    expect(back.getAttribute('title')).toBe('Voltar para SO-1');
     await act(async () => { fireEvent.click(back); });
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2 }).textContent)
-        .toBe('SO SO-1');
+        .toBe('PV SO-1');
     });
     // Trail is exhausted, so the arrow goes away again.
     expect(screen.queryByTestId('modal-back')).toBeNull();
@@ -233,15 +233,15 @@ describe('Related Records tab', () => {
     await openRelatedTab();
 
     await act(async () => { fireEvent.click(screen.getByTestId('related-open-2')); });
-    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-1-BO'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-1-BO'));
     await openRelatedTab();
     await act(async () => { fireEvent.click(screen.getByTestId('related-open-3')); });
-    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-1-BO-RMA'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-1-BO-RMA'));
 
     await act(async () => { fireEvent.click(screen.getByTestId('modal-back')); });
-    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-1-BO'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-1-BO'));
     await act(async () => { fireEvent.click(screen.getByTestId('modal-back')); });
-    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-1'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-1'));
   });
 
   it('lands on Details when opening a record, and on Related when going back', async () => {
@@ -256,7 +256,7 @@ describe('Related Records tab', () => {
 
     await act(async () => { fireEvent.click(screen.getByTestId('related-open-2')); });
     // Clicking a record shows what is ON it, not the family list again.
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
     expect(screen.getByTestId('so-tab-details').className).toContain('active');
 
     await act(async () => { fireEvent.click(screen.getByTestId('modal-back')); });
@@ -279,7 +279,7 @@ describe('Related Records tab', () => {
     const row = screen.getByTestId('related-row-2');
     expect(row).toBeTruthy();
     expect(row.className).toContain('voided');
-    expect(screen.getByText('VOIDED')).toBeTruthy();
+    expect(screen.getByText('ANULADO')).toBeTruthy();
     // Still reachable: a voided RMA is soft-deleted, not gone.
     expect(screen.getByTestId('related-open-2').disabled).toBe(false);
   });
@@ -305,7 +305,7 @@ describe('Related Records tab', () => {
     expect(screen.getByText('SKU-9')).toBeTruthy();
     // A return's meaningful quantity is what came back, so the column
     // header swaps from Shipped to Received.
-    expect(screen.getByText('Received')).toBeTruthy();
+    expect(screen.getByText('Recebido')).toBeTruthy();
 
     await act(async () => { fireEvent.click(screen.getByTestId('related-caret-2')); });
     expect(screen.queryByTestId('related-lines-2')).toBeNull();
@@ -320,7 +320,7 @@ describe('Related Records tab', () => {
     await openRelatedTab();
 
     await act(async () => { fireEvent.click(screen.getByTestId('related-caret-2')); });
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('SO SO-1');
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('PV SO-1');
     expect(screen.queryByTestId('modal-back')).toBeNull();
   });
 
@@ -337,8 +337,8 @@ describe('Related Records tab', () => {
     });
     await openViewModal();
     // Details still render, and the tab degrades rather than blocking.
-    expect(screen.getByText('Order Summary')).toBeTruthy();
+    expect(screen.getByText('Resumo do pedido')).toBeTruthy();
     await openRelatedTab();
-    expect(screen.getByText(/could not be loaded/i)).toBeTruthy();
+    expect(screen.getByText(/não foi possível carregar/i)).toBeTruthy();
   });
 });

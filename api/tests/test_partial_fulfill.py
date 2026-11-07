@@ -133,7 +133,7 @@ class TestStatusGate:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "Can only partial-fulfill" in resp.get_json()["error"]
+        assert "Só é possível atender parcialmente" in resp.get_json()["error"]
 
     def test_shipped_rejected(self, client, auth_headers):
         _set_so_status(1, "SHIPPED")
@@ -173,7 +173,7 @@ class TestBoChainingCap:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "backorder" in resp.get_json()["error"].lower()
+        assert "pendência" in resp.get_json()["error"].lower()
 
 
 class TestOrderTypeGate:
@@ -256,7 +256,7 @@ class TestOrderTypeGate:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "return" in resp.get_json()["error"].lower()
+        assert "devolução" in resp.get_json()["error"].lower()
 
     def test_refund_allowed_by_type_gate(self, client, auth_headers):
         # The refund exclusion was removed; a refund SO passes the type
@@ -281,7 +281,7 @@ class TestValidation:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "exceeds unshipped qty" in resp.get_json()["error"]
+        assert "excede a qtd. não expedida" in resp.get_json()["error"]
 
     def test_invalid_so_line_id_rejected(self, client, auth_headers):
         resp = client.post(
@@ -290,7 +290,7 @@ class TestValidation:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "not on SO" in resp.get_json()["error"]
+        assert "não está no PV" in resp.get_json()["error"]
 
     def test_zero_short_qty_rejected_at_schema_layer(self, client, auth_headers):
         sol_id = _so_line_id_for(1)

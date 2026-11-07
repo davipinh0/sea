@@ -8,16 +8,16 @@ import Modal from '../components/Modal.jsx';
 const ROLES = ['ADMIN', 'USER'];
 
 const ALL_FUNCTIONS = [
-  { key: 'pick', label: 'Pick' },
-  { key: 'pack', label: 'Pack' },
-  { key: 'ship', label: 'Ship' },
-  { key: 'receive', label: 'Receive' },
-  { key: 'putaway', label: 'Put-Away' },
-  { key: 'count', label: 'Count' },
-  { key: 'transfer', label: 'Transfer' },
+  { key: 'pick', label: 'Separar' },
+  { key: 'pack', label: 'Embalar' },
+  { key: 'ship', label: 'Expedir' },
+  { key: 'receive', label: 'Receber' },
+  { key: 'putaway', label: 'Armazenagem' },
+  { key: 'count', label: 'Contagem' },
+  { key: 'transfer', label: 'Transferir' },
   // Retail POS: the register gates login on this grant (ADMIN exempt). Grant it
   // to retail / customer-service accounts that should be able to sell.
-  { key: 'sell', label: 'Sell (POS)' },
+  { key: 'sell', label: 'Vender (PDV)' },
 ];
 
 // Web-admin page grants (mig 061). Mirrors the sidebar
@@ -27,57 +27,57 @@ const ALL_FUNCTIONS = [
 // purely cosmetic - the PUT endpoint no-ops for ADMIN targets.
 const PAGE_GROUPS = [
   {
-    label: 'Floor',
+    label: 'Operação',
     pages: [
-      { key: 'inventory', label: 'Inventory' },
-      { key: 'cycle-counts', label: 'Cycle Counts' },
-      { key: 'count-approvals', label: 'Count Approvals' },
+      { key: 'inventory', label: 'Estoque' },
+      { key: 'cycle-counts', label: 'Contagens cíclicas' },
+      { key: 'count-approvals', label: 'Aprovações de contagem' },
     ],
   },
   {
-    label: 'Inbound',
+    label: 'Entrada',
     pages: [
-      { key: 'purchase-orders', label: 'Purchase Orders' },
-      { key: 'receiving', label: 'Receiving' },
-      { key: 'putaway', label: 'Put-away' },
+      { key: 'purchase-orders', label: 'Pedidos de compra' },
+      { key: 'receiving', label: 'Recebimento' },
+      { key: 'putaway', label: 'Armazenagem' },
     ],
   },
   {
-    label: 'Outbound',
+    label: 'Saída',
     pages: [
-      { key: 'sales-orders', label: 'Sales Orders' },
-      { key: 'fraud', label: 'Fraud' },
+      { key: 'sales-orders', label: 'Pedidos de venda' },
+      { key: 'fraud', label: 'Fraude' },
       // picking/packing/shipping retired in favour of the mobile flow;
       // their page_keys are gone from ALL_PAGE_KEYS so a stale grant
       // cannot persist past the next permissions save.
     ],
   },
   {
-    label: 'Warehouse',
+    label: 'Armazém',
     pages: [
-      { key: 'items', label: 'Items' },
-      { key: 'vendors', label: 'Vendors' },
-      { key: 'adjustments', label: 'Inventory Adjustments' },
-      { key: 'inter-warehouse-transfers', label: 'Inventory Transfers' },
-      { key: 'transfer-orders', label: 'Transfer Orders' },
-      { key: 'warehouses', label: 'Warehouses' },
-      { key: 'bins', label: 'Bins' },
-      { key: 'zones', label: 'Zones' },
-      { key: 'preferred-bins', label: 'Preferred Bins' },
+      { key: 'items', label: 'Materiais' },
+      { key: 'vendors', label: 'Fornecedores' },
+      { key: 'adjustments', label: 'Ajustes de estoque' },
+      { key: 'inter-warehouse-transfers', label: 'Transferências de estoque' },
+      { key: 'transfer-orders', label: 'Ordens de transferência' },
+      { key: 'warehouses', label: 'Armazéns' },
+      { key: 'bins', label: 'Endereços' },
+      { key: 'zones', label: 'Zonas' },
+      { key: 'preferred-bins', label: 'Endereços preferenciais' },
     ],
   },
   {
-    label: 'System',
+    label: 'Sistema',
     pages: [
-      { key: 'users', label: 'Users' },
-      { key: 'api-tokens', label: 'API Tokens' },
-      { key: 'inbound', label: 'Inbound Activity' },
-      { key: 'consumer-groups', label: 'Consumer Groups' },
+      { key: 'users', label: 'Usuários' },
+      { key: 'api-tokens', label: 'Tokens de API' },
+      { key: 'inbound', label: 'Atividade de entrada' },
+      { key: 'consumer-groups', label: 'Grupos de consumidores' },
       { key: 'webhooks', label: 'Webhooks' },
-      { key: 'audit-log', label: 'Audit Log' },
-      { key: 'imports', label: 'Imports' },
-      { key: 'integrations', label: 'Integrations' },
-      { key: 'settings', label: 'Settings' },
+      { key: 'audit-log', label: 'Log de auditoria' },
+      { key: 'imports', label: 'Importações' },
+      { key: 'integrations', label: 'Integrações' },
+      { key: 'settings', label: 'Configurações' },
     ],
   },
   // Override grants (mig 062): feature-flag grants. Not pages in the
@@ -86,11 +86,11 @@ const PAGE_GROUPS = [
   // SO header/line edits past OPEN). Same storage as page grants so
   // the multi-select reuses the existing pagePermissions array.
   {
-    label: 'Overrides',
+    label: 'Permissões especiais',
     isOverride: true,
     pages: [      {
         key: 'so-full-edit',
-        label: 'Full SO edit (past OPEN, incl. source_system + line CRUD)',
+        label: 'Edição completa de PV (após ABERTO, incl. source_system + linhas)',
       },
     ],
   },
@@ -213,7 +213,7 @@ export default function Users() {
       : await api.post('/admin/users', body);
     if (!res?.ok) {
       const data = await res?.json();
-      setError(data?.error || 'Failed to save');
+      setError(data?.error || 'Falha ao salvar');
       return;
     }
     // Persist per-page grants in a follow-up PUT. The endpoint is a
@@ -230,7 +230,7 @@ export default function Users() {
       if (!permRes?.ok) {
         const permData = await permRes?.json();
         setError(
-          permData?.error || 'User saved, but failed to save page permissions',
+          permData?.error || 'Usuário salvo, mas houve falha ao salvar as permissões de página',
         );
         return;
       }
@@ -242,7 +242,7 @@ export default function Users() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   async function deleteUser(id) {
-    if (id === currentUser?.user_id) { setError('Cannot delete yourself'); return; }
+    if (id === currentUser?.user_id) { setError('Você não pode excluir a si mesmo'); return; }
     setShowDeleteConfirm(id);
   }
 
@@ -254,7 +254,7 @@ export default function Users() {
       loadUsers();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to delete user');
+      setError(data?.error || 'Falha ao excluir usuário');
     }
   }
 
@@ -309,15 +309,15 @@ export default function Users() {
   }
 
   const columns = [
-    { key: 'username', label: 'Username', mono: true },
-    { key: 'full_name', label: 'Full Name' },
-    { key: 'role', label: 'Role' },
-    { key: 'warehouse_ids', label: 'Warehouses', render: (r) => warehouseCodes(r.warehouse_ids) },
+    { key: 'username', label: 'Usuário', mono: true },
+    { key: 'full_name', label: 'Nome completo' },
+    { key: 'role', label: 'Função' },
+    { key: 'warehouse_ids', label: 'Armazéns', render: (r) => warehouseCodes(r.warehouse_ids) },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
-        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
+        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
         {r.user_id !== currentUser?.user_id && (
-          <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteUser(r.user_id); }} aria-label="Delete" title="Delete">&#128465;</button>
+          <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteUser(r.user_id); }} aria-label="Excluir" title="Excluir">&#128465;</button>
         )}
       </div>
     )},
@@ -325,45 +325,45 @@ export default function Users() {
 
   return (
     <div>
-      <PageHeader title="Users">
-        <button className="btn btn-primary" onClick={openCreate}>New User</button>
+      <PageHeader title="Usuários">
+        <button className="btn btn-primary" onClick={openCreate}>Novo usuário</button>
       </PageHeader>
-      <DataTable rowKey="user_id" columns={columns} data={users} emptyMessage="No users found" />
+      <DataTable rowKey="user_id" columns={columns} data={users} emptyMessage="Nenhum usuário encontrado" />
 
       {showModal && (
-        <Modal title={editId ? 'Edit User' : 'New User'} onClose={() => setShowModal(false)}
+        <Modal title={editId ? 'Editar usuário' : 'Novo usuário'} onClose={() => setShowModal(false)}
           size="wide"
           footer={
             <>
-              <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={save}>Save</button>
+              <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={save}>Salvar</button>
             </>
           }
         >
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
           <div className="form-row">
             <div className="form-group">
-              <label>Username</label>
+              <label>Usuário</label>
               <input className="form-input" value={form.username || ''} onChange={(e) => setForm({ ...form, username: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Full Name</label>
+              <label>Nome completo</label>
               <input className="form-input" value={form.full_name || ''} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             </div>
           </div>
           <div className="form-group">
-            <label>{editId ? 'New Password (leave blank to keep current)' : 'Password'}</label>
+            <label>{editId ? 'Nova senha (deixe em branco para manter a atual)' : 'Senha'}</label>
             <input className="form-input" type="password" value={form.password || ''} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Role</label>
+            <label>Função</label>
             <select className="form-select" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label>Warehouses</label>
+              <label>Armazéns</label>
               {warehouses.length > 0 && (
                 <span style={{ fontSize: 12 }}>
                   <button
@@ -371,7 +371,7 @@ export default function Users() {
                     onClick={selectAllWarehouses}
                     style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                   >
-                    Select all
+                    Selecionar todos
                   </button>
                   <span style={{ color: 'var(--text-tertiary)', margin: '0 6px' }}>/</span>
                   <button
@@ -379,7 +379,7 @@ export default function Users() {
                     onClick={clearWarehouses}
                     style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                   >
-                    Clear
+                    Limpar
                   </button>
                 </span>
               )}
@@ -396,19 +396,19 @@ export default function Users() {
                   <span style={{ color: 'var(--text-secondary)' }}>{wh.warehouse_name}</span>
                 </label>
               ))}
-              {warehouses.length === 0 && <span style={{ color: 'var(--text-secondary)' }}>No warehouses found</span>}
+              {warehouses.length === 0 && <span style={{ color: 'var(--text-secondary)' }}>Nenhum armazém encontrado</span>}
             </div>
           </div>
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label>Mobile Module Access</label>
+              <label>Acesso aos módulos do app móvel</label>
               <span style={{ fontSize: 12 }}>
                 <button
                   type="button"
                   onClick={selectAllFunctions}
                   style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                 >
-                  Select all
+                  Selecionar todos
                 </button>
                 <span style={{ color: 'var(--text-tertiary)', margin: '0 6px' }}>/</span>
                 <button
@@ -416,7 +416,7 @@ export default function Users() {
                   onClick={clearFunctions}
                   style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                 >
-                  Clear
+                  Limpar
                 </button>
               </span>
             </div>
@@ -436,14 +436,14 @@ export default function Users() {
 
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label>Web Admin Page Access</label>
+              <label>Acesso às páginas do painel web</label>
               <span style={{ fontSize: 12 }}>
                 <button
                   type="button"
                   onClick={selectAllPages}
                   style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                 >
-                  Select all
+                  Selecionar todos
                 </button>
                 <span style={{ color: 'var(--text-tertiary)', margin: '0 6px' }}>/</span>
                 <button
@@ -451,13 +451,13 @@ export default function Users() {
                   onClick={clearAllPages}
                   style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 12 }}
                 >
-                  Clear
+                  Limpar
                 </button>
               </span>
             </div>
             {form.role === 'ADMIN' ? (
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 0' }}>
-                ADMIN role bypasses page permissions - full access to every web admin page.
+                A função ADMIN ignora as permissões de página - acesso total a todas as páginas do painel web.
               </p>
             ) : (
               <div style={{
@@ -486,7 +486,7 @@ export default function Users() {
                             onClick={() => selectAllPagesInGroup(group)}
                             style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 11 }}
                           >
-                            All
+                            Todos
                           </button>
                           <span style={{ color: 'var(--text-tertiary)', margin: '0 4px' }}>/</span>
                           <button
@@ -494,7 +494,7 @@ export default function Users() {
                             onClick={() => clearPagesInGroup(group)}
                             style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 11 }}
                           >
-                            None
+                            Nenhum
                           </button>
                         </span>
                       </div>
@@ -523,16 +523,16 @@ export default function Users() {
       )}
 
       {showDeleteConfirm && (
-        <Modal title="Delete User" onClose={() => setShowDeleteConfirm(null)}
+        <Modal title="Excluir usuário" onClose={() => setShowDeleteConfirm(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={confirmDeleteUser}>Delete</button>
+              <button className="btn" onClick={() => setShowDeleteConfirm(null)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={confirmDeleteUser}>Excluir</button>
             </>
           }
         >
-          <p style={{ fontSize: 14, marginBottom: 8 }}>Are you sure? This action cannot be undone.</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>The user and all associated data will be permanently deleted.</p>
+          <p style={{ fontSize: 14, marginBottom: 8 }}>Tem certeza? Esta ação não pode ser desfeita.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O usuário e todos os dados associados serão excluídos permanentemente.</p>
         </Modal>
       )}
     </div>

@@ -4,13 +4,14 @@ import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import StatusTag from '../components/StatusTag.jsx';
+import { statusLabel } from '../utils/statusLabel.js';
 
 // v1.8.0 (#294) admin UI for transfer orders. Mirrors SalesOrders.jsx
 // single-file pattern (DataTable list + click-to-detail modal +
 // inline action modals) so the codebase stays uniform.
 
 const STATUS_OPTIONS = [
-  'All', 'OPEN', 'PARTIALLY_PICKED', 'AWAITING_APPROVAL',
+  'Todos', 'OPEN', 'PARTIALLY_PICKED', 'AWAITING_APPROVAL',
   'APPROVED', 'CLOSED', 'CANCELLED',
 ];
 
@@ -151,7 +152,7 @@ export default function TransferOrders() {
       await refreshDetail();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Cancel failed');
+      setActionError(data?.error || 'Falha ao cancelar');
     }
   }
 
@@ -164,7 +165,7 @@ export default function TransferOrders() {
       loadOrders();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Delete failed');
+      setActionError(data?.error || 'Falha ao excluir');
     }
   }
 
@@ -174,11 +175,11 @@ export default function TransferOrders() {
     const res = await api.post(`/admin/transfer-orders/${selected.to_id}/start-picking`, {});
     if (res?.ok) {
       const data = await res.json();
-      setActionError(`Pick batch ${data.batch_number} created with ${data.tasks_created} task(s)`);
+      setActionError(`Lote de separação ${data.batch_number} criada com ${data.tasks_created} tarefa(s)`);
       await refreshDetail();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Start picking failed');
+      setActionError(data?.error || 'Falha ao iniciar a separação');
     }
   }
 
@@ -193,7 +194,7 @@ export default function TransferOrders() {
       await refreshDetail();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Short-close failed');
+      setActionError(data?.error || 'Falha no fechamento por falta');
     }
   }
 
@@ -208,7 +209,7 @@ export default function TransferOrders() {
       await refreshDetail();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Approve failed');
+      setActionError(data?.error || 'Falha ao aprovar');
     }
   }
 
@@ -225,7 +226,7 @@ export default function TransferOrders() {
       await refreshDetail();
     } else {
       const data = await res?.json();
-      setActionError(data?.error || 'Reject failed');
+      setActionError(data?.error || 'Falha ao rejeitar');
     }
   }
 
@@ -260,11 +261,11 @@ export default function TransferOrders() {
     setImportErrors([]);
     setImportMessage('');
     if (!importForm.source_warehouse_code || !importForm.destination_warehouse_code) {
-      setImportMessage('Source and destination warehouses are required.');
+      setImportMessage('Os armazéns de origem e destino são obrigatórios.');
       return;
     }
     if (importRows.length === 0) {
-      setImportMessage('Add at least one row before submitting.');
+      setImportMessage('Adicione pelo menos uma linha antes de enviar.');
       return;
     }
     const res = await api.post('/admin/transfer-orders/import', {
@@ -289,7 +290,7 @@ export default function TransferOrders() {
       if (data?.rows) {
         setImportErrors(data.rows);
       } else {
-        setImportMessage(data?.error || data?.detail || 'Import failed');
+        setImportMessage(data?.error || data?.detail || 'Falha na importação');
       }
     }
   }
@@ -310,22 +311,22 @@ export default function TransferOrders() {
   }, [warehouses]);
 
   const columns = [
-    { key: 'to_number', label: 'TO Number', mono: true },
+    { key: 'to_number', label: 'Número da OT', mono: true },
     {
       key: 'source_warehouse_id',
-      label: 'Source',
+      label: 'Origem',
       render: (r) => warehouses.find((w) => w.warehouse_id === r.source_warehouse_id)?.warehouse_code || r.source_warehouse_id,
     },
     {
       key: 'destination_warehouse_id',
-      label: 'Dest',
+      label: 'Destino',
       render: (r) => warehouses.find((w) => w.warehouse_id === r.destination_warehouse_id)?.warehouse_code || r.destination_warehouse_id,
     },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
-    { key: 'created_by', label: 'Created By' },
+    { key: 'created_by', label: 'Criado por' },
     {
       key: 'created_at',
-      label: 'Created',
+      label: 'Criado',
       render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-',
     },
   ];
@@ -342,27 +343,27 @@ export default function TransferOrders() {
 
   return (
     <div>
-      <PageHeader title="Transfer Orders" />
+      <PageHeader title="Ordens de transferência" />
 
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Status:</label>
         <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ width: 200 }}>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
-        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Source:</label>
+        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Origem:</label>
         <select className="form-select" value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }} style={{ width: 140 }}>
           {warehouseOptions.map((w) => (
             <option key={w.warehouse_id || 'any'} value={w.warehouse_id}>{w.warehouse_code}</option>
           ))}
         </select>
-        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Dest:</label>
+        <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Destino:</label>
         <select className="form-select" value={destFilter} onChange={(e) => { setDestFilter(e.target.value); setPage(1); }} style={{ width: 140 }}>
           {warehouseOptions.map((w) => (
             <option key={w.warehouse_id || 'any'} value={w.warehouse_id}>{w.warehouse_code}</option>
           ))}
         </select>
         <button className="btn btn-primary" onClick={openImport} style={{ marginLeft: 'auto' }}>
-          Import CSV
+          Importar CSV
         </button>
       </div>
 
@@ -373,19 +374,19 @@ export default function TransferOrders() {
         pagination={pagination}
         onPageChange={setPage}
         onRowClick={viewTO}
-        emptyMessage="No transfer orders found"
+        emptyMessage="Nenhuma ordem de transferência encontrada"
       />
 
       {selected && (
         <Modal
-          title={`TO ${selected.to_number}`}
+          title={`OT ${selected.to_number}`}
           onClose={() => setSelected(null)}
           footer={
             <>
-              <button className="btn btn-danger" onClick={deleteTO} disabled={!canDelete}>Delete</button>
-              <button className="btn" onClick={cancelTO} disabled={!canCancel}>Cancel TO</button>
-              <button className="btn btn-primary" onClick={startPicking} disabled={!canStartPicking}>Start Picking</button>
-              <button className="btn" onClick={() => setSelected(null)}>Close</button>
+              <button className="btn btn-danger" onClick={deleteTO} disabled={!canDelete}>Excluir</button>
+              <button className="btn" onClick={cancelTO} disabled={!canCancel}>Cancelar OT</button>
+              <button className="btn btn-primary" onClick={startPicking} disabled={!canStartPicking}>Iniciar separação</button>
+              <button className="btn" onClick={() => setSelected(null)}>Fechar</button>
             </>
           }
         >
@@ -393,28 +394,28 @@ export default function TransferOrders() {
             <div className="form-error" style={{ marginBottom: 12 }}>{actionError}</div>
           )}
           <div className="detail-grid" style={{ marginBottom: 16 }}>
-            <span className="detail-label">Source WH</span>
+            <span className="detail-label">Armazém origem</span>
             <span>{warehouses.find((w) => w.warehouse_id === selected.source_warehouse_id)?.warehouse_code || selected.source_warehouse_id}</span>
-            <span className="detail-label">Dest WH</span>
+            <span className="detail-label">Armazém destino</span>
             <span>{warehouses.find((w) => w.warehouse_id === selected.destination_warehouse_id)?.warehouse_code || selected.destination_warehouse_id}</span>
             <span className="detail-label">Status</span>
             <span><StatusTag status={selected.status} /></span>
-            <span className="detail-label">Created By</span>
+            <span className="detail-label">Criado por</span>
             <span>{selected.created_by}</span>
-            <span className="detail-label">Notes</span>
+            <span className="detail-label">Observações</span>
             <span>{selected.notes || '-'}</span>
           </div>
 
-          <strong style={{ fontSize: 13 }}>Lines</strong>
+          <strong style={{ fontSize: 13 }}>Linhas</strong>
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', marginBottom: 16 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={thStyle}>SKU</th>
-                <th style={thStyle}>Item</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Requested</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Committed</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Picked</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Approved</th>
+                <th style={thStyle}>Material</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Solicitado</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Comprometido</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Separado</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Aprovado</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}></th>
               </tr>
@@ -431,7 +432,7 @@ export default function TransferOrders() {
                   <td style={tdStyle}><StatusTag status={l.status} /></td>
                   <td style={tdStyle}>
                     {l.status !== 'SHORT_CLOSED' && l.status !== 'APPROVED' && l.committed_qty > l.approved_qty && (
-                      <button className="btn btn-sm" onClick={() => shortCloseLine(l.to_line_id)}>Short-Close</button>
+                      <button className="btn btn-sm" onClick={() => shortCloseLine(l.to_line_id)}>Fechar por falta</button>
                     )}
                   </td>
                 </tr>
@@ -441,15 +442,15 @@ export default function TransferOrders() {
 
           {detailApprovals.length > 0 && (
             <>
-              <strong style={{ fontSize: 13 }}>Approvals</strong>
+              <strong style={{ fontSize: 13 }}>Aprovações</strong>
               <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', marginTop: 8 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <th style={thStyle}>Submitted By</th>
-                    <th style={thStyle}>Submitted At</th>
+                    <th style={thStyle}>Enviado por</th>
+                    <th style={thStyle}>Enviado em</th>
                     <th style={thStyle}>Status</th>
-                    <th style={thStyle}>Approver</th>
-                    <th style={thStyle}>Reason</th>
+                    <th style={thStyle}>Aprovador</th>
+                    <th style={thStyle}>Motivo</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
@@ -464,8 +465,8 @@ export default function TransferOrders() {
                       <td style={tdStyle}>
                         {a.status === 'PENDING' && (
                           <>
-                            <button className="btn btn-sm btn-primary" onClick={() => approveApproval(a.to_approval_id)} style={{ marginRight: 6 }}>Approve</button>
-                            <button className="btn btn-sm btn-danger" onClick={() => { setRejectingApprovalId(a.to_approval_id); setRejectionReason(''); }}>Reject</button>
+                            <button className="btn btn-sm btn-primary" onClick={() => approveApproval(a.to_approval_id)} style={{ marginRight: 6 }}>Aprovar</button>
+                            <button className="btn btn-sm btn-danger" onClick={() => { setRejectingApprovalId(a.to_approval_id); setRejectionReason(''); }}>Rejeitar</button>
                           </>
                         )}
                       </td>
@@ -480,38 +481,36 @@ export default function TransferOrders() {
 
       {rejectingApprovalId != null && (
         <Modal
-          title="Reject submission"
+          title="Rejeitar envio"
           onClose={() => setRejectingApprovalId(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setRejectingApprovalId(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={submitReject}>Reject</button>
+              <button className="btn" onClick={() => setRejectingApprovalId(null)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={submitReject}>Rejeitar</button>
             </>
           }
         >
           <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            Optional reason. Rejecting leaves source inventory in place
-            so the picker can re-pick; short-close the line instead if
-            the picks should not return to source.
+            Motivo opcional. Rejeitar mantém o estoque de origem no lugar para que o separador possa separar novamente; use fechamento por falta na linha se as separações não devem voltar à origem.
           </p>
           <textarea
             className="form-input"
             rows={3}
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="Why are you rejecting?"
+            placeholder="Por que você está rejeitando?"
           />
         </Modal>
       )}
 
       {importing && (
         <Modal
-          title="Import Transfer Order"
+          title="Importar ordem de transferência"
           onClose={() => setImporting(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setImporting(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitImport}>Submit</button>
+              <button className="btn" onClick={() => setImporting(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitImport}>Enviar</button>
             </>
           }
         >
@@ -520,36 +519,36 @@ export default function TransferOrders() {
           )}
           {importErrors.length > 0 && (
             <div className="form-error" style={{ marginBottom: 12 }}>
-              <strong>Row errors:</strong>
+              <strong>Erros nas linhas:</strong>
               <ul style={{ marginTop: 4, marginBottom: 0 }}>
                 {importErrors.map((e, idx) => (
-                  <li key={idx}>row {e.row_index}: {e.error_kind}{e.sku ? ` (${e.sku})` : ''}</li>
+                  <li key={idx}>linha {e.row_index}: {e.error_kind}{e.sku ? ` (${e.sku})` : ''}</li>
                 ))}
               </ul>
             </div>
           )}
           <div className="form-row">
             <div className="form-group">
-              <label>Source Warehouse</label>
+              <label>Armazém de origem</label>
               <select
                 className="form-select"
                 value={importForm.source_warehouse_code}
                 onChange={(e) => setImportForm({ ...importForm, source_warehouse_code: e.target.value })}
               >
-                <option value="">Select source...</option>
+                <option value="">Selecione a origem...</option>
                 {warehouses.map((w) => (
                   <option key={w.warehouse_id} value={w.warehouse_code}>{w.warehouse_code}</option>
                 ))}
               </select>
             </div>
             <div className="form-group">
-              <label>Destination Warehouse</label>
+              <label>Armazém de destino</label>
               <select
                 className="form-select"
                 value={importForm.destination_warehouse_code}
                 onChange={(e) => setImportForm({ ...importForm, destination_warehouse_code: e.target.value })}
               >
-                <option value="">Select destination...</option>
+                <option value="">Selecione o destino...</option>
                 {warehouses.map((w) => (
                   <option key={w.warehouse_id} value={w.warehouse_code}>{w.warehouse_code}</option>
                 ))}
@@ -557,7 +556,7 @@ export default function TransferOrders() {
             </div>
           </div>
           <div className="form-group">
-            <label>Notes</label>
+            <label>Observações</label>
             <input
               className="form-input"
               value={importForm.notes}
@@ -565,17 +564,17 @@ export default function TransferOrders() {
             />
           </div>
           <div className="form-group">
-            <label>CSV File (columns: sku, quantity)</label>
+            <label>Arquivo CSV (colunas: sku, quantity)</label>
             <input type="file" accept=".csv,text/csv" onChange={onImportFile} />
           </div>
           {importRows.length > 0 && (
             <div style={{ marginTop: 12, fontSize: 13 }}>
-              <strong>{importRows.length} row(s) ready</strong>
+              <strong>{importRows.length} linha(s) pronta(s)</strong>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     <th style={thStyle}>SKU</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Quantity</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Quantidade</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -588,7 +587,7 @@ export default function TransferOrders() {
                 </tbody>
               </table>
               {importRows.length > 50 && (
-                <p style={{ color: 'var(--text-secondary)' }}>+{importRows.length - 50} more...</p>
+                <p style={{ color: 'var(--text-secondary)' }}>+{importRows.length - 50} mais...</p>
               )}
             </div>
           )}
@@ -597,29 +596,27 @@ export default function TransferOrders() {
 
       {shortageState && (
         <Modal
-          title={`TO ${shortageState.to_number} created with shortages`}
+          title={`OT ${shortageState.to_number} criada com faltas`}
           onClose={() => setShortageState(null)}
           footer={
             <>
-              <button className="btn" onClick={() => downloadShortageCsv(shortageState.shortages)}>Download Shortage CSV</button>
-              <button className="btn btn-danger" onClick={shortageCancelTO}>Cancel TO</button>
-              <button className="btn btn-primary" onClick={shortageCreateWithAvailable}>Create with Available</button>
+              <button className="btn" onClick={() => downloadShortageCsv(shortageState.shortages)}>Baixar CSV de faltas</button>
+              <button className="btn btn-danger" onClick={shortageCancelTO}>Cancelar OT</button>
+              <button className="btn btn-primary" onClick={shortageCreateWithAvailable}>Criar com o disponível</button>
             </>
           }
         >
           <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            The TO was created with committed quantities reduced to
-            available stock at the source warehouse. Lines below show
-            the shortfall.
+            A OT foi criada com as quantidades comprometidas reduzidas ao estoque disponível no armazém de origem. As linhas abaixo mostram a falta.
           </p>
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={thStyle}>SKU</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Requested</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Available</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Committed</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Shortfall</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Solicitado</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Disponível</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Comprometido</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Falta</th>
               </tr>
             </thead>
             <tbody>

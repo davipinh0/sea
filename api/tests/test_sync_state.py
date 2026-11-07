@@ -288,7 +288,7 @@ class TestManualSyncTrigger:
         )
         assert resp.status_code == 202
         data = resp.get_json()
-        assert data["message"] == "Sync queued"
+        assert data["message"] == "Sincronização na fila"
         assert "task_id" in data
         assert data["sync_type"] == "orders"
 

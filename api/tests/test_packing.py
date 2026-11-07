@@ -64,7 +64,7 @@ class TestLoadOrder:
         # SO-2026-001 is still OPEN (not picked yet)
         resp = client.get("/api/packing/order/SO-2026-001", headers=auth_headers)
         assert resp.status_code == 400
-        assert "not ready" in resp.get_json()["error"].lower()
+        assert "não está pronto" in resp.get_json()["error"].lower()
 
 
 class TestVerifyItem:
@@ -102,7 +102,7 @@ class TestVerifyItem:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "remaining" in resp.get_json()["error"].lower()
+        assert "restam apenas" in resp.get_json()["error"].lower()
 
     def test_verify_item_not_on_order(self, client, auth_headers):
         _advance_so_to_picked(client, auth_headers, ["SO-2026-001"])
@@ -173,7 +173,7 @@ class TestCompletePacking:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "not yet verified" in resp.get_json()["error"].lower()
+        assert "ainda não conferidos" in resp.get_json()["error"].lower()
 
     def test_calculated_weight_correct(self, client, auth_headers):
         _advance_so_to_picked(client, auth_headers, ["SO-2026-001"])
@@ -215,4 +215,4 @@ class TestCompletePacking:
         )
         assert resp.status_code == 400
         err = resp.get_json()["error"].lower()
-        assert "under-picked" in err or "short-close marker" in err
+        assert "separada a menos" in err or "fechamento por falta" in err

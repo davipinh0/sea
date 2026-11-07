@@ -67,7 +67,7 @@
 .pos-legend { display:flex; gap:16px; font-size:12px; color: var(--text-secondary); margin-bottom: 4px; }
 .pos-legend span { display:inline-flex; align-items:center; gap:6px; }
 .pos-legend .sw { width:14px; height:3px; border-radius:2px; display:inline-block; }
-.pos-legend .sw.today { background:#8e2715; }
+.pos-legend .sw.today { background:#C2410C; }
 .pos-legend .sw.yest { background: var(--text-tertiary); }
 
 /* ── Charts ── */

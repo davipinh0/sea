@@ -1279,7 +1279,7 @@ def wave_validate(db, barcode, warehouse_id, username=None):
     #   if result: re-query DB and continue
     # For now, return "Order not found" immediately.
     # --- END FUTURE HOOK ---
-    return {"valid": False, "error": "Order not found", "status_code": 404}
+    return {"valid": False, "error": "Pedido não encontrado", "status_code": 404}
 
 
 def _validate_so(db, so):
@@ -1299,13 +1299,13 @@ def _validate_so(db, so):
         if active_batch:
             return {
                 "valid": False,
-                "error": "Order already in active pick batch",
+                "error": "Pedido já está em um lote de separação ativo",
                 "batch_id": active_batch.batch_id,
                 "status_code": 409,
             }
         return {
             "valid": False,
-            "error": f"Order status is {so.status}, must be OPEN",
+            "error": f"O status do pedido é {so.status}, deve ser OPEN",
             "status_code": 400,
         }
 
@@ -1324,7 +1324,7 @@ def _validate_so(db, so):
     if active_batch:
         return {
             "valid": False,
-            "error": "Order already in active pick batch",
+            "error": "Pedido já está em um lote de separação ativo",
             "batch_id": active_batch.batch_id,
             "status_code": 409,
         }
@@ -1340,7 +1340,7 @@ def _validate_so(db, so):
     ).fetchone()
 
     if line_stats.line_count == 0:
-        return {"valid": False, "error": "Order has no items", "status_code": 400}
+        return {"valid": False, "error": "O pedido não tem materiais", "status_code": 400}
 
     return {
         "valid": True,
@@ -1381,7 +1381,7 @@ def _validate_to(db, barcode, warehouse_id, username):
     if to.status not in ("OPEN", "PARTIALLY_PICKED"):
         return {
             "valid": False,
-            "error": f"Transfer order status is {to.status}",
+            "error": f"O status da ordem de transferência é {to.status}",
             "to_number": to.to_number,
             "to_status": to.status,
             "status_code": 409,
@@ -1405,7 +1405,7 @@ def _validate_to(db, barcode, warehouse_id, username):
     if not batch:
         return {
             "valid": False,
-            "error": "Transfer order not started -- ask admin to start picking",
+            "error": "Ordem de transferência não iniciada -- peça ao administrador para iniciar a separação",
             "to_number": to.to_number,
             "status_code": 409,
         }
@@ -1413,7 +1413,7 @@ def _validate_to(db, barcode, warehouse_id, username):
     if username is not None and batch.assigned_to != username:
         return {
             "valid": False,
-            "error": f"Transfer order is assigned to {batch.assigned_to}",
+            "error": f"A ordem de transferência está atribuída a {batch.assigned_to}",
             "to_number": to.to_number,
             "batch_id": batch.batch_id,
             "assigned_to": batch.assigned_to,

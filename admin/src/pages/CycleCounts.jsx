@@ -50,61 +50,61 @@ export default function CycleCounts() {
       warehouse_id: warehouseId,
     });
     if (res?.ok) {
-      setMessage('Cycle count created');
+      setMessage('Contagem cíclica criada');
       setShowCreate(false);
       loadCounts();
     } else {
       const data = await res?.json();
-      setMessage(data?.error || 'Failed to create count');
+      setMessage(data?.error || 'Falha ao criar contagem');
     }
   }
 
   const columns = [
     { key: 'count_id', label: 'ID', mono: true, render: (r) => `#${r.count_id}` },
-    { key: 'bin_code', label: 'Bin', mono: true },
+    { key: 'bin_code', label: 'Endereço', mono: true },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
-    { key: 'assigned_to', label: 'Assigned To' },
-    { key: 'lines', label: 'Items', render: (r) => r.lines?.length || 0 },
-    { key: 'variance', label: 'Variances', render: (r) => {
+    { key: 'assigned_to', label: 'Atribuído a' },
+    { key: 'lines', label: 'Materiais', render: (r) => r.lines?.length || 0 },
+    { key: 'variance', label: 'Divergências', render: (r) => {
       const variances = (r.lines || []).filter((l) => l.variance && l.variance !== 0);
       return variances.length > 0
         ? <span style={{ color: 'var(--copper)', fontWeight: 600 }}>{variances.length}</span>
         : <span style={{ color: 'var(--text-secondary)' }}>0</span>;
     }},
-    { key: 'created_at', label: 'Created', mono: true, render: (r) => r.created_at ? new Date(r.created_at).toLocaleString() : '-' },
+    { key: 'created_at', label: 'Criado', mono: true, render: (r) => r.created_at ? new Date(r.created_at).toLocaleString() : '-' },
     { key: 'actions', label: '', render: (r) => (
-      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); setSelectedCount(r); }}>View</button>
+      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); setSelectedCount(r); }}>Ver</button>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Cycle Counts">
-        <button className="btn btn-primary" onClick={openCreate}>New Count</button>
+      <PageHeader title="Contagens cíclicas">
+        <button className="btn btn-primary" onClick={openCreate}>Nova contagem</button>
       </PageHeader>
 
       {message && (
         <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--success)' }}>{message}</div>
       )}
 
-      <DataTable rowKey="count_id" columns={columns} data={counts} emptyMessage="No cycle counts found" />
+      <DataTable rowKey="count_id" columns={columns} data={counts} emptyMessage="Nenhuma contagem cíclica encontrada" />
 
       {/* Create modal */}
       {showCreate && (
         <Modal
-          title="Create Cycle Count"
+          title="Criar contagem cíclica"
           onClose={() => setShowCreate(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
+              <button className="btn" onClick={() => setShowCreate(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={createCount} disabled={selectedBins.length === 0}>
-                Create Count ({selectedBins.length} bins)
+                Criar contagem ({selectedBins.length} endereços)
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            Select bins to count:
+            Selecione os endereços a contar:
           </p>
           <div style={{ maxHeight: 300, overflow: 'auto' }}>
             {bins.map((bin) => (
@@ -125,17 +125,17 @@ export default function CycleCounts() {
       {/* Detail modal */}
       {selectedCount && (
         <Modal
-          title={`Count #${selectedCount.count_id} - ${selectedCount.bin_code}`}
+          title={`Contagem nº${selectedCount.count_id} - ${selectedCount.bin_code}`}
           onClose={() => setSelectedCount(null)}
-          footer={<button className="btn" onClick={() => setSelectedCount(null)}>Close</button>}
+          footer={<button className="btn" onClick={() => setSelectedCount(null)}>Fechar</button>}
         >
           <div style={{ marginBottom: 12 }}>
             <div className="detail-grid">
               <span className="detail-label">Status</span><span><StatusTag status={selectedCount.status} /></span>
-              <span className="detail-label">Assigned To</span><span>{selectedCount.assigned_to || '-'}</span>
-              <span className="detail-label">Created</span><span className="mono">{selectedCount.created_at ? new Date(selectedCount.created_at).toLocaleString() : '-'}</span>
+              <span className="detail-label">Atribuído a</span><span>{selectedCount.assigned_to || '-'}</span>
+              <span className="detail-label">Criado</span><span className="mono">{selectedCount.created_at ? new Date(selectedCount.created_at).toLocaleString() : '-'}</span>
               {selectedCount.completed_at && (
-                <><span className="detail-label">Completed</span><span className="mono">{new Date(selectedCount.completed_at).toLocaleString()}</span></>
+                <><span className="detail-label">Concluído</span><span className="mono">{new Date(selectedCount.completed_at).toLocaleString()}</span></>
               )}
             </div>
           </div>
@@ -145,10 +145,10 @@ export default function CycleCounts() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>SKU</th>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Item</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Expected</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Counted</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Variance</th>
+                  <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Material</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Esperado</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Contado</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Divergência</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,7 +169,7 @@ export default function CycleCounts() {
               </tbody>
             </table>
           ) : (
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No line items</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha</p>
           )}
         </Modal>
       )}

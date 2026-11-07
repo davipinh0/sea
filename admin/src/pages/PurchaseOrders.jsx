@@ -5,8 +5,9 @@ import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import StatusTag from '../components/StatusTag.jsx';
+import { statusLabel } from '../utils/statusLabel.js';
 
-const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
+const STATUS_OPTIONS = ['Todos', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 const ALL_PO_STATUSES = ['OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 // ARCHIVED is reachable only from CLOSED in the backend state
 // machine. Surface that rule in the dropdown so an operator never
@@ -194,7 +195,7 @@ export default function PurchaseOrders() {
     } else {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
-      setEditError(formatApiError(data, 'Failed to save'));
+      setEditError(formatApiError(data, 'Falha ao salvar'));
     }
   }
 
@@ -215,7 +216,7 @@ export default function PurchaseOrders() {
       try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
       setLineErrors((e) => ({
         ...e,
-        [line.po_line_id]: formatApiError(data, 'Failed to update'),
+        [line.po_line_id]: formatApiError(data, 'Falha ao atualizar'),
       }));
     }
   }
@@ -232,7 +233,7 @@ export default function PurchaseOrders() {
       try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
       setLineErrors((e) => ({
         ...e,
-        [line.po_line_id]: formatApiError(data, 'Failed to remove'),
+        [line.po_line_id]: formatApiError(data, 'Falha ao remover'),
       }));
     }
   }
@@ -258,11 +259,11 @@ export default function PurchaseOrders() {
     const sku = newLineSku.trim();
     const qty = parseInt(newLineQty, 10);
     if (!sku) {
-      setNewLineError('Enter a SKU');
+      setNewLineError('Informe um SKU');
       return;
     }
     if (isNaN(qty) || qty <= 0) {
-      setNewLineError('Enter a positive quantity');
+      setNewLineError('Informe uma quantidade positiva');
       return;
     }
     setAddingLine(true);
@@ -277,7 +278,7 @@ export default function PurchaseOrders() {
         item = await resolveSku(sku);
       }
       if (!item) {
-        setNewLineError(`Unknown SKU: ${sku}`);
+        setNewLineError(`SKU desconhecido: ${sku}`);
         return;
       }
       const res = await api.post(
@@ -297,7 +298,7 @@ export default function PurchaseOrders() {
       } else {
         let data = null;
         try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
-        setNewLineError(formatApiError(data, 'Failed to add line'));
+        setNewLineError(formatApiError(data, 'Falha ao adicionar linha'));
       }
     } finally {
       setAddingLine(false);
@@ -315,7 +316,7 @@ export default function PurchaseOrders() {
       const s = String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const headers = ['SKU', 'Item Name', 'Ordered', 'Received', 'Variance'];
+    const headers = ['SKU', 'Nome do material', 'Pedido', 'Recebido', 'Divergência'];
     const lines = [headers.join(',')];
     for (const l of poLines) {
       const ordered = l.quantity_ordered || 0;
@@ -341,29 +342,29 @@ export default function PurchaseOrders() {
   }
 
   const columns = [
-    { key: 'po_number', label: 'PO Number', mono: true },
-    { key: 'vendor_name', label: 'Vendor' },
-    { key: 'expected_date', label: 'Expected Date', mono: true, render: (r) => r.expected_date ? new Date(r.expected_date).toLocaleDateString() : '-' },
+    { key: 'po_number', label: 'Número do PC', mono: true },
+    { key: 'vendor_name', label: 'Fornecedor' },
+    { key: 'expected_date', label: 'Data prevista', mono: true, render: (r) => r.expected_date ? new Date(r.expected_date).toLocaleDateString() : '-' },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
-    { key: 'created_at', label: 'Created', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-' },
+    { key: 'created_at', label: 'Criado', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-' },
     { key: 'actions', label: '', render: (r) => (
-      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
+      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Purchase Orders" />
+      <PageHeader title="Pedidos de compra" />
 
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Status:</label>
         <select className="form-select" value={statusFilter} onChange={handleStatusChange} style={{ width: 160 }}>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
         <input
           className="form-input"
           style={{ maxWidth: 320 }}
-          placeholder="Search by PO number or vendor"
+          placeholder="Buscar por número do PC ou fornecedor"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
@@ -376,7 +377,7 @@ export default function PurchaseOrders() {
             checked={showArchived}
             onChange={(e) => { setShowArchived(e.target.checked); setPage(1); }}
           />
-          Show Archived
+          Mostrar arquivados
         </label>
       </div>
 
@@ -387,33 +388,33 @@ export default function PurchaseOrders() {
         pagination={pagination}
         onPageChange={handlePageChange}
         onRowClick={viewPO}
-        emptyMessage="No purchase orders found"
+        emptyMessage="Nenhum pedido de compra encontrado"
       />
 
       {selectedPO && (
         <Modal
-          title={`PO ${selectedPO.po_number}`}
+          title={`PC ${selectedPO.po_number}`}
           onClose={() => { setSelectedPO(null); setPOLines([]); }}
           footer={
             <>
-              <button className="btn" onClick={exportPOCsv} disabled={poLines.length === 0}>Export CSV</button>
-              <button className="btn" onClick={() => { setSelectedPO(null); setPOLines([]); }}>Close</button>
+              <button className="btn" onClick={exportPOCsv} disabled={poLines.length === 0}>Exportar CSV</button>
+              <button className="btn" onClick={() => { setSelectedPO(null); setPOLines([]); }}>Fechar</button>
             </>
           }
           size="wide"
         >
           <section className="section">
-            <div className="section-title">PO Summary</div>
+            <div className="section-title">Resumo do PC</div>
             <div className="detail-grid detail-grid-2col" style={{ marginBottom: 0 }}>
-              <span className="detail-label">Vendor</span><span>{selectedPO.vendor_name || '-'}</span>
+              <span className="detail-label">Fornecedor</span><span>{selectedPO.vendor_name || '-'}</span>
               <span className="detail-label">Status</span><span><StatusTag status={selectedPO.status} /></span>
-              <span className="detail-label">Expected Date</span><span className="mono">{selectedPO.expected_date ? new Date(selectedPO.expected_date).toLocaleDateString() : '-'}</span>
-              <span className="detail-label">Notes</span><span>{selectedPO.notes || '-'}</span>
+              <span className="detail-label">Data prevista</span><span className="mono">{selectedPO.expected_date ? new Date(selectedPO.expected_date).toLocaleDateString() : '-'}</span>
+              <span className="detail-label">Observações</span><span>{selectedPO.notes || '-'}</span>
             </div>
           </section>
 
           <section className="section" style={{ marginBottom: 0 }}>
-            <div className="section-title">Line Items</div>
+            <div className="section-title">Linhas do pedido</div>
             {poLines.length > 0 ? (
               <table className="lines-table">
                 <thead>
@@ -421,10 +422,10 @@ export default function PurchaseOrders() {
                     <th>SKU</th>
                     <th>UPC</th>
                     <th>MPN</th>
-                    <th>Item Name</th>
-                    <th style={{ textAlign: 'right' }}>Ordered</th>
-                    <th style={{ textAlign: 'right' }}>Received</th>
-                    <th style={{ textAlign: 'right' }}>Remaining</th>
+                    <th>Nome do material</th>
+                    <th style={{ textAlign: 'right' }}>Pedido</th>
+                    <th style={{ textAlign: 'right' }}>Recebido</th>
+                    <th style={{ textAlign: 'right' }}>Restante</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -445,7 +446,7 @@ export default function PurchaseOrders() {
                 </tbody>
               </table>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No line items</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha</p>
             )}
           </section>
         </Modal>
@@ -453,12 +454,12 @@ export default function PurchaseOrders() {
 
       {editing && (
         <Modal
-          title={`Edit PO ${editing.po_number}`}
+          title={`Editar PC ${editing.po_number}`}
           onClose={closeEdit}
           footer={
             <>
-              <button className="btn" onClick={closeEdit}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveEdit}>Save</button>
+              <button className="btn" onClick={closeEdit}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveEdit}>Salvar</button>
             </>
           }
           size="wide"
@@ -482,10 +483,10 @@ export default function PurchaseOrders() {
           )}
 
           <section className="section">
-            <div className="section-title">Header</div>
+            <div className="section-title">Cabeçalho</div>
             <div className="form-row">
               <div className="form-group">
-                <label>PO Number</label>
+                <label>Número do PC</label>
                 <input
                   className="form-input"
                   value={editForm.po_number}
@@ -494,7 +495,7 @@ export default function PurchaseOrders() {
                 />
               </div>
               <div className="form-group">
-                <label>Vendor</label>
+                <label>Fornecedor</label>
                 <input
                   className="form-input"
                   value={editForm.vendor_name}
@@ -505,7 +506,7 @@ export default function PurchaseOrders() {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label>Expected Date</label>
+                <label>Data prevista</label>
                 <input
                   className="form-input"
                   type="date"
@@ -522,13 +523,13 @@ export default function PurchaseOrders() {
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 >
                   {statusDropdownOptions(editing.status).map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>{statusLabel(s)}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div className="form-group">
-              <label>Notes</label>
+              <label>Observações</label>
               <textarea
                 className="form-input"
                 rows={2}
@@ -539,23 +540,22 @@ export default function PurchaseOrders() {
             </div>
             {EDIT_LOCKED_STATUSES.has(editing.status) && (
               <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                Header + line edits are locked while the PO is {editing.status}.
-                Move the status off {editing.status} via the dropdown to resume editing.
+                A edição do cabeçalho e das linhas está bloqueada enquanto o PC está {editing.status}. Mude o status de {editing.status} pelo menu para voltar a editar.
               </p>
             )}
           </section>
 
           <section className="section">
-            <div className="section-title">Line Items</div>
+            <div className="section-title">Linhas do pedido</div>
             {editLines.length > 0 ? (
               <table className="lines-table">
                 <thead>
                   <tr>
                     <th>SKU</th>
-                    <th>Item Name</th>
-                    <th style={{ textAlign: 'right' }}>Ordered</th>
-                    <th style={{ textAlign: 'right' }}>Received</th>
-                    <th style={{ textAlign: 'right' }}>Variance</th>
+                    <th>Nome do material</th>
+                    <th style={{ textAlign: 'right' }}>Pedido</th>
+                    <th style={{ textAlign: 'right' }}>Recebido</th>
+                    <th style={{ textAlign: 'right' }}>Divergência</th>
                     <th style={{ width: 40 }}></th>
                   </tr>
                 </thead>
@@ -590,9 +590,9 @@ export default function PurchaseOrders() {
                             onClick={() => removeLine(l)}
                             disabled={!removable}
                             title={!removable
-                              ? (lineLocked ? 'Locked while PO is ' + editing.status : 'Line has received units; reverse receipts first')
-                              : 'Remove line'}
-                            aria-label="Remove line"
+                              ? (lineLocked ? 'Bloqueado enquanto o PC está ' + editing.status : 'A linha tem unidades recebidas; estorne os recebimentos primeiro')
+                              : 'Remover linha'}
+                            aria-label="Remover linha"
                           >&#10005;</button>
                         </td>
                       </tr>
@@ -601,7 +601,7 @@ export default function PurchaseOrders() {
                 </tbody>
               </table>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No line items yet.</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha ainda.</p>
             )}
 
             {!EDIT_LOCKED_STATUSES.has(editing.status) && (
@@ -615,7 +615,7 @@ export default function PurchaseOrders() {
                     <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>SKU</label>
                     <input
                       className="form-input mono"
-                      placeholder="Type SKU to search"
+                      placeholder="Digite o SKU para buscar"
                       list="po-edit-sku-suggestions"
                       value={newLineSku}
                       onChange={(e) => setNewLineSku(e.target.value)}
@@ -628,7 +628,7 @@ export default function PurchaseOrders() {
                     </datalist>
                   </div>
                   <div style={{ flex: '0 0 120px' }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>Quantity</label>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>Quantidade</label>
                     <input
                       className="form-input"
                       type="number"
@@ -646,7 +646,7 @@ export default function PurchaseOrders() {
                     disabled={addingLine}
                     style={{ marginTop: 16 }}
                   >
-                    {addingLine ? 'Adding...' : 'Add Line'}
+                    {addingLine ? 'Adicionando...' : 'Adicionar linha'}
                   </button>
                 </div>
                 {/* Live resolution preview / error sit immediately under
@@ -658,12 +658,12 @@ export default function PurchaseOrders() {
                 )}
                 {!newLineError && resolvedItem && (
                   <div style={{ marginTop: 8, fontSize: 12, color: 'var(--success)' }}>
-                    Found: <strong>{resolvedItem.sku}</strong> - {resolvedItem.item_name}
+                    Encontrado: <strong>{resolvedItem.sku}</strong> - {resolvedItem.item_name}
                   </div>
                 )}
                 {!newLineError && !resolvedItem && newLineSku.trim().length >= 2 && skuSuggestions.length === 0 && (
                   <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
-                    No matches for "{newLineSku.trim()}". Click Add Line to retry the lookup.
+                    Nenhum resultado para "{newLineSku.trim()}". Clique em Adicionar linha para repetir a busca.
                   </div>
                 )}
               </div>

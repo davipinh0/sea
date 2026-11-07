@@ -48,7 +48,7 @@ def get_config_schema(connector_name):
     try:
         cls = registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     instance = cls(config={})
     return jsonify({
@@ -69,7 +69,7 @@ def save_credentials(connector_name, validated):
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     warehouse_id = validated.warehouse_id
     for key, value in validated.credentials.items():
@@ -77,7 +77,7 @@ def save_credentials(connector_name, validated):
 
     g.db.commit()
     return jsonify({
-        "message": "Credentials saved",
+        "message": "Credenciais salvas",
         "connector": connector_name,
         "warehouse_id": warehouse_id,
         "keys": list(validated.credentials.keys()),
@@ -93,12 +93,12 @@ def get_credentials(connector_name):
     from flask import request
     warehouse_id = request.args.get("warehouse_id", type=int)
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id query parameter is required"}), 400
+        return jsonify({"error": "O parâmetro warehouse_id é obrigatório"}), 400
 
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     from sqlalchemy import text
     rows = g.db.execute(
@@ -135,7 +135,7 @@ def test_connection(connector_name, validated):
     try:
         cls = registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     warehouse_id = validated.warehouse_id
     credentials = credential_vault.get_all_credentials(connector_name, warehouse_id)
@@ -173,13 +173,13 @@ def remove_credentials(connector_name, validated):
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     credential_vault.delete_all_credentials(connector_name, validated.warehouse_id)
     g.db.commit()
 
     return jsonify({
-        "message": "Credentials deleted",
+        "message": "Credenciais excluídas",
         "connector": connector_name,
         "warehouse_id": validated.warehouse_id,
     })
@@ -202,12 +202,12 @@ def get_sync_status(connector_name):
     from flask import request
     warehouse_id = request.args.get("warehouse_id", type=int)
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id query parameter is required"}), 400
+        return jsonify({"error": "O parâmetro warehouse_id é obrigatório"}), 400
 
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     states = sync_state_service.get_all_sync_states(connector_name, warehouse_id)
     return jsonify({
@@ -237,17 +237,17 @@ def reset_sync_state(connector_name):
     data = request.get_json(silent=True) or {}
     warehouse_id = data.get("warehouse_id")
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id is required"}), 400
+        return jsonify({"error": "warehouse_id é obrigatório"}), 400
     sync_type = data.get("sync_type")
     if sync_type is not None and sync_type not in VALID_SYNC_TYPES:
         return jsonify({
-            "error": f"Invalid sync_type '{sync_type}'. Must be one of: {', '.join(VALID_SYNC_TYPES)}",
+            "error": f"sync_type inválido '{sync_type}'. Deve ser um de: {', '.join(VALID_SYNC_TYPES)}",
         }), 400
 
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     wid_int = int(warehouse_id)
     count = sync_state_service.reset_running(connector_name, wid_int, sync_type)
@@ -296,17 +296,17 @@ def trigger_sync(connector_name, sync_type):
     data = request.get_json(silent=True) or {}
     warehouse_id = data.get("warehouse_id") or request.args.get("warehouse_id", type=int)
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id is required"}), 400
+        return jsonify({"error": "warehouse_id é obrigatório"}), 400
 
     if sync_type not in VALID_SYNC_TYPES:
         return jsonify({
-            "error": f"Invalid sync_type '{sync_type}'. Must be one of: {', '.join(VALID_SYNC_TYPES)}",
+            "error": f"sync_type inválido '{sync_type}'. Deve ser um de: {', '.join(VALID_SYNC_TYPES)}",
         }), 400
 
     try:
         registry.get(connector_name)
     except KeyError:
-        return jsonify({"error": f"Connector '{connector_name}' not found"}), 404
+        return jsonify({"error": f"Conector '{connector_name}' não encontrado"}), 404
 
     # Check if already running before queuing - avoids a useless task that just raises Ignore.
     # V-012: a 'running' row whose running_since is stale (older than
@@ -331,7 +331,7 @@ def trigger_sync(connector_name, sync_type):
         )
         if not is_stale:
             return jsonify({
-                "error": "Sync already running",
+                "error": "Sincronização já em andamento",
                 "connector": connector_name,
                 "warehouse_id": warehouse_id,
                 "sync_type": sync_type,
@@ -351,7 +351,7 @@ def trigger_sync(connector_name, sync_type):
     async_result = task.delay(connector_name, warehouse_id)
 
     return jsonify({
-        "message": "Sync queued",
+        "message": "Sincronização na fila",
         "task_id": async_result.id,
         "connector": connector_name,
         "warehouse_id": warehouse_id,

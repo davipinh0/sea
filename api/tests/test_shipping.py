@@ -118,7 +118,7 @@ class TestShippingOrderLookup:
 
         resp = client.get("/api/shipping/order/SO-2026-001", headers=auth_headers)
         assert resp.status_code == 400
-        assert "packed" in resp.get_json()["error"].lower()
+        assert "embalado" in resp.get_json()["error"].lower()
 
     def test_lookup_requires_auth(self, client):
         resp = client.get("/api/shipping/order/SO-2026-001")

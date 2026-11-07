@@ -14,7 +14,7 @@ import Modal from '../components/Modal.jsx';
 // actually needed.
 
 const RESOURCE_OPTIONS = [
-  { value: '', label: 'All resources' },
+  { value: '', label: 'Todos os recursos' },
   { value: 'sales_orders', label: 'sales_orders' },
   { value: 'items', label: 'items' },
   { value: 'customers', label: 'customers' },
@@ -23,7 +23,7 @@ const RESOURCE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: '', label: 'All statuses' },
+  { value: '', label: 'Todos os status' },
   { value: 'applied', label: 'applied' },
   { value: 'superseded', label: 'superseded' },
 ];
@@ -65,7 +65,7 @@ export default function InboundActivity() {
       setRows(data.rows || []);
     } else {
       const body = await res?.json();
-      setError(body?.error || 'Failed to load inbound activity');
+      setError(body?.error || 'Falha ao carregar a atividade de entrada');
     }
     setLoading(false);
   }
@@ -81,7 +81,7 @@ export default function InboundActivity() {
       setDetail({ summary: row, full: data });
     } else {
       const body = await res?.json();
-      setDetail({ summary: row, error: body?.error || 'Failed to load detail' });
+      setDetail({ summary: row, error: body?.error || 'Falha ao carregar o detalhe' });
     }
     setDetailLoading(false);
   }
@@ -89,7 +89,7 @@ export default function InboundActivity() {
   const columns = [
     {
       key: 'received_at',
-      label: 'Received',
+      label: 'Recebido',
       render: (r) => (
         <span className="mono" style={{ fontSize: 12 }}>
           {fmtTimestamp(r.received_at)}
@@ -98,22 +98,22 @@ export default function InboundActivity() {
     },
     {
       key: 'resource',
-      label: 'Resource',
+      label: 'Recurso',
       render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.resource}</span>,
     },
     {
       key: 'source_system',
-      label: 'Source system',
+      label: 'Sistema de origem',
       render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.source_system}</span>,
     },
     {
       key: 'external_id',
-      label: 'External ID',
+      label: 'ID externo',
       render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.external_id}</span>,
     },
     {
       key: 'external_version',
-      label: 'Version',
+      label: 'Versão',
       render: (r) => (
         <span className="mono" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
           {r.external_version}
@@ -141,7 +141,7 @@ export default function InboundActivity() {
           className="btn btn-sm"
           onClick={(e) => { e.stopPropagation(); openDetail(r); }}
         >
-          View
+          Ver
         </button>
       ),
     },
@@ -149,9 +149,9 @@ export default function InboundActivity() {
 
   return (
     <div>
-      <PageHeader title="Inbound activity">
+      <PageHeader title="Atividade de entrada">
         <button className="btn" onClick={load} disabled={loading}>
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? 'Carregando…' : 'Atualizar'}
         </button>
       </PageHeader>
 
@@ -170,18 +170,18 @@ export default function InboundActivity() {
       }}>
         <div style={{ flex: 1 }}>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            Source system
+            Sistema de origem
           </label>
           <input
             className="form-input"
             value={filters.source_system}
             onChange={(e) => setFilters({ ...filters, source_system: e.target.value })}
-            placeholder="exact match (e.g. fabric)"
+            placeholder="correspondência exata (ex.: fabric)"
           />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            Resource
+            Recurso
           </label>
           <select
             className="form-input"
@@ -207,46 +207,46 @@ export default function InboundActivity() {
             ))}
           </select>
         </div>
-        <button className="btn btn-primary" onClick={load}>Apply</button>
+        <button className="btn btn-primary" onClick={load}>Aplicar</button>
       </div>
 
       <DataTable
         rowKey="inbound_id"
         columns={columns}
         data={rows}
-        emptyMessage={loading ? 'Loading…' : 'No inbound activity matches the current filters.'}
+        emptyMessage={loading ? 'Carregando…' : 'Nenhuma atividade de entrada corresponde aos filtros atuais.'}
       />
 
       {detail && (
         <Modal
-          title={`Inbound row: ${detail.summary.resource} #${detail.summary.inbound_id}`}
+          title={`Registro de entrada: ${detail.summary.resource} #${detail.summary.inbound_id}`}
           onClose={() => setDetail(null)}
-          footer={<button className="btn" onClick={() => setDetail(null)}>Close</button>}
+          footer={<button className="btn" onClick={() => setDetail(null)}>Fechar</button>}
         >
-          {detailLoading && <div>Loading…</div>}
+          {detailLoading && <div>Carregando…</div>}
           {detail.error && <div className="form-error">{detail.error}</div>}
           {detail.full && (
             <div>
               <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 6, marginBottom: 12, fontSize: 13 }}>
-                <div style={{ color: 'var(--text-secondary)' }}>Received at</div>
+                <div style={{ color: 'var(--text-secondary)' }}>Recebido em</div>
                 <div className="mono">{fmtTimestamp(detail.full.received_at)}</div>
                 <div style={{ color: 'var(--text-secondary)' }}>Status</div>
                 <div className="mono">{detail.full.status}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>Superseded at</div>
+                <div style={{ color: 'var(--text-secondary)' }}>Substituído em</div>
                 <div className="mono">{fmtTimestamp(detail.full.superseded_at)}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>Source system</div>
+                <div style={{ color: 'var(--text-secondary)' }}>Sistema de origem</div>
                 <div className="mono">{detail.full.source_system}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>External ID</div>
+                <div style={{ color: 'var(--text-secondary)' }}>ID externo</div>
                 <div className="mono">{detail.full.external_id}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>External version</div>
+                <div style={{ color: 'var(--text-secondary)' }}>Versão externa</div>
                 <div className="mono">{detail.full.external_version}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>Canonical ID</div>
+                <div style={{ color: 'var(--text-secondary)' }}>ID canônico</div>
                 <div className="mono" style={{ wordBreak: 'break-all' }}>{detail.full.canonical_id}</div>
-                <div style={{ color: 'var(--text-secondary)' }}>Token ID</div>
+                <div style={{ color: 'var(--text-secondary)' }}>ID do token</div>
                 <div className="mono">{detail.full.ingested_via_token_id}</div>
               </div>
-              <PayloadBlock title="Source payload" value={detail.full.source_payload} />
-              <PayloadBlock title="Canonical payload" value={detail.full.canonical_payload} />
+              <PayloadBlock title="Payload de origem" value={detail.full.source_payload} />
+              <PayloadBlock title="Payload canônico" value={detail.full.canonical_payload} />
             </div>
           )}
         </Modal>

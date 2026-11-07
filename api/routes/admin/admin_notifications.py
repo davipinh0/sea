@@ -99,7 +99,7 @@ def create_notification_webhook(validated):
         {"wid": validated.warehouse_id},
     ).scalar()
     if not wh_exists:
-        return jsonify({"error": f"warehouse_id {validated.warehouse_id} not found"}), 400
+        return jsonify({"error": f"warehouse_id {validated.warehouse_id} não encontrado"}), 400
 
     event_filter = validated.event_filter or DEFAULT_EVENT_FILTER
 
@@ -141,7 +141,7 @@ def update_notification_webhook(webhook_id, validated):
         validated.event_filter is not None,
         validated.secret is not None,
     ]):
-        return jsonify({"error": "at least one field must be set"}), 400
+        return jsonify({"error": "pelo menos um campo deve ser informado"}), 400
 
     sets, params = [], {"wid": webhook_id}
     if validated.enabled is not None:
@@ -166,7 +166,7 @@ def update_notification_webhook(webhook_id, validated):
     ).fetchone()
     if not row:
         g.db.rollback()
-        return jsonify({"error": "notification webhook not found"}), 404
+        return jsonify({"error": "webhook de notificação não encontrado"}), 404
     g.db.commit()
     return jsonify(_row_to_summary(row))
 
@@ -190,7 +190,7 @@ def rotate_notification_webhook_url(webhook_id, validated):
     ).fetchone()
     if not row:
         g.db.rollback()
-        return jsonify({"error": "notification webhook not found"}), 404
+        return jsonify({"error": "webhook de notificação não encontrado"}), 404
     g.db.commit()
     return jsonify(_row_to_summary(row))
 
@@ -209,7 +209,7 @@ def delete_notification_webhook(webhook_id):
     ).fetchone()
     if not deleted:
         g.db.rollback()
-        return jsonify({"error": "notification webhook not found"}), 404
+        return jsonify({"error": "webhook de notificação não encontrado"}), 404
     g.db.commit()
     return jsonify({"webhook_id": webhook_id, "message": "deleted"})
 
@@ -251,18 +251,18 @@ def test_send_notification_webhook(webhook_id):
         {"wid": webhook_id},
     ).fetchone()
     if not row:
-        return jsonify({"error": "notification webhook not found"}), 404
+        return jsonify({"error": "webhook de notificação não encontrado"}), 404
 
     if row.channel_kind != "teams":
         return jsonify({
-            "error": f"test-send only supports channel_kind='teams'; got {row.channel_kind!r}",
+            "error": f"o envio de teste só suporta channel_kind='teams'; recebido {row.channel_kind!r}",
         }), 400
 
     try:
         plaintext_url = decrypt_string(row.url)
     except Exception as exc:
         return jsonify({
-            "error": "stored URL could not be decrypted (key rotated?). Rotate the URL or delete the row.",
+            "error": "a URL armazenada não pôde ser descriptografada (chave trocada?). Troque a URL ou exclua o registro.",
             "detail": str(exc),
         }), 500
 

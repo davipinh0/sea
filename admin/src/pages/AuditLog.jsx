@@ -48,7 +48,7 @@ const CATEGORY_TAG_CLASS = {
 };
 
 const ACTION_OPTIONS = [
-  { value: '', label: 'All actions' },
+  { value: '', label: 'Todas as ações' },
   ...Object.keys(ACTION_CATEGORY).sort().map((a) => ({ value: a, label: a })),
 ];
 
@@ -144,7 +144,7 @@ function DetailsChips({ row }) {
           fontSize: 11, color: 'var(--text-tertiary)',
           alignSelf: 'center', fontStyle: 'italic',
         }}>
-          +{overflow} more
+          +{overflow} mais
         </span>
       )}
     </div>
@@ -159,21 +159,21 @@ export default function AuditLog() {
   const [tab, setTab] = useState('item-history');
   return (
     <div>
-      <PageHeader title="Audit log" />
+      <PageHeader title="Log de auditoria" />
       <div className="data-tabs" style={{ marginBottom: 16 }}>
         <button
           type="button"
           className={`data-tab${tab === 'item-history' ? ' active' : ''}`}
           onClick={() => setTab('item-history')}
         >
-          Item History
+          Histórico do material
         </button>
         <button
           type="button"
           className={`data-tab${tab === 'audit' ? ' active' : ''}`}
           onClick={() => setTab('audit')}
         >
-          Audit Log
+          Log de auditoria
         </button>
       </div>
       {tab === 'item-history' ? <ItemHistoryView /> : <FullAuditLogView />}
@@ -276,18 +276,18 @@ function ItemHistoryView() {
         position: 'relative', marginBottom: 16, maxWidth: 480,
       }}>
         <label style={FILTER_LABEL_STYLE}>
-          SKU {itemSearching && <span style={{ textTransform: 'none', fontWeight: 400 }}>(searching...)</span>}
+          SKU {itemSearching && <span style={{ textTransform: 'none', fontWeight: 400 }}>(buscando...)</span>}
         </label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             className="form-input"
-            placeholder="Type SKU or item name (min 2 chars)"
+            placeholder="Digite o SKU ou nome do material (mín. 2 caracteres)"
             value={itemSearch}
             onChange={(e) => { setItemSearch(e.target.value); if (item) setItem(null); }}
             autoComplete="off"
           />
           {item && (
-            <button className="btn btn-sm" onClick={clearItem}>Clear</button>
+            <button className="btn btn-sm" onClick={clearItem}>Limpar</button>
           )}
         </div>
         {!item && itemResults.length > 0 && (
@@ -316,9 +316,7 @@ function ItemHistoryView() {
 
       {!item && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Type a SKU or item name above to see every audit-log event
-          that touched it (receives, picks, packs, ships, adjustments,
-          transfers).
+          Digite um SKU ou nome de material acima para ver todos os eventos de auditoria que o envolveram (recebimentos, separações, embalagens, expedições, ajustes, transferências).
         </p>
       )}
 
@@ -333,8 +331,8 @@ function ItemHistoryView() {
           onSort={handleSort}
           emptyMessage={
             loading
-              ? 'Loading…'
-              : `No audit events for ${item.sku}.`
+              ? 'Carregando…'
+              : `Nenhum evento de auditoria para ${item.sku}.`
           }
         />
       )}
@@ -415,7 +413,7 @@ function FullAuditLogView() {
         marginBottom: 16,
       }}>
         <div style={{ minWidth: 200 }}>
-          <label style={FILTER_LABEL_STYLE}>Action</label>
+          <label style={FILTER_LABEL_STYLE}>Ação</label>
           <select
             className="form-select"
             value={filters.action_type}
@@ -427,7 +425,7 @@ function FullAuditLogView() {
           </select>
         </div>
         <div style={{ minWidth: 140 }}>
-          <label style={FILTER_LABEL_STYLE}>User</label>
+          <label style={FILTER_LABEL_STYLE}>Usuário</label>
           <input
             className="form-input"
             placeholder="username"
@@ -436,7 +434,7 @@ function FullAuditLogView() {
           />
         </div>
         <div>
-          <label style={FILTER_LABEL_STYLE}>From</label>
+          <label style={FILTER_LABEL_STYLE}>De</label>
           <input
             className="form-input"
             type="date"
@@ -445,7 +443,7 @@ function FullAuditLogView() {
           />
         </div>
         <div>
-          <label style={FILTER_LABEL_STYLE}>To</label>
+          <label style={FILTER_LABEL_STYLE}>Até</label>
           <input
             className="form-input"
             type="date"
@@ -454,7 +452,7 @@ function FullAuditLogView() {
           />
         </div>
         {hasFilters && (
-          <button className="btn btn-sm" onClick={clearFilters}>Clear</button>
+          <button className="btn btn-sm" onClick={clearFilters}>Limpar</button>
         )}
       </div>
 
@@ -468,10 +466,10 @@ function FullAuditLogView() {
         onSort={handleSort}
         emptyMessage={
           loading
-            ? 'Loading…'
+            ? 'Carregando…'
             : (hasFilters
-                ? 'No entries match the current filters.'
-                : 'No audit log entries yet.')
+                ? 'Nenhum registro corresponde aos filtros atuais.'
+                : 'Nenhum registro de auditoria ainda.')
         }
       />
 
@@ -485,7 +483,7 @@ function FullAuditLogView() {
 const AUDIT_COLUMNS = [
   {
     key: 'created_at',
-    label: 'When',
+    label: 'Quando',
     sortable: true,
     render: (r) => (
       <span className="mono" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -495,19 +493,19 @@ const AUDIT_COLUMNS = [
   },
   {
     key: 'action_type',
-    label: 'Action',
+    label: 'Ação',
     sortable: true,
     render: (r) => <ActionBadge action={r.action_type} />,
   },
   {
     key: 'entity_type',
-    label: 'Entity',
+    label: 'Entidade',
     sortable: true,
     render: (r) => <EntityCell row={r} />,
   },
   {
     key: 'user_id',
-    label: 'User',
+    label: 'Usuário',
     sortable: true,
     render: (r) => (
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
@@ -527,7 +525,7 @@ const AUDIT_COLUMNS = [
   },
   {
     key: 'details',
-    label: 'Details',
+    label: 'Detalhes',
     render: (r) => <DetailsChips row={r} />,
   },
 ];
@@ -563,9 +561,9 @@ function AuditDetailModal({ entry, onClose }) {
 
   return (
     <Modal
-      title="Audit log entry"
+      title="Registro de auditoria"
       onClose={onClose}
-      footer={<button className="btn" onClick={onClose}>Close</button>}
+      footer={<button className="btn" onClick={onClose}>Fechar</button>}
     >
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
@@ -582,7 +580,7 @@ function AuditDetailModal({ entry, onClose }) {
         display: 'grid', gridTemplateColumns: '110px 1fr',
         gap: '8px 14px', fontSize: 13, marginBottom: 16,
       }}>
-        <KV label="Entity">
+        <KV label="Entidade">
           <EntityCell row={entry} />
           {entry.entity_id ? (
             <span className="mono" style={{
@@ -592,20 +590,20 @@ function AuditDetailModal({ entry, onClose }) {
             </span>
           ) : null}
         </KV>
-        <KV label="User">
+        <KV label="Usuário">
           <span className="mono">{entry.username || entry.user_id || '-'}</span>
         </KV>
         {entry.device_id && (
-          <KV label="Device">
+          <KV label="Dispositivo">
             <span className="mono" style={{ fontSize: 12 }}>{entry.device_id}</span>
           </KV>
         )}
         {entry.warehouse_code && (
-          <KV label="Warehouse">
+          <KV label="Armazém">
             <span className="mono" style={{ fontSize: 12 }}>{entry.warehouse_code}</span>
           </KV>
         )}
-        <KV label="Log ID">
+        <KV label="ID do log">
           <span className="mono" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
             #{entry.log_id}
           </span>
@@ -622,10 +620,10 @@ function AuditDetailModal({ entry, onClose }) {
               fontSize: 11, color: 'var(--text-secondary)',
               textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600,
             }}>
-              Event details
+              Detalhes do evento
             </h4>
-            <button className="btn btn-sm" onClick={copyJson} title="Copy JSON to clipboard">
-              Copy JSON
+            <button className="btn btn-sm" onClick={copyJson} title="Copiar JSON para a área de transferência">
+              Copiar JSON
             </button>
           </div>
           <div style={{

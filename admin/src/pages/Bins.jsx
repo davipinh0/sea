@@ -133,7 +133,7 @@ export default function Bins() {
       loadBins();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to delete');
+      setError(data?.error || 'Falha ao excluir');
       setDeleteTarget(null);
     }
   }
@@ -156,31 +156,31 @@ export default function Bins() {
       loadBins();
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to save');
+      setError(data?.error || 'Falha ao salvar');
     }
   }
 
   const columns = [
-    { key: 'bin_code', label: 'Bin Code', mono: true },
-    { key: 'bin_barcode', label: 'Barcode', mono: true },
-    { key: 'bin_type', label: 'Type' },
-    { key: 'zone_name', label: 'Zone' },
-    { key: 'aisle', label: 'Aisle' },
-    { key: 'pick_sequence', label: 'Pick Seq' },
-    { key: 'is_active', label: 'Active', render: (r) => r.is_active ? 'Yes' : 'No' },
+    { key: 'bin_code', label: 'Código do endereço', mono: true },
+    { key: 'bin_barcode', label: 'Código de barras', mono: true },
+    { key: 'bin_type', label: 'Tipo' },
+    { key: 'zone_name', label: 'Zona' },
+    { key: 'aisle', label: 'Corredor' },
+    { key: 'pick_sequence', label: 'Seq. separação' },
+    { key: 'is_active', label: 'Ativo', render: (r) => r.is_active ? 'Sim' : 'Não' },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
-        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEditFromRow(r); }} aria-label="Edit" title="Edit">&#9998;</button>
-        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} aria-label="Delete" title="Delete">&#128465;</button>
+        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEditFromRow(r); }} aria-label="Editar" title="Editar">&#9998;</button>
+        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} aria-label="Excluir" title="Excluir">&#128465;</button>
       </div>
     )},
   ];
 
   const invCols = [
     { key: 'sku', label: 'SKU', mono: true },
-    { key: 'item_name', label: 'Item' },
-    { key: 'quantity_on_hand', label: 'On Hand' },
-    { key: 'quantity_allocated', label: 'Allocated' },
+    { key: 'item_name', label: 'Material' },
+    { key: 'quantity_on_hand', label: 'Em estoque' },
+    { key: 'quantity_allocated', label: 'Alocado' },
   ];
 
   function renderForm() {
@@ -189,37 +189,37 @@ export default function Bins() {
         {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
         <div className="form-row">
           <div className="form-group">
-            <label>Bin Code</label>
+            <label>Código do endereço</label>
             <input className="form-input" value={form.bin_code || ''} onChange={(e) => setForm({ ...form, bin_code: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Barcode</label>
+            <label>Código de barras</label>
             <input className="form-input" value={form.bin_barcode || ''} onChange={(e) => setForm({ ...form, bin_barcode: e.target.value })} />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label>Type</label>
+            <label>Tipo</label>
             <select className="form-select" value={form.bin_type || ''} onChange={(e) => setForm({ ...form, bin_type: e.target.value })}>
-              <option value="">Select type</option>
+              <option value="">Selecione o tipo</option>
               {BIN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div className="form-group">
-            <label>Zone</label>
+            <label>Zona</label>
             <select className="form-select" value={form.zone_id || ''} onChange={(e) => setForm({ ...form, zone_id: Number(e.target.value) })}>
-              <option value="">Select zone</option>
+              <option value="">Selecione a zona</option>
               {zones.map((z) => <option key={z.zone_id} value={z.zone_id}>{z.zone_code} - {z.zone_name}</option>)}
             </select>
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label>Aisle</label>
+            <label>Corredor</label>
             <input className="form-input" value={form.aisle || ''} onChange={(e) => setForm({ ...form, aisle: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Pick Sequence</label>
+            <label>Sequência de separação</label>
             <input className="form-input" type="number" value={form.pick_sequence ?? ''} onChange={(e) => setForm({ ...form, pick_sequence: e.target.value })} />
           </div>
         </div>
@@ -229,11 +229,11 @@ export default function Bins() {
 
   return (
     <div>
-      <PageHeader title="Bins">
+      <PageHeader title="Endereços">
         <input
           className="form-input"
           style={{ maxWidth: 320, marginRight: 8 }}
-          placeholder="Search by bin code or barcode"
+          placeholder="Buscar por código do endereço ou código de barras"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
@@ -242,32 +242,32 @@ export default function Bins() {
           onClick={exportCsv}
           disabled={exporting || !pagination?.total}
           style={{ marginRight: 8 }}
-          title="Export current filter to CSV"
+          title="Exportar filtro atual para CSV"
         >
-          {exporting ? 'Exporting…' : 'Export CSV'}
+          {exporting ? 'Exportando…' : 'Exportar CSV'}
         </button>
-        <button className="btn btn-primary" onClick={() => { setForm({ is_active: true }); setShowCreate(true); setError(''); }}>New Bin</button>
+        <button className="btn btn-primary" onClick={() => { setForm({ is_active: true }); setShowCreate(true); setError(''); }}>Novo endereço</button>
       </PageHeader>
       <DataTable rowKey="bin_id" columns={columns} data={bins} pagination={pagination} onPageChange={setPage} onRowClick={viewBin} />
 
       {selected && detail && !editing && (
-        <Modal title={`Bin ${detail.bin_code}`} onClose={() => { setSelected(null); setDetail(null); setError(''); }}
+        <Modal title={`Endereço ${detail.bin_code}`} onClose={() => { setSelected(null); setDetail(null); setError(''); }}
           footer={
-            <button className="btn" onClick={() => { setEditing(true); setForm(detail); setError(''); }}>Edit</button>
+            <button className="btn" onClick={() => { setEditing(true); setForm(detail); setError(''); }}>Editar</button>
           }
         >
           <div className="detail-grid">
-            <span className="detail-label">Code</span><span className="mono">{detail.bin_code}</span>
-            <span className="detail-label">Barcode</span><span className="mono">{detail.bin_barcode}</span>
-            <span className="detail-label">Type</span><span>{detail.bin_type}</span>
-            <span className="detail-label">Zone</span><span>{detail.zone_name || '-'}</span>
-            <span className="detail-label">Aisle</span><span>{detail.aisle || '-'}</span>
-            <span className="detail-label">Pick Seq</span><span>{detail.pick_sequence ?? '-'}</span>
-            <span className="detail-label">Active</span><span>{detail.is_active ? 'Yes' : 'No'}</span>
+            <span className="detail-label">Código</span><span className="mono">{detail.bin_code}</span>
+            <span className="detail-label">Código de barras</span><span className="mono">{detail.bin_barcode}</span>
+            <span className="detail-label">Tipo</span><span>{detail.bin_type}</span>
+            <span className="detail-label">Zona</span><span>{detail.zone_name || '-'}</span>
+            <span className="detail-label">Corredor</span><span>{detail.aisle || '-'}</span>
+            <span className="detail-label">Seq. separação</span><span>{detail.pick_sequence ?? '-'}</span>
+            <span className="detail-label">Ativo</span><span>{detail.is_active ? 'Sim' : 'Não'}</span>
           </div>
           {detail.inventory && detail.inventory.length > 0 && (
             <>
-              <div className="section-title">Inventory</div>
+              <div className="section-title">Estoque</div>
               <DataTable rowKey="inventory_id" columns={invCols} data={detail.inventory} />
             </>
           )}
@@ -277,18 +277,17 @@ export default function Bins() {
 
       {deleteTarget && (
         <Modal
-          title={`Delete bin ${deleteTarget.bin_code}?`}
+          title={`Excluir endereço ${deleteTarget.bin_code}?`}
           onClose={() => setDeleteTarget(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={deleteBin}>Delete</button>
+              <button className="btn" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={deleteBin}>Excluir</button>
             </>
           }
         >
           <p style={{ fontSize: 13 }}>
-            This permanently removes bin <span className="mono">{deleteTarget.bin_code}</span>. Inventory with
-            quantity on hand and preferred-bin references must be cleared first.
+            Isto remove permanentemente o endereço <span className="mono">{deleteTarget.bin_code}</span>. O estoque com quantidade em mãos e referências de endereço preferencial deve ser zerado antes.
           </p>
           {error && <div className="form-error" style={{ marginTop: 12 }}>{error}</div>}
         </Modal>
@@ -296,12 +295,12 @@ export default function Bins() {
 
       {(editing || showCreate) && (
         <Modal
-          title={editing ? `Edit Bin ${form.bin_code}` : 'New Bin'}
+          title={editing ? `Editar endereço ${form.bin_code}` : 'Novo endereço'}
           onClose={() => { setEditing(false); setShowCreate(false); setSelected(null); setDetail(null); }}
           footer={
             <>
-              <button className="btn" onClick={() => { setEditing(false); setShowCreate(false); setSelected(null); setDetail(null); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveBin}>Save</button>
+              <button className="btn" onClick={() => { setEditing(false); setShowCreate(false); setSelected(null); setDetail(null); }}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveBin}>Salvar</button>
             </>
           }
         >

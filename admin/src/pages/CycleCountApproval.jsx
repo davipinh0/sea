@@ -37,11 +37,11 @@ export default function CycleCountApproval() {
     }));
     const res = await api.post('/admin/adjustments/review', { decisions: payload });
     if (res?.ok) {
-      setMessage(`Bin decisions submitted successfully`);
+      setMessage(`Decisões dos endereços enviadas com sucesso`);
       loadPending();
     } else {
       const data = await res?.json();
-      setMessage(data?.error || 'Failed to submit decisions');
+      setMessage(data?.error || 'Falha ao enviar as decisões');
     }
     setSubmitting(false);
   }
@@ -83,47 +83,47 @@ export default function CycleCountApproval() {
 
   return (
     <div>
-      <PageHeader title="Count Approvals" />
+      <PageHeader title="Aprovações de contagem" />
 
       {message && (
         <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--success)' }}>{message}</div>
       )}
 
       {adjustments.length === 0 ? (
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No pending adjustments</p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhum ajuste pendente</p>
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-            <span>Sort by</span>
+            <span>Ordenar por</span>
             <button
               className={`btn btn-sm${sortBy === 'count' ? ' btn-primary' : ''}`}
               onClick={() => setSortBy('count')}
             >
-              Count #
+              Contagem nº
             </button>
             <button
               className={`btn btn-sm${sortBy === 'bin' ? ' btn-primary' : ''}`}
               onClick={() => setSortBy('bin')}
             >
-              Bin
+              Endereço
             </button>
           </div>
           {sortedGroups.map(([countId, items]) => (
             <div key={countId} className="card" style={{ marginBottom: 16 }}>
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>
-                Count #{countId} - {items[0].bin_code}
+                Contagem nº{countId} - {items[0].bin_code}
               </div>
               <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     <th style={thStyle}>SKU</th>
-                    <th style={thStyle}>Item Name</th>
-                    <th style={thStyle}>Bin</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Expected</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Scanned</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Variance</th>
-                    <th style={thStyle}>Counted By</th>
-                    <th style={thStyle}>Decision</th>
+                    <th style={thStyle}>Nome do material</th>
+                    <th style={thStyle}>Endereço</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Esperado</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Lido</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Divergência</th>
+                    <th style={thStyle}>Contado por</th>
+                    <th style={thStyle}>Decisão</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,7 +149,7 @@ export default function CycleCountApproval() {
                               onChange={() => setDecision(a.adjustment_id, 'approve')}
                               style={{ marginRight: 4 }}
                             />
-                            Approve
+                            Aprovar
                           </label>
                           <label style={{ fontSize: 12, cursor: 'pointer' }}>
                             <input
@@ -159,7 +159,7 @@ export default function CycleCountApproval() {
                               onChange={() => setDecision(a.adjustment_id, 'reject')}
                               style={{ marginRight: 4 }}
                             />
-                            Reject
+                            Rejeitar
                           </label>
                         </td>
                       </tr>
@@ -169,10 +169,10 @@ export default function CycleCountApproval() {
               </table>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button className="btn btn-primary btn-sm" onClick={() => submitGroup(countId)} disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit'}
+                  {submitting ? 'Enviando...' : 'Enviar'}
                 </button>
-                <button className="btn btn-sm" onClick={() => approveAll(countId)}>Approve All</button>
-                <button className="btn btn-sm" onClick={() => rejectAll(countId)}>Reject All</button>
+                <button className="btn btn-sm" onClick={() => approveAll(countId)}>Aprovar todos</button>
+                <button className="btn btn-sm" onClick={() => rejectAll(countId)}>Rejeitar todos</button>
               </div>
             </div>
           ))}

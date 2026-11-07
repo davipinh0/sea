@@ -106,7 +106,7 @@ def get_vendor(canonical_id):
         {"cid": str(canonical_id)},
     ).fetchone()
     if not row:
-        return jsonify({"error": "Vendor not found"}), 404
+        return jsonify({"error": "Fornecedor não encontrado"}), 404
     return jsonify({"vendor": _vendor_row_to_dict(row)})
 
 
@@ -148,14 +148,14 @@ def create_vendor(validated):
 def update_vendor(canonical_id, validated):
     data = validated.model_dump(exclude_unset=True)
     if not data:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     existing = g.db.execute(
         text("SELECT canonical_id FROM vendors WHERE canonical_id = :cid"),
         {"cid": str(canonical_id)},
     ).fetchone()
     if not existing:
-        return jsonify({"error": "Vendor not found"}), 404
+        return jsonify({"error": "Fornecedor não encontrado"}), 404
 
     set_fragments = [f"{col} = :{col}" for col in data]
     set_fragments.append("updated_at = NOW()")
@@ -186,7 +186,7 @@ def delete_vendor(canonical_id):
         {"cid": str(canonical_id)},
     ).fetchone()
     if not existing:
-        return jsonify({"error": "Vendor not found"}), 404
+        return jsonify({"error": "Fornecedor não encontrado"}), 404
 
     g.db.execute(
         text("DELETE FROM vendors WHERE canonical_id = :cid"),

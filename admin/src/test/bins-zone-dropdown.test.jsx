@@ -75,7 +75,7 @@ describe('Bin create Zone dropdown (issue #99)', () => {
 
     // Wait for the initial loads, then open the create modal.
     await waitFor(() => expect(apiGetMock).toHaveBeenCalled());
-    fireEvent.click(await findByText('New Bin'));
+    fireEvent.click(await findByText('Novo endereço'));
 
     // The form has no htmlFor bindings, so target by role. Inputs in
     // render order are Bin Code, Barcode, Aisle; Pick Sequence is a
@@ -89,7 +89,7 @@ describe('Bin create Zone dropdown (issue #99)', () => {
     // Select the second zone (zone_id = 3) via the Zone dropdown.
     fireEvent.change(selects[1], { target: { value: '3' } });
 
-    fireEvent.click(getByRole('button', { name: 'Save' }));
+    fireEvent.click(getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalled());
 

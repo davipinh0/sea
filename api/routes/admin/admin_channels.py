@@ -45,13 +45,12 @@ def _validate_sink(url: str):
     """Return an (error_json, status) tuple on rejection, else None."""
     scheme = urlparse(url).scheme
     if scheme not in ("http", "https"):
-        return {"error": "delivery_url must be http or https"}, 400
+        return {"error": "delivery_url deve ser http ou https"}, 400
     if scheme == "http" and not _http_sink_allowed():
         return {
             "error": "https_required",
             "detail": (
-                "delivery_url must use https. Set SENTRY_ALLOW_HTTP_WEBHOOKS=true "
-                "to relax this in dev / CI; production refuses the opt-out."
+                "delivery_url deve usar https. Defina SENTRY_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
             ),
         }, 400
     try:

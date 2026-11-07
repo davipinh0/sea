@@ -12,73 +12,73 @@ import { useWarehouse } from '../warehouse.jsx';
 // authenticated user so the badges below populate.
 const NAV = [
   {
-    label: 'Floor',
+    label: 'Operação',
     items: [
-      { to: '/', label: 'Dashboard', pageKey: 'dashboard' },
-      { to: '/inventory', label: 'Inventory', pageKey: 'inventory' },
-      { to: '/cycle-counts', label: 'Counts', pageKey: 'cycle-counts' },
-      { to: '/count-approvals', label: 'Approvals', pageKey: 'count-approvals' },
+      { to: '/', label: 'Painel', pageKey: 'dashboard' },
+      { to: '/inventory', label: 'Estoque', pageKey: 'inventory' },
+      { to: '/cycle-counts', label: 'Contagens', pageKey: 'cycle-counts' },
+      { to: '/count-approvals', label: 'Aprovações', pageKey: 'count-approvals' },
     ],
   },
   {
-    label: 'Inbound',
+    label: 'Entrada',
     items: [
-      { to: '/purchase-orders', label: 'Purchase Orders', pageKey: 'purchase-orders' },
-      { to: '/receiving', label: 'Receiving', pageKey: 'receiving' },
-      { to: '/putaway', label: 'Put-away', pageKey: 'putaway' },
+      { to: '/purchase-orders', label: 'Pedidos de compra', pageKey: 'purchase-orders' },
+      { to: '/receiving', label: 'Recebimento', pageKey: 'receiving' },
+      { to: '/putaway', label: 'Armazenagem', pageKey: 'putaway' },
     ],
   },
   {
-    label: 'Outbound',
+    label: 'Saída',
     items: [
-      { to: '/sales-orders', label: 'Sales Orders', pageKey: 'sales-orders' },
-      { to: '/pos-activity', label: 'POS Activity' },
-      { to: '/fraud', label: 'Fraud', pageKey: 'fraud' },
+      { to: '/sales-orders', label: 'Pedidos de venda', pageKey: 'sales-orders' },
+      { to: '/pos-activity', label: 'Atividade PDV' },
+      { to: '/fraud', label: 'Fraude', pageKey: 'fraud' },
       // Partial-fulfill / backorders dashboard.
-      { to: '/backorders', label: 'Backorders', pageKey: 'backorders' },
-      { to: '/picking-tickets', label: 'Picking Tickets', pageKey: 'picking-tickets' },
+      { to: '/backorders', label: 'Pendências', pageKey: 'backorders' },
+      { to: '/picking-tickets', label: 'Fichas de separação', pageKey: 'picking-tickets' },
       // Returns: RMA (the <orig>-RMA goods-in SOs) + Refunds (the <orig>-REFUND
       // credit memos) under one tabbed page. Reuses the sales-orders permission
       // -- the create-rma / receive-return / refund routes all gate on it.
-      { to: '/returns', label: 'Returns', pageKey: 'sales-orders' },
+      { to: '/returns', label: 'Devoluções', pageKey: 'sales-orders' },
       // Picking/Packing/Shipping are mobile-only: the admin-side
       // mirrors were retired. Supervisors use Sales Orders + Picking
       // Tickets here, and the handheld scanners drive the floor work.
-      { to: '/picking-batches', label: 'Picking Batches', pageKey: 'picking-batches' },
+      { to: '/picking-batches', label: 'Lotes de separação', pageKey: 'picking-batches' },
     ],
   },
   {
-    label: 'Warehouse',
+    label: 'Armazém',
     items: [
       // Day-to-day operational entries lead; the warehouse-layout
       // pages (Warehouses / Bins / Zones / Preferred Bins) collapse
       // into a single Data link with a tab strip.
-      { to: '/items', label: 'Items', pageKey: 'items' },
-      { to: '/vendors', label: 'Vendors', pageKey: 'vendors' },
-      { to: '/adjustments', label: 'Inventory Adjustments', pageKey: 'adjustments' },
-      { to: '/inter-warehouse-transfers', label: 'Inventory Transfers', pageKey: 'inter-warehouse-transfers' },
-      { to: '/transfer-orders', label: 'Transfer Orders', pageKey: 'transfer-orders' },
-      { to: '/data', label: 'Data', pageKeys: ['warehouses', 'bins', 'zones', 'preferred-bins'] },
+      { to: '/items', label: 'Materiais', pageKey: 'items' },
+      { to: '/vendors', label: 'Fornecedores', pageKey: 'vendors' },
+      { to: '/adjustments', label: 'Ajustes de estoque', pageKey: 'adjustments' },
+      { to: '/inter-warehouse-transfers', label: 'Transferências de estoque', pageKey: 'inter-warehouse-transfers' },
+      { to: '/transfer-orders', label: 'Ordens de transferência', pageKey: 'transfer-orders' },
+      { to: '/data', label: 'Dados', pageKeys: ['warehouses', 'bins', 'zones', 'preferred-bins'] },
     ],
   },
   {
-    label: 'System',
+    label: 'Sistema',
     items: [
-      { to: '/users', label: 'Users', pageKey: 'users' },
-      { to: '/api-tokens', label: 'API tokens', pageKey: 'api-tokens' },
-      { to: '/inbound', label: 'Inbound activity', pageKey: 'inbound' },
-      { to: '/consumer-groups', label: 'Consumer groups', pageKey: 'consumer-groups' },
+      { to: '/users', label: 'Usuários', pageKey: 'users' },
+      { to: '/api-tokens', label: 'Tokens de API', pageKey: 'api-tokens' },
+      { to: '/inbound', label: 'Atividade de entrada', pageKey: 'inbound' },
+      { to: '/consumer-groups', label: 'Grupos de consumidores', pageKey: 'consumer-groups' },
       { to: '/webhooks', label: 'Webhooks', pageKey: 'webhooks' },
-      { to: '/channels', label: 'Channels', pageKey: 'channels' },
+      { to: '/channels', label: 'Canais', pageKey: 'channels' },
       // v1.13.0 mig 064 notification_webhooks. Sibling to /webhooks
       // because both are outbound-delivery surfaces; this one carries
       // chat-channel destinations (Teams adaptive cards), the other
       // signed-envelope HTTP subscribers.
-      { to: '/notifications', label: 'Notifications', pageKey: 'notifications' },
-      { to: '/audit-log', label: 'Audit log', pageKey: 'audit-log' },
-      { to: '/imports', label: 'Import', pageKey: 'imports' },
-      { to: '/integrations', label: 'Integrations', pageKey: 'integrations' },
-      { to: '/settings', label: 'Settings', pageKey: 'settings' },
+      { to: '/notifications', label: 'Notificações', pageKey: 'notifications' },
+      { to: '/audit-log', label: 'Log de auditoria', pageKey: 'audit-log' },
+      { to: '/imports', label: 'Importação', pageKey: 'imports' },
+      { to: '/integrations', label: 'Integrações', pageKey: 'integrations' },
+      { to: '/settings', label: 'Configurações', pageKey: 'settings' },
     ],
   },
 ];

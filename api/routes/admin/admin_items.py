@@ -130,7 +130,7 @@ def get_item(item_id):
         {"iid": item_id},
     ).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     inv_rows = g.db.execute(
         text("""
@@ -193,12 +193,12 @@ def create_item(validated):
 
     dup = g.db.execute(text("SELECT 1 FROM items WHERE sku = :sku"), {"sku": data["sku"]}).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate SKU: {data['sku']}"}), 400
+        return jsonify({"error": f"SKU duplicado: {data['sku']}"}), 400
 
     if data.get("upc"):
         dup_upc = g.db.execute(text("SELECT 1 FROM items WHERE upc = :upc"), {"upc": data["upc"]}).fetchone()
         if dup_upc:
-            return jsonify({"error": f"Duplicate UPC: {data['upc']}"}), 400
+            return jsonify({"error": f"UPC duplicado: {data['upc']}"}), 400
 
     result = g.db.execute(
         text("""
@@ -235,7 +235,7 @@ def update_item(item_id, validated):
 
     existing = g.db.execute(text("SELECT item_id FROM items WHERE item_id = :iid"), {"iid": item_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active"}
     fields, params = [], {"iid": item_id}
@@ -245,7 +245,7 @@ def update_item(item_id, validated):
             params[col] = data[col]
 
     if not fields:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     fields.append("updated_at = NOW()")
     g.db.execute(text(f"UPDATE items SET {', '.join(fields)} WHERE item_id = :iid"), params)
@@ -271,12 +271,12 @@ def update_item(item_id, validated):
 def archive_item(item_id):
     existing = g.db.execute(text("SELECT item_id, is_active FROM items WHERE item_id = :iid"), {"iid": item_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     new_active = not existing.is_active
     g.db.execute(text("UPDATE items SET is_active = :active, updated_at = NOW() WHERE item_id = :iid"), {"iid": item_id, "active": new_active})
     g.db.commit()
-    return jsonify({"message": "Item restored" if new_active else "Item archived", "is_active": new_active})
+    return jsonify({"message": "Material restaurado" if new_active else "Material arquivado", "is_active": new_active})
 
 
 @admin_bp.route("/items/<int:item_id>", methods=["DELETE"])
@@ -286,14 +286,14 @@ def archive_item(item_id):
 def delete_item(item_id):
     existing = g.db.execute(text("SELECT item_id FROM items WHERE item_id = :iid"), {"iid": item_id}).fetchone()
     if not existing:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     has_inv = g.db.execute(
         text("SELECT 1 FROM inventory WHERE item_id = :iid AND quantity_on_hand > 0 LIMIT 1"),
         {"iid": item_id},
     ).fetchone()
     if has_inv:
-        return jsonify({"error": "Cannot delete item with existing inventory"}), 400
+        return jsonify({"error": "Não é possível excluir material com estoque existente"}), 400
 
     # Check for references in order lines
     has_orders = g.db.execute(
@@ -301,14 +301,14 @@ def delete_item(item_id):
         {"iid": item_id},
     ).fetchone()
     if has_orders:
-        return jsonify({"error": "Cannot delete item with order history. Use archive instead."}), 400
+        return jsonify({"error": "Não é possível excluir material com histórico de pedidos. Use arquivar."}), 400
 
     has_po = g.db.execute(
         text("SELECT 1 FROM purchase_order_lines WHERE item_id = :iid LIMIT 1"),
         {"iid": item_id},
     ).fetchone()
     if has_po:
-        return jsonify({"error": "Cannot delete item with PO history. Use archive instead."}), 400
+        return jsonify({"error": "Não é possível excluir material com histórico de pedidos de compra. Use arquivar."}), 400
 
     # Safe to hard delete  -  clean up related records first
     g.db.execute(text("DELETE FROM preferred_bins WHERE item_id = :iid"), {"iid": item_id})
@@ -317,7 +317,7 @@ def delete_item(item_id):
     g.db.execute(text("DELETE FROM inventory WHERE item_id = :iid"), {"iid": item_id})
     g.db.execute(text("DELETE FROM items WHERE item_id = :iid"), {"iid": item_id})
     g.db.commit()
-    return jsonify({"message": "Item deleted"})
+    return jsonify({"message": "Material excluído"})
 
 
 # ── Inventory Overview ────────────────────────────────────────────────────────
@@ -454,16 +454,16 @@ def _validate_row(entity_type, rec):
 @with_db
 def csv_import(entity_type):
     if entity_type not in _IMPORT_ROW_SCHEMAS:
-        return jsonify({"error": f"Unsupported entity type: {entity_type}"}), 400
+        return jsonify({"error": f"Tipo de entidade não suportado: {entity_type}"}), 400
 
     data = request.get_json()
     # Accept either "records" key or entity_type key (e.g., "items")
     records = data.get("records") or data.get(entity_type) or data.get(entity_type.replace("-", "_"))
     if not data or not records:
-        return jsonify({"error": "records array is required"}), 400
+        return jsonify({"error": "o array records é obrigatório"}), 400
 
     if len(records) > 5000:
-        return jsonify({"error": "Import limited to 5000 records per file"}), 400
+        return jsonify({"error": "Importação limitada a 5000 registros por arquivo"}), 400
 
     # Default warehouse_id for PO/SO import (can be overridden per record)
     default_warehouse_id = data.get("warehouse_id")
@@ -511,7 +511,7 @@ def csv_import(entity_type):
         )
 
     return jsonify({
-        "message": "Import complete",
+        "message": "Importação concluída",
         "total": len(records),
         "imported": imported,
         "skipped": len(errors),
@@ -944,14 +944,11 @@ def create_preferred_bin(validated):
         {"bin_id": bin_id},
     ).fetchone()
     if not bin_row:
-        return jsonify({"error": "Bin not found"}), 404
+        return jsonify({"error": "Endereço não encontrado"}), 404
     if bin_row.bin_type != BIN_PICKABLE:
         return jsonify({
             "error": (
-                f"Bin {bin_row.bin_code} is a {bin_row.bin_type} bin; "
-                "preferred bins must be Pickable. Staging and "
-                "PickableStaging bins hold transient receiving stock and "
-                "cannot be an item's home pick location."
+                f"O endereço {bin_row.bin_code} é do tipo {bin_row.bin_type}; endereços preferenciais devem ser Pickable. Endereços Staging e PickableStaging guardam estoque transitório de recebimento e não podem ser a posição de separação padrão de um material."
             )
         }), 400
 
@@ -974,7 +971,7 @@ def create_preferred_bin(validated):
     ).scalar()
     _resequence_item_preferred_bins(g.db, item_id, target)
     g.db.commit()
-    return jsonify({"message": "Preferred bin saved"})
+    return jsonify({"message": "Endereço preferencial salvo"})
 
 
 @admin_bp.route("/preferred-bins/<int:preferred_bin_id>", methods=["PUT"])
@@ -994,12 +991,12 @@ def update_preferred_bin(preferred_bin_id, validated):
     ).fetchone()
     if not row:
         g.db.rollback()
-        return jsonify({"error": "preferred bin not found"}), 404
+        return jsonify({"error": "endereço preferencial não encontrado"}), 404
     # The requested priority positions this bin; resequence the
     # item's list so it stays a contiguous 1..K hierarchy with no ties.
     _resequence_item_preferred_bins(g.db, row.item_id, preferred_bin_id)
     g.db.commit()
-    return jsonify({"message": "Priority updated"})
+    return jsonify({"message": "Prioridade atualizada"})
 
 
 @admin_bp.route("/preferred-bins/<int:preferred_bin_id>", methods=["DELETE"])
@@ -1012,4 +1009,4 @@ def delete_preferred_bin(preferred_bin_id):
         {"pbid": preferred_bin_id},
     )
     g.db.commit()
-    return jsonify({"message": "Preferred bin deleted"})
+    return jsonify({"message": "Endereço preferencial excluído"})

@@ -207,7 +207,7 @@ def get_transfer_order(to_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     lines = g.db.execute(
         text(
@@ -331,7 +331,7 @@ def cancel_transfer_order(to_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     try:
         validate_header_transition(header.status, TO_STATUS_CANCELLED)
@@ -397,7 +397,7 @@ def delete_transfer_order(to_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     # Hard delete only allowed pre-approval and pre-pick. Once any line
     # has picked_qty > 0 OR any approval row exists, the audit trail
@@ -422,8 +422,7 @@ def delete_transfer_order(to_id):
             "any_picks": any_picks,
             "any_approvals": any_approvals,
             "detail": (
-                "Use cancel for TOs with picks or approvals; delete "
-                "only applies to OPEN TOs with no downstream activity."
+                "Use cancelar para OTs com separações ou aprovações; excluir só se aplica a OTs ABERTAS sem atividade posterior."
             ),
         }), 409
 
@@ -478,7 +477,7 @@ def short_close_to_line(to_id, line_id):
         {"lid": line_id, "tid": to_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Transfer order line not found"}), 404
+        return jsonify({"error": "Linha da ordem de transferência não encontrada"}), 404
 
     try:
         validate_line_transition(line.status, TO_LINE_SHORT_CLOSED)
@@ -811,7 +810,7 @@ def start_to_picking(to_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
     if header.status not in (TO_STATUS_OPEN, TO_STATUS_PARTIALLY_PICKED):
         return jsonify({
             "error": "invalid_status_for_start_picking",
@@ -837,7 +836,7 @@ def start_to_picking(to_id):
     if not lines:
         return jsonify({
             "error": "no_lines_to_pick",
-            "detail": "Every line is either fully picked or short-closed.",
+            "detail": "Todas as linhas estão totalmente separadas ou fechadas por falta.",
         }), 409
 
     # Create pick_batch anchor.
@@ -953,7 +952,7 @@ def picker_get_transfer_order(to_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     lines = g.db.execute(
         text(
@@ -995,7 +994,7 @@ def submit_transfer_order_picks(to_id):
     if not result["ok"]:
         reason = result["reason"]
         if reason == "not_found":
-            return jsonify({"error": "Transfer order not found"}), 404
+            return jsonify({"error": "Ordem de transferência não encontrada"}), 404
         if reason == "invalid_status":
             return jsonify({
                 "error": "invalid_status_for_submit",
@@ -1005,8 +1004,7 @@ def submit_transfer_order_picks(to_id):
         return jsonify({
             "error": "nothing_picked",
             "detail": (
-                "No new picks since the last submit. Pick more lines "
-                "before submitting."
+                "Nenhuma separação nova desde o último envio. Separe mais linhas antes de enviar."
             ),
         }), 422
     g.db.commit()
@@ -1164,7 +1162,7 @@ def approve_transfer_order_approval(to_id, approval_id):
         {"aid": approval_id, "tid": to_id},
     ).fetchone()
     if not approval:
-        return jsonify({"error": "Approval row not found"}), 404
+        return jsonify({"error": "Registro de aprovação não encontrado"}), 404
     if approval.status != TO_APPROVAL_PENDING:
         return jsonify({
             "error": "approval_not_pending",
@@ -1178,8 +1176,7 @@ def approve_transfer_order_approval(to_id, approval_id):
             "error": "self_approval_blocked",
             "submitted_by": approval.submitted_by,
             "detail": (
-                "app_settings.transfer_order_block_self_approval is TRUE; "
-                "a different admin must approve this submission."
+                "app_settings.transfer_order_block_self_approval está TRUE; outro administrador deve aprovar este envio."
             ),
         }), 403
 
@@ -1192,13 +1189,13 @@ def approve_transfer_order_approval(to_id, approval_id):
         {"tid": to_id},
     ).fetchone()
     if not header:
-        return jsonify({"error": "Transfer order not found"}), 404
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     snapshot_lines = (approval.lines_snapshot or {}).get("lines", []) or []
     if not snapshot_lines:
         return jsonify({
             "error": "approval_snapshot_empty",
-            "detail": "Approval row has no line snapshot; nothing to approve.",
+            "detail": "O registro de aprovação não tem snapshot das linhas; nada a aprovar.",
         }), 422
 
     # Process lines in item_id ASC for deterministic inventory locking.
@@ -1361,7 +1358,7 @@ def reject_transfer_order_approval(to_id, approval_id):
         {"aid": approval_id, "tid": to_id},
     ).fetchone()
     if not approval:
-        return jsonify({"error": "Approval row not found"}), 404
+        return jsonify({"error": "Registro de aprovação não encontrado"}), 404
     if approval.status != TO_APPROVAL_PENDING:
         return jsonify({
             "error": "approval_not_pending",

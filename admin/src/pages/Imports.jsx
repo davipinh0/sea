@@ -47,11 +47,11 @@ function downloadTemplate(type) {
 }
 
 const IMPORT_TYPES = [
-  { value: 'items', label: 'Items', desc: 'Import products with SKU, UPC, weight, and initial quantity' },
-  { value: 'bins', label: 'Bins', desc: 'Import bin locations with zone, aisle, and type' },
-  { value: 'purchase-orders', label: 'Purchase Orders', desc: 'Import POs with vendor and line items' },
-  { value: 'sales-orders', label: 'Sales Orders', desc: 'Import SOs with customer and line items' },
-  { value: 'inventory-adjustments', label: 'Inventory Adjustments', desc: 'Bulk adjust on-hand quantities (auto-approved). Signed qty: positive adds, negative subtracts. Memo lands on the adjustment record.' },
+  { value: 'items', label: 'Materiais', desc: 'Import products with SKU, UPC, weight, and initial quantity' },
+  { value: 'bins', label: 'Endereços', desc: 'Import bin locations with zone, aisle, and type' },
+  { value: 'purchase-orders', label: 'Pedidos de compra', desc: 'Import POs with vendor and line items' },
+  { value: 'sales-orders', label: 'Pedidos de venda', desc: 'Import SOs with customer and line items' },
+  { value: 'inventory-adjustments', label: 'Ajustes de estoque', desc: 'Bulk adjust on-hand quantities (auto-approved). Signed qty: positive adds, negative subtracts. Memo lands on the adjustment record.' },
 ];
 
 export default function Imports() {
@@ -89,10 +89,10 @@ export default function Imports() {
         setImportResult(data);
       } else {
         const data = await res?.json();
-        setImportResult({ error: data?.error || 'Import failed' });
+        setImportResult({ error: data?.error || 'Falha na importação' });
       }
     } catch (err) {
-      setImportResult({ error: 'Failed to parse file' });
+      setImportResult({ error: 'Falha ao ler o arquivo' });
     }
     setImporting(false);
     fileRef.current.value = '';
@@ -100,10 +100,10 @@ export default function Imports() {
 
   return (
     <div>
-      <PageHeader title="Import" />
+      <PageHeader title="Importação" />
 
       <div className="settings-section">
-        <h3>Import Data</h3>
+        <h3>Importar dados</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
           {IMPORT_TYPES.map((t) => (
             <button
@@ -120,29 +120,29 @@ export default function Imports() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
           <input ref={fileRef} type="file" accept=".csv,.json" style={{ fontSize: 13 }} />
           <button className="btn btn-primary" onClick={handleImport} disabled={importing}>
-            {importing ? 'Importing...' : 'Import'}
+            {importing ? 'Importando...' : 'Importação'}
           </button>
           <button className="btn btn-sm" onClick={() => downloadTemplate(importType)} style={{ fontSize: 12 }}>
-            Download Template
+            Baixar modelo
           </button>
         </div>
       </div>
 
       {importResult && (
         <div className="settings-section">
-          <h3>Results</h3>
+          <h3>Resultados</h3>
           <div className="import-results">
             {importResult.error ? (
               <div className="errors">{importResult.error}</div>
             ) : (
               <>
-                <div className="success">Imported: {importResult.imported ?? 0}</div>
+                <div className="success">Importados: {importResult.imported ?? 0}</div>
                 {importResult.errors?.length > 0 && (
                   <div className="errors" style={{ marginTop: 4 }}>
-                    Errors: {importResult.errors.length}
+                    Erros: {importResult.errors.length}
                     <ul style={{ margin: '4px 0 0 16px', fontSize: 12 }}>
                       {importResult.errors.slice(0, 20).map((err, i) => (
-                        <li key={i}>Row {err.row}: {err.error}</li>
+                        <li key={i}>Linha {err.row}: {err.error}</li>
                       ))}
                     </ul>
                   </div>

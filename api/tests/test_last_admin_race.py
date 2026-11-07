@@ -126,4 +126,4 @@ class TestLastAdminCheckSingleThreaded:
         # Attempting to delete admin (self) hits the self-guard.
         resp = client.delete(f"/api/admin/users/{admin_id}", headers=auth_headers)
         assert resp.status_code == 400
-        assert "yourself" in resp.get_json().get("error", "").lower()
+        assert "a si mesmo" in resp.get_json().get("error", "").lower()

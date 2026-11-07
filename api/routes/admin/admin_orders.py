@@ -174,7 +174,7 @@ def get_purchase_order(po_id):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
 
     lines = g.db.execute(
         text("""
@@ -214,13 +214,13 @@ def create_purchase_order(validated):
 
     dup = g.db.execute(text("SELECT 1 FROM purchase_orders WHERE po_number = :pn"), {"pn": data["po_number"]}).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate po_number: {data['po_number']}"}), 400
+        return jsonify({"error": f"po_number duplicado: {data['po_number']}"}), 400
 
     # Validate items exist in DB
     for line in data["lines"]:
         item = g.db.execute(text("SELECT 1 FROM items WHERE item_id = :iid"), {"iid": line["item_id"]}).fetchone()
         if not item:
-            return jsonify({"error": f"Item {line['item_id']} not found"}), 400
+            return jsonify({"error": f"Material {line['item_id']} não encontrado"}), 400
 
     result = g.db.execute(
         text("""
@@ -314,19 +314,19 @@ def update_purchase_order(po_id, validated):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
 
     new_status = data.get("status")
     if new_status is not None:
         if new_status not in PO_STATUS_VALUES:
-            return jsonify({"error": f"Invalid status: {new_status}"}), 400
+            return jsonify({"error": f"Status inválido: {new_status}"}), 400
         # ARCHIVED is reachable only from CLOSED so an active PO cannot
         # be hidden by a single dropdown change. All other transitions
         # (including ARCHIVED -> any other) are allowed; admins use the
         # dropdown to un-archive when needed.
         if new_status == PO_ARCHIVED and po.status != PO_CLOSED:
             return jsonify({
-                "error": "PO must be CLOSED before it can be ARCHIVED",
+                "error": "O PC precisa estar FECHADO antes de ser ARQUIVADO",
             }), 400
 
     HEADER_FIELDS = {"po_number", "po_barcode", "vendor_name", "expected_date", "notes"}
@@ -336,7 +336,7 @@ def update_purchase_order(po_id, validated):
     # can transition out of CLOSED before resuming line work.
     if header_data and po.status in PO_EDIT_BLOCKED_STATUSES:
         return jsonify({
-            "error": f"Header edits are not allowed while the PO is {po.status}",
+            "error": f"Não é permitido editar o cabeçalho enquanto o PC está {po.status}",
         }), 400
 
     set_fragments, params = [], {"pid": po_id}
@@ -348,7 +348,7 @@ def update_purchase_order(po_id, validated):
         params["status"] = new_status
 
     if not set_fragments:
-        return jsonify({"error": "No valid fields provided"}), 400
+        return jsonify({"error": "Nenhum campo válido informado"}), 400
 
     g.db.execute(
         text(f"UPDATE purchase_orders SET {', '.join(set_fragments)} WHERE po_id = :pid"),
@@ -423,10 +423,10 @@ def add_purchase_order_line(po_id, validated):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
     if po.status in PO_EDIT_BLOCKED_STATUSES:
         return jsonify({
-            "error": f"Cannot add lines while the PO is {po.status}",
+            "error": f"Não é possível adicionar linhas enquanto o PC está {po.status}",
         }), 400
 
     item = g.db.execute(
@@ -434,7 +434,7 @@ def add_purchase_order_line(po_id, validated):
         {"iid": data["item_id"]},
     ).fetchone()
     if not item:
-        return jsonify({"error": f"Item {data['item_id']} not found"}), 400
+        return jsonify({"error": f"Material {data['item_id']} não encontrado"}), 400
 
     # Reject duplicate items on the same PO; the receive endpoint
     # already does LIMIT 1 against (po_id, item_id) and would not be
@@ -444,7 +444,7 @@ def add_purchase_order_line(po_id, validated):
         {"pid": po_id, "iid": data["item_id"]},
     ).fetchone()
     if dup:
-        return jsonify({"error": f"Item {item.sku} is already on this PO"}), 400
+        return jsonify({"error": f"O material {item.sku} já está neste PC"}), 400
 
     next_ln = g.db.execute(
         text("SELECT COALESCE(MAX(line_number), 0) + 1 FROM purchase_order_lines WHERE po_id = :pid"),
@@ -526,10 +526,10 @@ def update_purchase_order_line(po_id, po_line_id, validated):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
     if po.status in PO_EDIT_BLOCKED_STATUSES:
         return jsonify({
-            "error": f"Cannot edit lines while the PO is {po.status}",
+            "error": f"Não é possível editar linhas enquanto o PC está {po.status}",
         }), 400
 
     line = g.db.execute(
@@ -543,7 +543,7 @@ def update_purchase_order_line(po_id, po_line_id, validated):
         {"plid": po_line_id, "pid": po_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Line not found"}), 404
+        return jsonify({"error": "Linha não encontrada"}), 404
 
     new_qty = data["quantity_ordered"]
     # Blocking ordered<received keeps variance non-negative. The
@@ -551,8 +551,7 @@ def update_purchase_order_line(po_id, po_line_id, validated):
     if new_qty < line.quantity_received:
         return jsonify({
             "error": (
-                f"quantity_ordered ({new_qty}) cannot be less than "
-                f"quantity_received ({line.quantity_received})"
+                f"quantity_ordered ({new_qty}) não pode ser menor que quantity_received ({line.quantity_received})"
             ),
         }), 400
 
@@ -622,10 +621,10 @@ def delete_purchase_order_line(po_id, po_line_id):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
     if po.status in PO_EDIT_BLOCKED_STATUSES:
         return jsonify({
-            "error": f"Cannot remove lines while the PO is {po.status}",
+            "error": f"Não é possível remover linhas enquanto o PC está {po.status}",
         }), 400
 
     line = g.db.execute(
@@ -639,7 +638,7 @@ def delete_purchase_order_line(po_id, po_line_id):
         {"plid": po_line_id, "pid": po_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Line not found"}), 404
+        return jsonify({"error": "Linha não encontrada"}), 404
 
     # Blocking removal of lines with received qty preserves inventory
     # history. To remove, operator first reverses receipts via a
@@ -648,8 +647,7 @@ def delete_purchase_order_line(po_id, po_line_id):
     if line.quantity_received > 0:
         return jsonify({
             "error": (
-                f"Line has {line.quantity_received} received units; "
-                "remove the receipts before deleting the line"
+                f"A linha tem {line.quantity_received} unidades recebidas; estorne os recebimentos antes de excluir a linha"
             ),
         }), 400
 
@@ -702,16 +700,16 @@ def close_purchase_order(po_id):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
     if po.status == PO_CLOSED:
-        return jsonify({"error": "Purchase order is already CLOSED"}), 409
+        return jsonify({"error": "O pedido de compra já está FECHADO"}), 409
 
     g.db.execute(
         text("UPDATE purchase_orders SET status = :status WHERE po_id = :pid"),
         {"pid": po_id, "status": PO_CLOSED},
     )
     g.db.commit()
-    return jsonify({"message": "Purchase order closed", "status": PO_CLOSED})
+    return jsonify({"message": "Pedido de compra fechado", "status": PO_CLOSED})
 
 
 @admin_bp.route("/purchase-orders/<int:po_id>/reopen", methods=["POST"])
@@ -724,10 +722,10 @@ def reopen_purchase_order(po_id):
         {"pid": po_id},
     ).fetchone()
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
     if po.status != PO_CLOSED:
         return jsonify({
-            "error": f"Only CLOSED purchase orders can be reopened. Current status: {po.status}"
+            "error": f"Só pedidos de compra FECHADOS podem ser reabertos. Status atual: {po.status}"
         }), 409
 
     g.db.execute(
@@ -735,7 +733,7 @@ def reopen_purchase_order(po_id):
         {"pid": po_id, "status": PO_OPEN},
     )
     g.db.commit()
-    return jsonify({"message": "Purchase order reopened", "status": PO_OPEN})
+    return jsonify({"message": "Pedido de compra reaberto", "status": PO_OPEN})
 
 
 # ── PO Receipts: admin unreceive (double-scan fix) ────────────────────────
@@ -827,9 +825,9 @@ def unreceive_receipt(receipt_id):
     body = request.get_json(silent=True) or {}
     reason = body.get("reason")
     if reason is not None and not isinstance(reason, str):
-        return jsonify({"error": "reason must be a string"}), 422
+        return jsonify({"error": "o motivo deve ser um texto"}), 422
     if reason and len(reason) > 500:
-        return jsonify({"error": "reason must be 500 chars or fewer"}), 422
+        return jsonify({"error": "o motivo deve ter no máximo 500 caracteres"}), 422
 
     try:
         result = record_unreceive(
@@ -853,7 +851,7 @@ def unreceive_receipt(receipt_id):
 
     g.db.commit()
     return jsonify({
-        "message": "Receipt reversed",
+        "message": "Recebimento estornado",
         **result,
     })
 
@@ -1127,7 +1125,7 @@ def get_sales_order(so_id):
         {"sid": so_id, "company_tz": COMPANY_TIMEZONE},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     lines = g.db.execute(
         text("""
@@ -1315,7 +1313,7 @@ def get_sales_order_related(so_id):
         {"sid": so_id},
     ).fetchone()
     if not exists:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     rows = g.db.execute(
         text("""
@@ -1439,7 +1437,7 @@ def get_picking_ticket(so_id):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     # Per line, fetch the top-priority preferred bin scoped to the SO's
     # warehouse. A LEFT JOIN LATERAL keeps the row when there is no
@@ -1544,13 +1542,13 @@ def create_sales_order(validated):
 
     dup = g.db.execute(text("SELECT 1 FROM sales_orders WHERE so_number = :sn"), {"sn": data["so_number"]}).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate so_number: {data['so_number']}"}), 400
+        return jsonify({"error": f"so_number duplicado: {data['so_number']}"}), 400
 
     # Validate items exist in DB
     for line in data["lines"]:
         item = g.db.execute(text("SELECT 1 FROM items WHERE item_id = :iid"), {"iid": line["item_id"]}).fetchone()
         if not item:
-            return jsonify({"error": f"Item {line['item_id']} not found"}), 400
+            return jsonify({"error": f"Material {line['item_id']} não encontrado"}), 400
 
     result = g.db.execute(
         text("""
@@ -1690,7 +1688,7 @@ def update_sales_order(so_id, validated):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     role = g.current_user.get("role")
     is_admin = role == ROLE_ADMIN
@@ -1702,12 +1700,12 @@ def update_sales_order(so_id, validated):
         if has_so_override:
             if so.status == SO_SHIPPED:
                 return jsonify({
-                    "error": "Cannot edit a SHIPPED order; void the shipment first",
+                    "error": "Não é possível editar um pedido EXPEDIDO; anule a expedição primeiro",
                     "current_status": so.status,
                 }), 403
         elif so.status != SO_OPEN:
             return jsonify({
-                "error": "non-admin can only edit OPEN sales orders without the so-full-edit override",
+                "error": "sem a permissão so-full-edit, não administradores só podem editar pedidos de venda ABERTOS",
                 "current_status": so.status,
             }), 403
 
@@ -1716,7 +1714,7 @@ def update_sales_order(so_id, validated):
     # the UPDATE so partial writes never land.
     if "source_system" in data and not (is_admin or has_so_override):
         return jsonify({
-            "error": "source_system reassignment requires ADMIN or so-full-edit override",
+            "error": "reatribuir source_system exige ADMIN ou a permissão so-full-edit",
         }), 403
 
     ALLOWED_FIELDS = {
@@ -1766,7 +1764,7 @@ def update_sales_order(so_id, validated):
     if is_ship_transition:
         if so.status not in (SO_PICKED, SO_PACKED):
             return jsonify({
-                "error": "Can only ship an order from PICKED or PACKED",
+                "error": "Só é possível expedir um pedido SEPARADO ou EMBALADO",
                 "current_status": so.status,
             }), 422
         # tracking_number is required for carrier ships but not for
@@ -1782,8 +1780,7 @@ def update_sales_order(so_id, validated):
         if not (ship_tracking and ship_tracking.strip()) and not is_local_pickup:
             return jsonify({
                 "error": (
-                    "tracking_number is required to ship unless "
-                    "ship_method indicates local pickup"
+                    "tracking_number é obrigatório para expedir, a menos que ship_method indique retirada no local"
                 ),
             }), 422
 
@@ -1986,16 +1983,16 @@ def update_sales_order_address(so_id, validated):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
     if role != ROLE_ADMIN and so.status != SO_OPEN:
         return jsonify({
-            "error": "non-admin can only edit address on OPEN sales orders",
+            "error": "não administradores só podem editar o endereço de pedidos de venda ABERTOS",
             "current_status": so.status,
         }), 403
 
     data = validated.model_dump(exclude_unset=True)
     if not data:
-        return jsonify({"error": "no address fields provided"}), 400
+        return jsonify({"error": "nenhum campo de endereço informado"}), 400
 
     fields, params, edits = [], {"sid": so_id}, []
     for col, new_value in data.items():
@@ -2052,7 +2049,7 @@ def update_sales_order_memo(so_id, validated):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     new_memo = validated.memo if validated.memo != "" else None
     if so.memo == new_memo:
@@ -2105,7 +2102,7 @@ def adjust_sales_order_line_allocation(so_id, so_line_id, validated):
         {"lid": so_line_id, "sid": so_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Sales order line not found"}), 404
+        return jsonify({"error": "Linha do pedido de venda não encontrada"}), 404
 
     current = line.quantity_allocated
     # Never below what's already picked (those units left the shelf), never
@@ -2219,10 +2216,10 @@ def push_sales_order_to_queue(so_id):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
     if so.status != SO_FRAUD_REVIEW:
         return jsonify({
-            "error": f"Can only push FRAUD_REVIEW orders to the queue. Current: {so.status}",
+            "error": f"Só é possível enviar para a fila pedidos em FRAUD_REVIEW. Atual: {so.status}",
             "current_status": so.status,
         }), 409
 
@@ -2258,7 +2255,7 @@ def cancel_sales_order(so_id):
         )
     except CancelNotAllowed as exc:
         if exc.current_status == "UNKNOWN":
-            return jsonify({"error": "Sales order not found"}), 404
+            return jsonify({"error": "Pedido de venda não encontrado"}), 404
         return jsonify({
             "error": str(exc),
             "current_status": exc.current_status,
@@ -2276,7 +2273,7 @@ def cancel_sales_order(so_id):
         )
 
     return jsonify({
-        "message": "Sales order cancelled",
+        "message": "Pedido de venda cancelado",
         "pre_status": result["pre_status"],
         "audit_log_id": result["audit_log_id"],
     })
@@ -2309,7 +2306,7 @@ def revert_sales_order_status(so_id, validated):
         return jsonify(body), status_code
     g.db.commit()
     return jsonify({
-        "message": "Sales order status reverted",
+        "message": "Status do pedido de venda revertido",
         **result,
     })
 
@@ -2350,7 +2347,7 @@ def admin_pick_available_bins(so_id, so_line_id):
     ).fetchone()
     if so is None:
         return jsonify({
-            "error": "sales order line not found or not on this SO",
+            "error": "linha do pedido de venda não encontrada ou não pertence a este PV",
         }), 404
 
     rows = g.db.execute(
@@ -2425,7 +2422,7 @@ def admin_pick_sales_order(so_id, validated):
     role = g.current_user.get("role")
     if role != ROLE_ADMIN and not has_override(OVERRIDE_SO_FULL_EDIT):
         return jsonify({
-            "error": "admin-pick requires ADMIN or so-full-edit override",
+            "error": "a separação admin exige ADMIN ou a permissão so-full-edit",
         }), 403
 
     try:
@@ -2450,7 +2447,7 @@ def admin_pick_sales_order(so_id, validated):
 
     g.db.commit()
     return jsonify({
-        "message": "Admin pick applied",
+        "message": "Separação admin aplicada",
         "promoted_to_picked": bool(promoted),
         **result,
     })
@@ -2475,7 +2472,7 @@ def void_return_order(so_id):
         result = _void_return(g.db, so_id=so_id, username=username)
     except ReturnVoidNotAllowed as exc:
         if exc.reason == "not_found":
-            return jsonify({"error": "Return order not found"}), 404
+            return jsonify({"error": "Pedido de devolução não encontrado"}), 404
         return jsonify({
             "error": str(exc),
             "reason": exc.reason,
@@ -2483,7 +2480,7 @@ def void_return_order(so_id):
         }), 409
     g.db.commit()
     return jsonify({
-        "message": "Return already voided" if result["already_voided"] else "Return voided",
+        "message": "Devolução já anulada" if result["already_voided"] else "Devolução anulada",
         "so_number": result["so_number"],
         "audit_log_id": result["audit_log_id"],
     })
@@ -2609,11 +2606,11 @@ def partial_fulfill_sales_order(so_id, validated):
     """Ship what's pickable, create a backorder SO for the rest."""
     so = _select_so_for_partial_fulfill(g.db, so_id)
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     if so.status not in (SO_OPEN, SO_PICKED):
         return jsonify({
-            "error": f"Can only partial-fulfill OPEN or PICKED orders. Current: {so.status}",
+            "error": f"Só é possível atender parcialmente pedidos ABERTOS ou SEPARADOS. Atual: {so.status}",
             "current_status": so.status,
         }), 400
 
@@ -2622,14 +2619,14 @@ def partial_fulfill_sales_order(so_id, validated):
     # children -- which also carry a parent_so_id -- ARE eligible, so the
     # gate is keyed on order_type, not on parent_so_id.
     if not order_type_allows_fulfillment_ops(so.order_type):
-        return jsonify({"error": "Cannot partial-fulfill a return SO."}), 400
+        return jsonify({"error": "Não é possível atender parcialmente um PV de devolução."}), 400
 
     # BO chaining cap: a backorder cannot itself spawn a backorder. Keyed
     # on order_type (not parent_so_id) so replacement/exchange children
     # stay eligible while a backorder still must be cancelled + recreated.
     if so.order_type == ORDER_TYPE_BACKORDER:
         return jsonify({
-            "error": "This SO is a backorder; cancel it and create a fresh standalone SO instead of chaining backorders.",
+            "error": "Este PV é uma pendência; cancele-o e crie um novo PV independente em vez de encadear pendências.",
             "parent_so_id": so.parent_so_id,
         }), 400
 
@@ -2638,7 +2635,7 @@ def partial_fulfill_sales_order(so_id, validated):
     role = g.current_user.get("role")
     if so.status == SO_PICKED and role != ROLE_ADMIN and not has_override(OVERRIDE_SO_FULL_EDIT):
         return jsonify({
-            "error": "Partial-fulfill on a PICKED order requires ADMIN or so-full-edit override.",
+            "error": "Atender parcialmente um pedido SEPARADO exige ADMIN ou a permissão so-full-edit.",
             "current_status": so.status,
         }), 403
 
@@ -2665,15 +2662,13 @@ def partial_fulfill_sales_order(so_id, validated):
         ).fetchone()
         if not line:
             return jsonify({
-                "error": f"so_line_id {entry.so_line_id} not on SO {so.so_number}",
+                "error": f"so_line_id {entry.so_line_id} não está no PV {so.so_number}",
             }), 400
         unshipped = line.quantity_ordered - line.quantity_picked
         if entry.short_qty > unshipped:
             return jsonify({
                 "error": (
-                    f"short_qty {entry.short_qty} on line {line.line_number} "
-                    f"exceeds unshipped qty ({line.quantity_ordered} ordered - "
-                    f"{line.quantity_picked} picked = {unshipped})"
+                    f"short_qty {entry.short_qty} na linha {line.line_number} excede a qtd. não expedida ({line.quantity_ordered} pedido - {line.quantity_picked} separado = {unshipped})"
                 ),
                 "so_line_id": entry.so_line_id,
             }), 400
@@ -2917,8 +2912,7 @@ def cancel_backorder(bo_so_id, validated):
     if reason not in CANCEL_REASONS:
         return jsonify({
             "error": (
-                f"Invalid cancellation_reason. Allowed: "
-                f"{', '.join(CANCEL_REASONS)}"
+                f"cancellation_reason inválido. Permitidos: {', '.join(CANCEL_REASONS)}"
             ),
         }), 400
 
@@ -2930,16 +2924,16 @@ def cancel_backorder(bo_so_id, validated):
         {"sid": bo_so_id},
     ).fetchone()
     if not bo:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
     if bo.parent_so_id is None or bo.order_type != ORDER_TYPE_BACKORDER:
         return jsonify({
             "error": (
-                "Not a backorder SO. Use /cancel for non-backorder orders."
+                "Não é um PV de pendência. Use /cancel para pedidos que não são pendências."
             ),
         }), 400
     if bo.status == SO_CANCELLED:
         return jsonify({
-            "error": "Backorder already cancelled.",
+            "error": "Pendência já cancelada.",
             "current_status": bo.status,
         }), 400
 
@@ -2960,7 +2954,7 @@ def cancel_backorder(bo_so_id, validated):
         )
     except CancelNotAllowed as exc:
         if exc.current_status == "UNKNOWN":
-            return jsonify({"error": "Sales order not found"}), 404
+            return jsonify({"error": "Pedido de venda não encontrado"}), 404
         return jsonify({
             "error": str(exc),
             "current_status": exc.current_status,
@@ -2989,7 +2983,7 @@ def cancel_backorder(bo_so_id, validated):
         )
 
     return jsonify({
-        "message": "Backorder cancelled",
+        "message": "Pendência cancelada",
         "bo_so_id": bo_so_id,
         "cancellation_reason": reason,
         "audit_log_id": result["audit_log_id"],
@@ -3032,7 +3026,7 @@ def list_backorders():
         params = {"s_open": SO_OPEN, "s_picked": SO_PICKED, "s_packed": SO_PACKED}
     else:
         return jsonify({
-            "error": "tab must be 'waiting' or 'ready-to-ship'",
+            "error": "tab deve ser 'waiting' ou 'ready-to-ship'",
             "got": tab,
         }), 400
 
@@ -3194,7 +3188,7 @@ def admin_ship_sales_order(so_id):
     role = g.current_user.get("role")
     if role != ROLE_ADMIN and not has_override(OVERRIDE_SO_FULL_EDIT):
         return jsonify({
-            "error": "admin-ship requires ADMIN or so-full-edit override",
+            "error": "a expedição admin exige ADMIN ou a permissão so-full-edit",
         }), 403
 
     body = request.get_json(silent=True) or {}
@@ -3226,7 +3220,7 @@ def admin_ship_sales_order(so_id):
 
     g.db.commit()
     return jsonify({
-        "message": "Admin ship applied",
+        "message": "Expedição admin aplicada",
         "fulfillment_id": result["fulfillment_id"],
         "lines_shipped": result["lines_shipped"],
         "total_quantity": result["total_quantity"],
@@ -3256,7 +3250,7 @@ def create_rma_route(so_id, validated):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     g.db.commit()
-    return jsonify({"message": "RMA created", **result}), 201
+    return jsonify({"message": "RMA criado", **result}), 201
 
 
 @admin_bp.route("/sales-orders/<int:so_id>/receive-return", methods=["POST"])
@@ -3287,7 +3281,7 @@ def receive_return_route(so_id, validated):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     g.db.commit()
-    return jsonify({"message": "Return received", **result})
+    return jsonify({"message": "Devolução recebida", **result})
 
 
 # ── Sales Order Lines (add / update / remove) ────────────────────────────────
@@ -3315,7 +3309,7 @@ def _so_line_edit_gate(so):
     """
     if so.status in SO_LINE_EDIT_TERMINAL_STATUSES:
         return False, (jsonify({
-            "error": f"Cannot edit lines on a {so.status} order",
+            "error": f"Não é possível editar linhas de um pedido {so.status}",
             "current_status": so.status,
         }), 400)
     role = g.current_user.get("role")
@@ -3326,7 +3320,7 @@ def _so_line_edit_gate(so):
     if has_override(OVERRIDE_SO_FULL_EDIT):
         return True, None
     return False, (jsonify({
-        "error": "Line edits past OPEN require ADMIN or so-full-edit override",
+        "error": "Editar linhas após ABERTO exige ADMIN ou a permissão so-full-edit",
         "current_status": so.status,
     }), 403)
 
@@ -3406,7 +3400,7 @@ def add_sales_order_line(so_id, validated):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     allowed, err = _so_line_edit_gate(so)
     if not allowed:
@@ -3417,7 +3411,7 @@ def add_sales_order_line(so_id, validated):
         {"iid": data["item_id"]},
     ).fetchone()
     if not item:
-        return jsonify({"error": f"Item {data['item_id']} not found"}), 400
+        return jsonify({"error": f"Material {data['item_id']} não encontrado"}), 400
 
     # Duplicate-item guard mirrors the PO surface: allocation +
     # pick-batch creation paths fetch by (so_id, item_id) and cannot
@@ -3427,7 +3421,7 @@ def add_sales_order_line(so_id, validated):
         {"sid": so_id, "iid": data["item_id"]},
     ).fetchone()
     if dup:
-        return jsonify({"error": f"Item {item.sku} is already on this SO"}), 400
+        return jsonify({"error": f"O material {item.sku} já está neste PV"}), 400
 
     next_ln = g.db.execute(
         text("SELECT COALESCE(MAX(line_number), 0) + 1 FROM sales_order_lines WHERE so_id = :sid"),
@@ -3487,7 +3481,7 @@ def update_sales_order_line(so_id, so_line_id, validated):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     allowed, err = _so_line_edit_gate(so)
     if not allowed:
@@ -3506,7 +3500,7 @@ def update_sales_order_line(so_id, so_line_id, validated):
         {"sol_id": so_line_id, "sid": so_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Line not found"}), 404
+        return jsonify({"error": "Linha não encontrada"}), 404
 
     new_qty = data["quantity_ordered"]
     # Picked / packed / shipped units already left their source bin or
@@ -3517,15 +3511,13 @@ def update_sales_order_line(so_id, so_line_id, validated):
     if new_qty < picked_or_packed:
         return jsonify({
             "error": (
-                f"quantity_ordered ({new_qty}) cannot be less than "
-                f"already-picked/packed quantity ({picked_or_packed})"
+                f"quantity_ordered ({new_qty}) não pode ser menor que a quantidade já separada/embalada ({picked_or_packed})"
             ),
         }), 400
     if new_qty < line.quantity_shipped:
         return jsonify({
             "error": (
-                f"quantity_ordered ({new_qty}) cannot be less than "
-                f"already-shipped quantity ({line.quantity_shipped})"
+                f"quantity_ordered ({new_qty}) não pode ser menor que a quantidade já expedida ({line.quantity_shipped})"
             ),
         }), 400
 
@@ -3591,7 +3583,7 @@ def delete_sales_order_line(so_id, so_line_id):
         {"sid": so_id},
     ).fetchone()
     if not so:
-        return jsonify({"error": "Sales order not found"}), 404
+        return jsonify({"error": "Pedido de venda não encontrado"}), 404
 
     allowed, err = _so_line_edit_gate(so)
     if not allowed:
@@ -3610,7 +3602,7 @@ def delete_sales_order_line(so_id, so_line_id):
         {"sol_id": so_line_id, "sid": so_id},
     ).fetchone()
     if not line:
-        return jsonify({"error": "Line not found"}), 404
+        return jsonify({"error": "Linha não encontrada"}), 404
 
     # Picked / packed / shipped units block deletion at any tier. To
     # remove these the operator must unwind through the dedicated
@@ -3619,8 +3611,7 @@ def delete_sales_order_line(so_id, so_line_id):
     if line.quantity_picked > 0 or line.quantity_packed > 0 or line.quantity_shipped > 0:
         return jsonify({
             "error": (
-                "Line has picked/packed/shipped units; unwind via the "
-                "ship-void or short-pick path before removing the line"
+                "A linha tem unidades separadas/embaladas/expedidas; desfaça pela anulação da expedição ou pela separação com falta antes de remover a linha"
             ),
             "quantity_picked": line.quantity_picked,
             "quantity_packed": line.quantity_packed,

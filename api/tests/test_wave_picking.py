@@ -91,7 +91,7 @@ def test_validate_unknown_so(client, auth_headers):
     assert resp.status_code == 404
     data = resp.get_json()
     assert data["valid"] is False
-    assert "not found" in data["error"]
+    assert "não encontrado" in data["error"]
 
 
 def test_validate_so_in_active_batch(client, auth_headers):
@@ -111,7 +111,7 @@ def test_validate_so_in_active_batch(client, auth_headers):
     assert resp.status_code == 409
     data = resp.get_json()
     assert data["valid"] is False
-    assert "already in active pick batch" in data["error"]
+    assert "já está em um lote de separação ativo" in data["error"]
     assert "batch_id" in data
 
 
@@ -133,7 +133,7 @@ def test_validate_so_no_items(client, auth_headers):
     assert resp.status_code == 400
     data = resp.get_json()
     assert data["valid"] is False
-    assert "no items" in data["error"].lower()
+    assert "não tem materiais" in data["error"].lower()
 
 
 def test_validate_accepts_new_barcode_field(client, auth_headers):
@@ -252,7 +252,7 @@ def test_validate_to_not_started(client, auth_headers):
     assert resp.status_code == 409
     data = resp.get_json()
     assert data["valid"] is False
-    assert "not started" in data["error"].lower()
+    assert "não iniciada" in data["error"].lower()
     assert data["to_number"] == "TO-NOTSTARTED"
 
 
@@ -288,7 +288,7 @@ def test_validate_to_wrong_warehouse(client, auth_headers):
     assert resp.status_code == 404
     data = resp.get_json()
     assert data["valid"] is False
-    assert "not found" in data["error"].lower()
+    assert "não encontrado" in data["error"].lower()
 
 
 def test_validate_to_closed_status(client, auth_headers):

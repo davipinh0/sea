@@ -13,10 +13,10 @@ import { useAuth } from '../auth.jsx';
 // permission so granular access keeps working.
 
 const TABS = [
-  { to: 'warehouses', label: 'Warehouses', pageKey: 'warehouses' },
-  { to: 'bins', label: 'Bins', pageKey: 'bins' },
-  { to: 'zones', label: 'Zones', pageKey: 'zones' },
-  { to: 'preferred-bins', label: 'Preferred Bins', pageKey: 'preferred-bins' },
+  { to: 'warehouses', label: 'Armazéns', pageKey: 'warehouses' },
+  { to: 'bins', label: 'Endereços', pageKey: 'bins' },
+  { to: 'zones', label: 'Zonas', pageKey: 'zones' },
+  { to: 'preferred-bins', label: 'Endereços preferenciais', pageKey: 'preferred-bins' },
 ];
 
 export default function Data() {
@@ -36,7 +36,7 @@ export default function Data() {
     if (visibleTabs.length === 0) {
       return (
         <div style={{ padding: 24, color: 'var(--text-secondary)' }}>
-          No warehouse-data pages granted to your account.
+          Nenhuma página de dados do armazém liberada para sua conta.
         </div>
       );
     }

@@ -59,7 +59,7 @@ class TestPOLookup:
 
         resp = client.get("/api/receiving/po/PO-2026-001", headers=auth_headers)
         assert resp.status_code == 400
-        assert "closed" in resp.get_json()["error"].lower()
+        assert "fechado" in resp.get_json()["error"].lower()
 
 
 class TestReceiveItems:
@@ -150,7 +150,7 @@ class TestReceiveItems:
         }
         resp = client.post("/api/receiving/receive", json=payload, headers=auth_headers)
         assert resp.status_code == 400
-        assert "not on PO" in resp.get_json()["error"]
+        assert "não está no PC" in resp.get_json()["error"]
 
     def test_receive_zero_quantity(self, client, auth_headers, seed_data):
         payload = {
@@ -168,7 +168,7 @@ class TestReceiveItems:
         }
         resp = client.post("/api/receiving/receive", json=payload, headers=auth_headers)
         assert resp.status_code == 400
-        assert "Over-receipt" in resp.get_json()["error"]
+        assert "Recebimento acima do pedido" in resp.get_json()["error"]
 
     def test_receive_missing_body(self, client, auth_headers):
         resp = client.post("/api/receiving/receive", json={}, headers=auth_headers)
@@ -282,7 +282,7 @@ class TestBatchedReceive:
         }
         resp = client.post("/api/receiving/receive", json=payload, headers=auth_headers)
         assert resp.status_code == 400, resp.get_json()
-        assert "Over-receipt" in resp.get_json()["error"]
+        assert "Recebimento acima do pedido" in resp.get_json()["error"]
 
         # Line quantities unchanged for every item in the batch.
         for item_id in (1, 2, 3):

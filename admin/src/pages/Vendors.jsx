@@ -5,9 +5,9 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 
 const FILTER_OPTIONS = [
-  { label: 'Active', value: 'active' },
-  { label: 'Archived', value: 'archived' },
-  { label: 'All', value: 'all' },
+  { label: 'Ativo', value: 'active' },
+  { label: 'Arquivados', value: 'archived' },
+  { label: 'Todos', value: 'all' },
 ];
 
 function formatApiError(data, fallback) {
@@ -96,7 +96,7 @@ export default function Vendors() {
     } else {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
-      setError(formatApiError(data, 'Failed to save'));
+      setError(formatApiError(data, 'Falha ao salvar'));
     }
   }
 
@@ -110,24 +110,24 @@ export default function Vendors() {
     } else {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON body */ }
-      setDeleteError(formatApiError(data, 'Failed to delete'));
+      setDeleteError(formatApiError(data, 'Falha ao excluir'));
     }
   }
 
   const columns = [
-    { key: 'vendor_name', label: 'Vendor', sortable: true },
-    { key: 'contact_name', label: 'Contact', render: (r) => r.contact_name || '-' },
-    { key: 'email', label: 'Email', render: (r) => r.email || '-' },
-    { key: 'phone', label: 'Phone', mono: true, render: (r) => r.phone || '-' },
-    { key: 'is_active', label: 'Active', render: (r) => (r.is_active === false ? 'No' : 'Yes') },
+    { key: 'vendor_name', label: 'Fornecedor', sortable: true },
+    { key: 'contact_name', label: 'Contato', render: (r) => r.contact_name || '-' },
+    { key: 'email', label: 'E-mail', render: (r) => r.email || '-' },
+    { key: 'phone', label: 'Telefone', mono: true, render: (r) => r.phone || '-' },
+    { key: 'is_active', label: 'Ativo', render: (r) => (r.is_active === false ? 'Não' : 'Sim') },
     {
       key: 'actions', label: '', render: (r) => (
         <div style={{ display: 'flex', gap: 4 }}>
-          <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Edit" title="Edit">&#9998;</button>
+          <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
           <button
             className="btn btn-sm btn-danger"
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); setDeleteError(''); }}
-            aria-label="Delete" title="Delete (only when no items reference this vendor)"
+            aria-label="Excluir" title="Excluir (somente quando nenhum material referencia este fornecedor)"
           >&#128465;</button>
         </div>
       ),
@@ -136,14 +136,14 @@ export default function Vendors() {
 
   return (
     <div>
-      <PageHeader title="Vendors">
-        <button className="btn btn-primary" onClick={openCreate}>New Vendor</button>
+      <PageHeader title="Fornecedores">
+        <button className="btn btn-primary" onClick={openCreate}>Novo fornecedor</button>
       </PageHeader>
 
       <div className="filter-bar">
         <input
           className="form-input"
-          placeholder="Search by name, contact, email"
+          placeholder="Buscar por nome, contato, e-mail"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           style={{ maxWidth: 320 }}
@@ -164,17 +164,17 @@ export default function Vendors() {
         pagination={pagination}
         onPageChange={setPage}
         onRowClick={openEdit}
-        emptyMessage="No vendors found"
+        emptyMessage="Nenhum fornecedor encontrado"
       />
 
       {showModal && (
         <Modal
-          title={editId ? 'Edit Vendor' : 'New Vendor'}
+          title={editId ? 'Editar fornecedor' : 'Novo fornecedor'}
           onClose={() => setShowModal(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={save}>Save</button>
+              <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={save}>Salvar</button>
             </>
           }
           size="wide"
@@ -182,7 +182,7 @@ export default function Vendors() {
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
           <div className="form-row">
             <div className="form-group">
-              <label>Vendor Name</label>
+              <label>Nome do fornecedor</label>
               <input
                 className="form-input" autoFocus
                 value={form.vendor_name || ''}
@@ -190,7 +190,7 @@ export default function Vendors() {
               />
             </div>
             <div className="form-group">
-              <label>Contact Name</label>
+              <label>Nome do contato</label>
               <input
                 className="form-input"
                 value={form.contact_name || ''}
@@ -200,7 +200,7 @@ export default function Vendors() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Email</label>
+              <label>E-mail</label>
               <input
                 className="form-input" type="email"
                 value={form.email || ''}
@@ -208,7 +208,7 @@ export default function Vendors() {
               />
             </div>
             <div className="form-group">
-              <label>Phone</label>
+              <label>Telefone</label>
               <input
                 className="form-input"
                 value={form.phone || ''}
@@ -217,7 +217,7 @@ export default function Vendors() {
             </div>
           </div>
           <div className="form-group">
-            <label>Billing Address</label>
+            <label>Endereço de cobrança</label>
             <textarea
               className="form-input" rows={2}
               value={form.billing_address || ''}
@@ -225,7 +225,7 @@ export default function Vendors() {
             />
           </div>
           <div className="form-group">
-            <label>Remit-To Address</label>
+            <label>Endereço de pagamento</label>
             <textarea
               className="form-input" rows={2}
               value={form.remit_to_address || ''}
@@ -234,7 +234,7 @@ export default function Vendors() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Tax ID</label>
+              <label>CNPJ</label>
               <input
                 className="form-input"
                 value={form.tax_id || ''}
@@ -242,10 +242,10 @@ export default function Vendors() {
               />
             </div>
             <div className="form-group">
-              <label>Payment Terms</label>
+              <label>Condições de pagamento</label>
               <input
                 className="form-input"
-                placeholder="e.g. Net 30"
+                placeholder="ex.: 30 dias"
                 value={form.payment_terms || ''}
                 onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
               />
@@ -258,7 +258,7 @@ export default function Vendors() {
                 checked={form.is_active !== false}
                 onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
               />
-              <span>Active (uncheck to hide from item / PO vendor pickers)</span>
+              <span>Ativo (desmarque para ocultar dos seletores de fornecedor de materiais / PC)</span>
             </label>
           </div>
         </Modal>
@@ -266,20 +266,18 @@ export default function Vendors() {
 
       {deleteTarget && (
         <Modal
-          title={`Delete vendor ${deleteTarget.vendor_name}?`}
+          title={`Excluir fornecedor ${deleteTarget.vendor_name}?`}
           onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
           footer={
             <>
-              <button className="btn" onClick={() => { setDeleteTarget(null); setDeleteError(''); }}>Cancel</button>
-              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+              <button className="btn" onClick={() => { setDeleteTarget(null); setDeleteError(''); }}>Cancelar</button>
+              <button className="btn btn-danger" onClick={confirmDelete}>Excluir</button>
             </>
           }
         >
           {deleteError && <div className="form-error" style={{ marginBottom: 12 }}>{deleteError}</div>}
           <p style={{ fontSize: 13 }}>
-            Permanently delete this vendor. The action is blocked when any item still
-            references this vendor; soft-archive via the Active checkbox in the edit form
-            for that case.
+            Exclui permanentemente este fornecedor. A ação é bloqueada quando algum material ainda referencia este fornecedor; nesse caso, arquive-o pela caixa Ativo no formulário de edição.
           </p>
         </Modal>
       )}

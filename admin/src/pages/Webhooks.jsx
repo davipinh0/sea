@@ -48,13 +48,13 @@ function ScopeCheckboxList({ options, value, onChange, renderLabel, keyOf }) {
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
         <button type="button" className="btn btn-sm" onClick={selectAll} disabled={allSelected}>
-          All
+          Todos
         </button>
         <button type="button" className="btn btn-sm" onClick={selectNone} disabled={selected.size === 0}>
-          None
+          Nenhum
         </button>
         <span style={{ fontSize: 12, color: 'var(--text-secondary)', alignSelf: 'center' }}>
-          {selected.size} / {allKeys.length} selected
+          {selected.size} / {allKeys.length} selecionado(s)
         </span>
       </div>
       <div
@@ -67,7 +67,7 @@ function ScopeCheckboxList({ options, value, onChange, renderLabel, keyOf }) {
         }}
       >
         {options.length === 0 ? (
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>No options available.</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Nenhuma opção disponível.</span>
         ) : (
           options.map((opt) => {
             const k = keyOf(opt);
@@ -154,7 +154,7 @@ function DlqPanel({ subscription, onClose }) {
       setTotal(data.total || 0);
     } else {
       const body = await res?.json();
-      setPanelError(body?.error || 'Failed to load DLQ');
+      setPanelError(body?.error || 'Falha ao carregar a DLQ');
     }
     setLoading(false);
   }
@@ -169,7 +169,7 @@ function DlqPanel({ subscription, onClose }) {
       load();
       return;
     }
-    setPanelError(body?.detail || body?.error || 'Failed to replay delivery');
+    setPanelError(body?.detail || body?.error || 'Falha ao reenviar a entrega');
   }
 
   function buildReplayPayload(acknowledge) {
@@ -220,7 +220,7 @@ function DlqPanel({ subscription, onClose }) {
       });
       return;
     }
-    setReplayError({ kind: 'other', detail: body?.detail || body?.error || 'Failed to replay batch' });
+    setReplayError({ kind: 'other', detail: body?.detail || body?.error || 'Falha ao reenviar o lote' });
   }
 
   function closeReplayBatch() {
@@ -234,15 +234,15 @@ function DlqPanel({ subscription, onClose }) {
   const pageEnd = Math.min(offset + limit, total);
 
   const dlqColumns = [
-    { key: 'delivery_id', label: 'Delivery', render: (r) => <span className="mono">{r.delivery_id}</span> },
-    { key: 'event_id', label: 'Event', render: (r) => <span className="mono">{r.event_id ?? '-'}</span> },
-    { key: 'event_type', label: 'Type', render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.event?.event_type || '-'}</span> },
-    { key: 'attempt_number', label: 'Attempt', render: (r) => r.attempt_number },
+    { key: 'delivery_id', label: 'Entrega', render: (r) => <span className="mono">{r.delivery_id}</span> },
+    { key: 'event_id', label: 'Evento', render: (r) => <span className="mono">{r.event_id ?? '-'}</span> },
+    { key: 'event_type', label: 'Tipo', render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.event?.event_type || '-'}</span> },
+    { key: 'attempt_number', label: 'Tentativa', render: (r) => r.attempt_number },
     { key: 'http_status', label: 'HTTP', render: (r) => r.http_status ?? '-' },
-    { key: 'error_kind', label: 'Error', render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.error_kind || '-'}</span> },
+    { key: 'error_kind', label: 'Erro', render: (r) => <span className="mono" style={{ fontSize: 12 }}>{r.error_kind || '-'}</span> },
     {
       key: 'error_detail',
-      label: 'Detail',
+      label: 'Detalhe',
       render: (r) => {
         // Both columns now read from the server-owned catalog. The
         // hover tooltip enriches with the longer description from the
@@ -262,16 +262,16 @@ function DlqPanel({ subscription, onClose }) {
     },
     {
       key: 'completed_at',
-      label: 'Completed',
+      label: 'Concluído',
       render: (r) => r.completed_at ? new Date(r.completed_at).toLocaleString() : '-',
     },
-    { key: 'gen', label: 'Gen', render: (r) => r.secret_generation },
+    { key: 'gen', label: 'Ger.', render: (r) => r.secret_generation },
     {
       key: 'actions',
       label: '',
       render: (r) => (
-        <button className="btn btn-sm" onClick={() => replaySingle(r.delivery_id)} title="Replay">
-          Replay
+        <button className="btn btn-sm" onClick={() => replaySingle(r.delivery_id)} title="Reenviar">
+          Reenviar
         </button>
       ),
     },
@@ -283,16 +283,16 @@ function DlqPanel({ subscription, onClose }) {
       onClose={onClose}
       footer={
         <>
-          <button className="btn" onClick={onClose}>Close</button>
+          <button className="btn" onClick={onClose}>Fechar</button>
         </>
       }
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 13 }}>
-          {loading ? 'Loading…' : (total === 0 ? 'No DLQ rows' : `${pageStart}-${pageEnd} of ${total}`)}
+          {loading ? 'Carregando…' : (total === 0 ? 'Nenhum registro na DLQ' : `${pageStart}-${pageEnd} de ${total}`)}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Page size</label>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Tamanho da página</label>
           <select
             className="form-input"
             style={{ width: 80, padding: '2px 6px' }}
@@ -306,22 +306,22 @@ function DlqPanel({ subscription, onClose }) {
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
           >
-            Prev
+            Anterior
           </button>
           <button
             className="btn btn-sm"
             disabled={offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
           >
-            Next
+            Próxima
           </button>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowReplayBatch(true)}
             disabled={subscription.status === 'revoked'}
-            title={subscription.status === 'revoked' ? 'Subscription is revoked' : 'Replay batch'}
+            title={subscription.status === 'revoked' ? 'A assinatura está revogada' : 'Reenviar lote'}
           >
-            Replay batch
+            Reenviar lote
           </button>
         </div>
       </div>
@@ -332,23 +332,23 @@ function DlqPanel({ subscription, onClose }) {
         rowKey="delivery_id"
         columns={dlqColumns}
         data={rows}
-        emptyMessage={loading ? 'Loading…' : 'No DLQ rows for this subscription'}
+        emptyMessage={loading ? 'Carregando…' : 'Nenhum registro na DLQ para esta assinatura'}
       />
 
       {showReplayBatch && (
         <Modal
-          title="Replay batch"
+          title="Reenviar lote"
           onClose={closeReplayBatch}
           footer={
             <>
-              <button className="btn" onClick={closeReplayBatch}>Close</button>
+              <button className="btn" onClick={closeReplayBatch}>Fechar</button>
               {replayError?.kind === 'hard_cap' ? (
                 <button
                   className="btn btn-primary"
                   style={{ background: 'var(--copper)' }}
                   onClick={() => submitReplayBatch(true)}
                 >
-                  Acknowledge and replay {replayError.impact_count}
+                  Confirmar e reenviar {replayError.impact_count}
                 </button>
               ) : (
                 <button
@@ -356,7 +356,7 @@ function DlqPanel({ subscription, onClose }) {
                   onClick={() => submitReplayBatch(false)}
                   disabled={replayResult !== null}
                 >
-                  Replay matching deliveries
+                  Reenviar entregas correspondentes
                 </button>
               )}
             </>
@@ -372,12 +372,12 @@ function DlqPanel({ subscription, onClose }) {
               {REPLAY_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Source bucket the batch reads from. Default dlq.
+              Origem que o lote lê. Padrão: dlq.
             </div>
           </div>
 
           <div className="form-group">
-            <label>Event type (optional)</label>
+            <label>Tipo de evento (opcional)</label>
             <input
               className="form-input"
               value={replayFilter.event_type}
@@ -387,7 +387,7 @@ function DlqPanel({ subscription, onClose }) {
           </div>
 
           <div className="form-group">
-            <label>Warehouse ID (optional)</label>
+            <label>ID do armazém (opcional)</label>
             <input
               className="form-input"
               type="number"
@@ -399,7 +399,7 @@ function DlqPanel({ subscription, onClose }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>Completed from (optional)</label>
+              <label>Concluído de (opcional)</label>
               <input
                 className="form-input"
                 type="datetime-local"
@@ -408,7 +408,7 @@ function DlqPanel({ subscription, onClose }) {
               />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>Completed to (optional)</label>
+              <label>Concluído até (opcional)</label>
               <input
                 className="form-input"
                 type="datetime-local"
@@ -421,14 +421,14 @@ function DlqPanel({ subscription, onClose }) {
           {replayError?.kind === 'hard_cap' && (
             <div className="form-error" style={{ marginTop: 12 }}>
               <div style={{ fontWeight: 600 }}>
-                Matched {replayError.impact_count} deliveries, above the {replayError.hard_cap} hard cap.
+                Correspondentes {replayError.impact_count} entregas, acima do {replayError.hard_cap} limite máximo.
               </div>
               <div style={{ marginTop: 4, fontSize: 12 }}>{replayError.detail}</div>
             </div>
           )}
           {replayError?.kind === 'throttled' && (
             <div className="form-error" style={{ marginTop: 12 }}>
-              Throttled. Try again in {replayError.seconds_until_retry}s.
+              Limite atingido. Tente novamente em {replayError.seconds_until_retry}s.
             </div>
           )}
           {replayError?.kind === 'other' && (
@@ -439,11 +439,11 @@ function DlqPanel({ subscription, onClose }) {
           {replayResult && (
             <div style={{ marginTop: 12, padding: 12, background: 'var(--surface-muted)', borderRadius: 4 }}>
               <div style={{ fontWeight: 600, fontSize: 13 }}>
-                Replayed {replayResult.replayed_count} deliver{replayResult.replayed_count === 1 ? 'y' : 'ies'}.
+                Reenviados {replayResult.replayed_count} entrega{replayResult.replayed_count === 1 ? 'y' : 'ies'}.
               </div>
               {replayResult.impact_count !== replayResult.replayed_count && (
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-                  Server-computed impact: {replayResult.impact_count}.
+                  Impacto calculado pelo servidor: {replayResult.impact_count}.
                 </div>
               )}
             </div>
@@ -494,7 +494,7 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
         setErrorKinds(data.error_kinds || []);
       } else {
         const body = await res?.json();
-        setPanelError(body?.error || 'Failed to load errors');
+        setPanelError(body?.error || 'Falha ao carregar os erros');
       }
       setLoading(false);
     }
@@ -515,9 +515,9 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
 
   return (
     <Modal
-      title="Webhook errors"
+      title="Erros de webhook"
       onClose={onClose}
-      footer={<button className="btn" onClick={onClose}>Close</button>}
+      footer={<button className="btn" onClick={onClose}>Fechar</button>}
     >
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
         <select
@@ -526,7 +526,7 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
           value={filterSubscription}
           onChange={(e) => { setFilterSubscription(e.target.value); setErrorsOffset(0); }}
         >
-          <option value="">All subscriptions</option>
+          <option value="">Todas as assinaturas</option>
           {webhooks.map((w) => (
             <option key={w.subscription_id} value={w.subscription_id}>
               {w.display_name}
@@ -539,7 +539,7 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
           value={filterErrorKind}
           onChange={(e) => { setFilterErrorKind(e.target.value); setErrorsOffset(0); }}
         >
-          <option value="">All error kinds</option>
+          <option value="">Todos os tipos de erro</option>
           {errorKinds.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
         <input
@@ -548,7 +548,7 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
           style={{ width: 200 }}
           value={filterFrom}
           onChange={(e) => { setFilterFrom(e.target.value); setErrorsOffset(0); }}
-          placeholder="From"
+          placeholder="De"
         />
         <input
           type="datetime-local"
@@ -556,14 +556,14 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
           style={{ width: 200 }}
           value={filterTo}
           onChange={(e) => { setFilterTo(e.target.value); setErrorsOffset(0); }}
-          placeholder="To"
+          placeholder="Até"
         />
-        <button className="btn btn-sm" onClick={clearFilters}>Clear</button>
+        <button className="btn btn-sm" onClick={clearFilters}>Limpar</button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ fontSize: 13 }}>
-          {loading ? 'Loading…' : (total === 0 ? 'No errors found' : `${pageStart}-${pageEnd} of ${total}`)}
+          {loading ? 'Carregando…' : (total === 0 ? 'Nenhum erro encontrado' : `${pageStart}-${pageEnd} de ${total}`)}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -571,14 +571,14 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
             disabled={offset === 0}
             onClick={() => setErrorsOffset(Math.max(0, offset - limit))}
           >
-            Prev
+            Anterior
           </button>
           <button
             className="btn btn-sm"
             disabled={offset + limit >= total}
             onClick={() => setErrorsOffset(offset + limit)}
           >
-            Next
+            Próxima
           </button>
         </div>
       </div>
@@ -589,19 +589,19 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
             <th style={{ padding: 6 }}></th>
-            <th style={{ padding: 6 }}>Subscription</th>
-            <th style={{ padding: 6 }}>Delivery</th>
-            <th style={{ padding: 6 }}>Kind</th>
+            <th style={{ padding: 6 }}>Assinatura</th>
+            <th style={{ padding: 6 }}>Entrega</th>
+            <th style={{ padding: 6 }}>Tipo</th>
             <th style={{ padding: 6 }}>HTTP</th>
-            <th style={{ padding: 6 }}>Completed</th>
-            <th style={{ padding: 6 }}>Short message</th>
+            <th style={{ padding: 6 }}>Concluído</th>
+            <th style={{ padding: 6 }}>Mensagem curta</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 && !loading && (
             <tr>
               <td colSpan="7" style={{ padding: 12, color: 'var(--text-secondary)' }}>
-                No matching error rows.
+                Nenhum registro de erro correspondente.
               </td>
             </tr>
           )}
@@ -627,20 +627,20 @@ function WebhookErrorsPanel({ webhooks, onClose }) {
                     <td colSpan="7" style={{ padding: 12 }}>
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                          What happened
+                          O que aconteceu
                         </div>
                         <div style={{ fontSize: 13, marginTop: 2 }}>{r.description}</div>
                       </div>
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                          Triage hint
+                          Dica de diagnóstico
                         </div>
                         <div style={{ fontSize: 13, marginTop: 2 }}>{r.triage_hint}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 24, fontSize: 12, color: 'var(--text-secondary)' }}>
-                        <span>Connector: <span className="mono">{r.connector_id}</span></span>
-                        <span>Event: <span className="mono">{r.event_id ?? '-'}</span></span>
-                        <span>Attempt: {r.attempt_number}</span>
+                        <span>Conector: <span className="mono">{r.connector_id}</span></span>
+                        <span>Evento: <span className="mono">{r.event_id ?? '-'}</span></span>
+                        <span>Tentativa: {r.attempt_number}</span>
                         <span>Status: {r.status}</span>
                       </div>
                     </td>
@@ -674,7 +674,7 @@ function StatsPanel({ subscription, onClose }) {
         setStats(await res.json());
       } else {
         const body = await res?.json();
-        setPanelError(body?.error || 'Failed to load stats');
+        setPanelError(body?.error || 'Falha ao carregar as estatísticas');
       }
       setLoading(false);
     }
@@ -683,23 +683,23 @@ function StatsPanel({ subscription, onClose }) {
   }, [subscription.subscription_id, window]);
 
   const counters = [
-    { label: 'Attempts', key: 'attempts_total' },
-    { label: 'Succeeded', key: 'succeeded' },
-    { label: 'Failed', key: 'failed' },
+    { label: 'Tentativas', key: 'attempts_total' },
+    { label: 'Sucesso', key: 'succeeded' },
+    { label: 'Falhou', key: 'failed' },
     { label: 'DLQ', key: 'dlq' },
-    { label: 'In flight', key: 'in_flight' },
-    { label: 'Pending', key: 'pending' },
+    { label: 'Em andamento', key: 'in_flight' },
+    { label: 'Pendente', key: 'pending' },
   ];
 
   return (
     <Modal
-      title={`Stats - ${subscription.display_name}`}
+      title={`Estatísticas - ${subscription.display_name}`}
       onClose={onClose}
-      footer={<button className="btn" onClick={onClose}>Close</button>}
+      footer={<button className="btn" onClick={onClose}>Fechar</button>}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-          Server caches for 30s; switch windows to force a re-read.
+          O servidor mantém cache por 30s; troque o período para forçar nova leitura.
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {STATS_WINDOW_OPTIONS.map((w) => (
@@ -717,7 +717,7 @@ function StatsPanel({ subscription, onClose }) {
       {panelError && <div className="form-error" style={{ marginBottom: 12 }}>{panelError}</div>}
 
       {loading && !stats && (
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading…</div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Carregando…</div>
       )}
 
       {stats && (
@@ -745,7 +745,7 @@ function StatsPanel({ subscription, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
             <div style={{ border: '1px solid var(--border)', borderRadius: 4, padding: 12 }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                Success rate
+                Taxa de sucesso
               </div>
               <div className="mono" style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>
                 {formatRate(stats.success_rate)}
@@ -753,7 +753,7 @@ function StatsPanel({ subscription, onClose }) {
             </div>
             <div style={{ border: '1px solid var(--border)', borderRadius: 4, padding: 12 }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                Current lag (events)
+                Atraso atual (eventos)
               </div>
               <div className="mono" style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>
                 {stats.current_lag ?? 0}
@@ -763,7 +763,7 @@ function StatsPanel({ subscription, onClose }) {
 
           <div style={{ border: '1px solid var(--border)', borderRadius: 4, padding: 12, marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Response time (succeeded only)
+              Tempo de resposta (somente sucessos)
             </div>
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
@@ -789,10 +789,10 @@ function StatsPanel({ subscription, onClose }) {
 
           <div style={{ border: '1px solid var(--border)', borderRadius: 4, padding: 12, marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Top error kinds
+              Principais tipos de erro
             </div>
             {(stats.top_error_kinds || []).length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No errors in window.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhum erro no período.</div>
             ) : (
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
@@ -808,7 +808,7 @@ function StatsPanel({ subscription, onClose }) {
           </div>
 
           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Window {stats.window}. Generated at {new Date(stats.generated_at * 1000).toLocaleString()}.
+            Período {stats.window}. Gerado em {new Date(stats.generated_at * 1000).toLocaleString()}.
           </div>
         </>
       )}
@@ -867,7 +867,7 @@ export default function Webhooks() {
       setWebhooks(data.webhooks || []);
       setPageError('');
     } else {
-      setPageError('Failed to load webhooks');
+      setPageError('Falha ao carregar os webhooks');
     }
     setLoading(false);
   }
@@ -922,9 +922,9 @@ export default function Webhooks() {
 
   async function submitCreate() {
     setCreateError('');
-    if (!form.display_name.trim()) { setCreateError('Display name is required'); return; }
-    if (!form.connector_id) { setCreateError('Connector is required'); return; }
-    if (!form.delivery_url.trim()) { setCreateError('Delivery URL is required'); return; }
+    if (!form.display_name.trim()) { setCreateError('O nome de exibição é obrigatório'); return; }
+    if (!form.connector_id) { setCreateError('O conector é obrigatório'); return; }
+    if (!form.delivery_url.trim()) { setCreateError('A URL de entrega é obrigatória'); return; }
     const res = await api.post('/admin/webhooks', buildPayload());
     const body = await res?.json();
     if (res?.status === 409 && body?.error === 'url_reuse_tombstone') {
@@ -946,7 +946,7 @@ export default function Webhooks() {
       load();
       return;
     }
-    setCreateError(body?.error || 'Failed to create webhook');
+    setCreateError(body?.error || 'Falha ao criar webhook');
   }
 
   async function confirmUrlReuse() {
@@ -969,7 +969,7 @@ export default function Webhooks() {
       setRevealAcked(false);
       load();
     } else {
-      setCreateError(body?.error || 'Failed to create webhook');
+      setCreateError(body?.error || 'Falha ao criar webhook');
     }
   }
 
@@ -1021,8 +1021,8 @@ export default function Webhooks() {
 
   async function submitEdit() {
     if (!editing || !editForm) return;
-    if (!editForm.display_name.trim()) { setEditError('Display name is required'); return; }
-    if (!editForm.delivery_url.trim()) { setEditError('Delivery URL is required'); return; }
+    if (!editForm.display_name.trim()) { setEditError('O nome de exibição é obrigatório'); return; }
+    if (!editForm.delivery_url.trim()) { setEditError('A URL de entrega é obrigatória'); return; }
     // PATCH accepts only the keys the admin actually mutated; sending
     // the full form is fine because the backend short-circuits when
     // the supplied value matches the persisted one (no audit row, no
@@ -1044,7 +1044,7 @@ export default function Webhooks() {
       closeEdit();
       load();
     } else {
-      setEditError(body?.error || 'Failed to update webhook');
+      setEditError(body?.error || 'Falha ao atualizar webhook');
     }
   }
 
@@ -1055,7 +1055,7 @@ export default function Webhooks() {
       load();
     } else {
       const body = await res?.json();
-      setPageError(body?.error || `Failed to ${next === 'paused' ? 'pause' : 'resume'} webhook`);
+      setPageError(body?.error || `Falha ao ${next === 'paused' ? 'pause' : 'resume'} webhook`);
     }
   }
 
@@ -1066,7 +1066,7 @@ export default function Webhooks() {
       load();
     } else {
       const body = await res?.json();
-      setPageError(body?.error || 'Failed to revoke webhook');
+      setPageError(body?.error || 'Falha ao revogar webhook');
       setConfirmSoftDelete(null);
     }
   }
@@ -1086,7 +1086,7 @@ export default function Webhooks() {
       load();
     } else {
       setConfirmRotate(null);
-      setPageError(body?.detail || body?.error || 'Failed to rotate secret');
+      setPageError(body?.detail || body?.error || 'Falha ao rotacionar o segredo');
     }
   }
 
@@ -1105,7 +1105,7 @@ export default function Webhooks() {
       setPurgeError({ live_count: body.live_count, detail: body.detail });
       return;
     }
-    setPageError(body?.error || 'Failed to purge webhook');
+    setPageError(body?.error || 'Falha ao expurgar webhook');
     setConfirmPurge(null);
   }
 
@@ -1114,8 +1114,8 @@ export default function Webhooks() {
   const editHttpAttempt = (editForm?.delivery_url || '').trim().toLowerCase().startsWith('http://');
 
   const columns = [
-    { key: 'display_name', label: 'Name' },
-    { key: 'connector_id', label: 'Connector', render: (r) => <span className="mono">{r.connector_id}</span> },
+    { key: 'display_name', label: 'Nome' },
+    { key: 'connector_id', label: 'Conector', render: (r) => <span className="mono">{r.connector_id}</span> },
     {
       key: 'status',
       label: 'Status',
@@ -1126,19 +1126,19 @@ export default function Webhooks() {
     },
     {
       key: 'pause_reason',
-      label: 'Pause reason',
+      label: 'Motivo da pausa',
       render: (r) => r.pause_reason
         ? <span className="mono" style={{ fontSize: 12 }}>{r.pause_reason}</span>
         : <span style={{ color: 'var(--text-secondary)' }}>-</span>,
     },
     {
       key: 'success_rate_24h',
-      label: 'Success (24h)',
+      label: 'Sucesso (24h)',
       render: (r) => formatRate(r.stats?.success_rate_24h),
     },
     {
       key: 'pending_count',
-      label: 'Pending',
+      label: 'Pendente',
       render: (r) => <span className="mono">{r.stats?.pending_count ?? 0}</span>,
     },
     {
@@ -1159,53 +1159,53 @@ export default function Webhooks() {
             className="btn btn-sm"
             onClick={(e) => { e.stopPropagation(); openEdit(r); }}
             disabled={r.status === 'revoked'}
-            title="Edit"
+            title="Editar"
           >
-            Edit
+            Editar
           </button>
           <button
             className="btn btn-sm"
             onClick={(e) => { e.stopPropagation(); togglePause(r); }}
             disabled={r.status === 'revoked'}
-            title={r.status === 'active' ? 'Pause' : 'Resume'}
+            title={r.status === 'active' ? 'Pausar' : 'Retomar'}
           >
-            {r.status === 'active' ? 'Pause' : 'Resume'}
+            {r.status === 'active' ? 'Pausar' : 'Retomar'}
           </button>
           <button
             className="btn btn-sm"
             onClick={(e) => { e.stopPropagation(); setConfirmRotate(r); }}
             disabled={r.status === 'revoked'}
-            title="Rotate secret"
+            title="Rotacionar segredo"
           >
-            Rotate
+            Trocar
           </button>
           <button
             className="btn btn-sm"
             onClick={(e) => { e.stopPropagation(); setDlqRow(r); }}
-            title="DLQ viewer + replay"
+            title="Visualizar DLQ + reenviar"
           >
             DLQ
           </button>
           <button
             className="btn btn-sm"
             onClick={(e) => { e.stopPropagation(); setStatsRow(r); }}
-            title="Stats"
+            title="Estatísticas"
           >
-            Stats
+            Estatísticas
           </button>
           <button
             className="btn btn-sm btn-danger"
             onClick={(e) => { e.stopPropagation(); setConfirmSoftDelete(r); }}
             disabled={r.status === 'revoked'}
-            title="Revoke (soft delete)"
+            title="Revogar (exclusão lógica)"
           >
-            Revoke
+            Revogar
           </button>
           <button
             className="btn btn-sm btn-danger"
             onClick={(e) => { e.stopPropagation(); setPurgeError(null); setConfirmPurge(r); }}
-            title="Purge (hard delete + tombstone)"
-            aria-label="Purge"
+            title="Expurgar (exclusão definitiva + marcador)"
+            aria-label="Expurgar"
           >
             &#128465;
           </button>
@@ -1217,8 +1217,8 @@ export default function Webhooks() {
   return (
     <div>
       <PageHeader title="Webhooks">
-        <button className="btn" onClick={() => setShowErrors(true)}>View errors</button>
-        <button className="btn btn-primary" onClick={openCreate}>New webhook</button>
+        <button className="btn" onClick={() => setShowErrors(true)}>Ver erros</button>
+        <button className="btn btn-primary" onClick={openCreate}>Novo webhook</button>
       </PageHeader>
 
       {pageError && <div className="form-error" style={{ marginBottom: 12 }}>{pageError}</div>}
@@ -1227,22 +1227,22 @@ export default function Webhooks() {
         rowKey="subscription_id"
         columns={columns}
         data={webhooks}
-        emptyMessage={loading ? 'Loading…' : 'No webhook subscriptions yet'}
+        emptyMessage={loading ? 'Carregando…' : 'Nenhuma assinatura de webhook ainda'}
       />
 
       {showCreate && (
         <Modal
-          title="New webhook subscription"
+          title="Nova assinatura de webhook"
           onClose={() => setShowCreate(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
+              <button className="btn" onClick={() => setShowCreate(false)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 onClick={submitCreate}
                 disabled={!httpsValid && !httpAttempt}
               >
-                Create
+                Criar
               </button>
             </>
           }
@@ -1250,7 +1250,7 @@ export default function Webhooks() {
           {createError && <div className="form-error" style={{ marginBottom: 12 }}>{createError}</div>}
 
           <div className="form-group">
-            <label>Display name</label>
+            <label>Nome de exibição</label>
             <input
               className="form-input"
               value={form.display_name}
@@ -1260,13 +1260,13 @@ export default function Webhooks() {
           </div>
 
           <div className="form-group">
-            <label>Connector</label>
+            <label>Conector</label>
             <select
               className="form-input"
               value={form.connector_id}
               onChange={(e) => setForm({ ...form, connector_id: e.target.value })}
             >
-              <option value="">Select a connector…</option>
+              <option value="">Selecione um conector…</option>
               {connectors.map((c) => (
                 <option key={c.connector_id} value={c.connector_id}>
                   {c.connector_id} - {c.display_name}
@@ -1274,12 +1274,12 @@ export default function Webhooks() {
               ))}
             </select>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Register a new connector under Consumer groups before it appears here.
+              Registre um novo conector em Grupos de consumidores para que ele apareça aqui.
             </div>
           </div>
 
           <div className="form-group">
-            <label>Delivery URL</label>
+            <label>URL de entrega</label>
             <input
               className="form-input"
               value={form.delivery_url}
@@ -1288,14 +1288,13 @@ export default function Webhooks() {
             />
             {httpAttempt && (
               <div className="form-error" style={{ marginTop: 4, fontSize: 12 }}>
-                http:// is rejected in production. Use https:// or set
-                SENTRY_ALLOW_HTTP_WEBHOOKS=true in dev / CI.
+                http:// é rejeitado em produção. Use https:// ou defina SENTRY_ALLOW_HTTP_WEBHOOKS=true em dev / CI.
               </div>
             )}
           </div>
 
           <div className="form-group">
-            <label>Event types (filter)</label>
+            <label>Tipos de evento (filtro)</label>
             <ScopeCheckboxList
               options={scopeCatalog.event_types}
               value={form.event_types}
@@ -1304,12 +1303,12 @@ export default function Webhooks() {
               renderLabel={(t) => <span className="mono">{t}</span>}
             />
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Empty selection = match every event type.
+              Seleção vazia = todos os tipos de evento.
             </div>
           </div>
 
           <div className="form-group">
-            <label>Warehouses (filter)</label>
+            <label>Armazéns (filtro)</label>
             <ScopeCheckboxList
               options={warehouses}
               value={form.warehouse_ids}
@@ -1323,12 +1322,12 @@ export default function Webhooks() {
               )}
             />
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Empty selection = match every warehouse.
+              Seleção vazia = todos os armazéns.
             </div>
           </div>
 
           <Slider
-            label="Rate limit (req/sec)"
+            label="Limite de taxa (req/seg)"
             min={1}
             max={100}
             step={1}
@@ -1338,7 +1337,7 @@ export default function Webhooks() {
           />
 
           <Slider
-            label="Pending ceiling"
+            label="Limite de pendentes"
             min={100}
             max={100000}
             step={100}
@@ -1348,7 +1347,7 @@ export default function Webhooks() {
           />
 
           <Slider
-            label="DLQ ceiling"
+            label="Limite da DLQ"
             min={10}
             max={10000}
             step={10}
@@ -1361,26 +1360,23 @@ export default function Webhooks() {
 
       {urlReuseGate && (
         <Modal
-          title="URL previously used"
+          title="URL usada anteriormente"
           onClose={() => setUrlReuseGate(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setUrlReuseGate(null)}>Cancel</button>
+              <button className="btn" onClick={() => setUrlReuseGate(null)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 style={{ background: 'var(--copper)' }}
                 onClick={confirmUrlReuse}
               >
-                Acknowledge and create
+                Confirmar e criar
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600 }}>
-            This delivery URL was associated with a previously-deleted
-            subscription (tombstone {urlReuseGate.tombstone_id}). The
-            previous consumer may still be configured to receive
-            traffic at this URL.
+            Esta URL de entrega estava associada a uma assinatura excluída anteriormente (marcador {urlReuseGate.tombstone_id}). O consumidor anterior pode ainda estar configurado para receber tráfego nesta URL.
           </p>
           <p style={{ fontSize: 13 }}>
             {urlReuseGate.detail}
@@ -1390,24 +1386,21 @@ export default function Webhooks() {
 
       {reveal && (
         <Modal
-          title={reveal.kind === 'rotated' ? 'Webhook secret rotated' : 'Webhook secret issued'}
+          title={reveal.kind === 'rotated' ? 'Segredo do webhook rotacionado' : 'Segredo do webhook emitido'}
           onClose={() => { /* reveal modal must be explicitly acknowledged */ }}
           footer={
             <button
               className="btn btn-primary"
               onClick={() => setReveal(null)}
               disabled={!revealAcked}
-              title={revealAcked ? 'Close' : 'Confirm you have saved the secret first'}
+              title={revealAcked ? 'Fechar' : 'Confirme que você salvou o segredo primeiro'}
             >
-              Close
+              Fechar
             </button>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600 }}>
-            {reveal.display_name}: this secret (generation {reveal.secret_generation})
-            is shown exactly once. Copy it to the consumer's HMAC verifier
-            now. Sentry stores only the encrypted form; if you lose this
-            value you must rotate.
+            {reveal.display_name}: este segredo (geração {reveal.secret_generation}) é exibido uma única vez. Copie-o agora para o verificador HMAC do consumidor. O SEA armazena apenas a forma criptografada; se você perder este valor, será preciso gerar outro.
           </p>
           <div style={{
             background: 'var(--surface-muted)',
@@ -1422,7 +1415,7 @@ export default function Webhooks() {
             {reveal.secret}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn" onClick={copySecret}>Copy to clipboard</button>
+            <button className="btn" onClick={copySecret}>Copiar para a área de transferência</button>
           </div>
           <div className="form-group" style={{ marginTop: 16 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -1431,7 +1424,7 @@ export default function Webhooks() {
                 checked={revealAcked}
                 onChange={(e) => setRevealAcked(e.target.checked)}
               />
-              I have saved this secret in a secure location.
+              Salvei este segredo em um local seguro.
             </label>
           </div>
         </Modal>
@@ -1439,19 +1432,19 @@ export default function Webhooks() {
 
       {editing && editForm && (
         <Modal
-          title={`Edit ${editing.display_name}`}
+          title={`Editar ${editing.display_name}`}
           onClose={closeEdit}
           footer={
             <>
-              <button className="btn" onClick={closeEdit}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitEdit}>Save</button>
+              <button className="btn" onClick={closeEdit}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitEdit}>Salvar</button>
             </>
           }
         >
           {editError && <div className="form-error" style={{ marginBottom: 12 }}>{editError}</div>}
 
           <div className="form-group">
-            <label>Connector</label>
+            <label>Conector</label>
             <input
               className="form-input mono"
               value={editing.connector_id}
@@ -1459,12 +1452,12 @@ export default function Webhooks() {
               disabled
             />
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Connector is fixed at create time. Recreate the subscription to change.
+              O conector é definido na criação. Recrie a assinatura para alterá-lo.
             </div>
           </div>
 
           <div className="form-group">
-            <label>Display name</label>
+            <label>Nome de exibição</label>
             <input
               className="form-input"
               value={editForm.display_name}
@@ -1473,7 +1466,7 @@ export default function Webhooks() {
           </div>
 
           <div className="form-group">
-            <label>Delivery URL</label>
+            <label>URL de entrega</label>
             <input
               className="form-input"
               value={editForm.delivery_url}
@@ -1481,17 +1474,16 @@ export default function Webhooks() {
             />
             {editHttpAttempt && (
               <div className="form-error" style={{ marginTop: 4, fontSize: 12 }}>
-                http:// is rejected in production. Use https:// or set
-                SENTRY_ALLOW_HTTP_WEBHOOKS=true in dev / CI.
+                http:// é rejeitado em produção. Use https:// ou defina SENTRY_ALLOW_HTTP_WEBHOOKS=true em dev / CI.
               </div>
             )}
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Changing the URL forces dispatcher session teardown and a fresh DNS resolution on the next dispatch.
+              Alterar a URL força o encerramento da sessão do dispatcher e uma nova resolução DNS no próximo envio.
             </div>
           </div>
 
           <div className="form-group">
-            <label>Event types (filter)</label>
+            <label>Tipos de evento (filtro)</label>
             <ScopeCheckboxList
               options={scopeCatalog.event_types}
               value={editForm.event_types}
@@ -1502,7 +1494,7 @@ export default function Webhooks() {
           </div>
 
           <div className="form-group">
-            <label>Warehouses (filter)</label>
+            <label>Armazéns (filtro)</label>
             <ScopeCheckboxList
               options={warehouses}
               value={editForm.warehouse_ids}
@@ -1518,7 +1510,7 @@ export default function Webhooks() {
           </div>
 
           <Slider
-            label="Rate limit (req/sec)"
+            label="Limite de taxa (req/seg)"
             min={1}
             max={100}
             step={1}
@@ -1527,7 +1519,7 @@ export default function Webhooks() {
           />
 
           <Slider
-            label="Pending ceiling"
+            label="Limite de pendentes"
             min={100}
             max={100000}
             step={100}
@@ -1536,7 +1528,7 @@ export default function Webhooks() {
           />
 
           <Slider
-            label="DLQ ceiling"
+            label="Limite da DLQ"
             min={10}
             max={10000}
             step={10}
@@ -1569,95 +1561,82 @@ export default function Webhooks() {
 
       {confirmRotate && (
         <Modal
-          title="Rotate webhook secret"
+          title="Rotacionar segredo do webhook"
           onClose={() => setConfirmRotate(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setConfirmRotate(null)}>Cancel</button>
+              <button className="btn" onClick={() => setConfirmRotate(null)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 onClick={() => rotateSecret(confirmRotate)}
               >
-                Rotate
+                Trocar
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600 }}>
-            Rotate the HMAC secret for {confirmRotate.display_name}?
+            Rotacionar o segredo HMAC de {confirmRotate.display_name}?
           </p>
           <p style={{ fontSize: 13 }}>
-            The current secret is demoted to generation 2 with a 24-hour
-            dual-accept window. Consumers can verify against either
-            generation until the window expires; the dispatcher signs new
-            POSTs with the fresh generation 1 immediately. The new
-            plaintext is shown once on the next screen.
+            O segredo atual é rebaixado para a geração 2 com uma janela de 24 horas de aceitação dupla. Os consumidores podem validar com qualquer geração até a janela expirar; o dispatcher assina os novos POSTs com a nova geração 1 imediatamente. O novo valor é exibido uma vez na próxima tela.
           </p>
           <p style={{ fontSize: 13, color: 'var(--copper)' }}>
-            A second rotation within 24 hours overwrites the demoted
-            secret and shortens the cutover window for any consumer that
-            has not yet picked up the new value.
+            Uma segunda rotação em menos de 24 horas sobrescreve o segredo rebaixado e encurta a janela de transição para consumidores que ainda não adotaram o novo valor.
           </p>
         </Modal>
       )}
 
       {confirmSoftDelete && (
         <Modal
-          title="Revoke webhook"
+          title="Revogar webhook"
           onClose={() => setConfirmSoftDelete(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setConfirmSoftDelete(null)}>Cancel</button>
+              <button className="btn" onClick={() => setConfirmSoftDelete(null)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 style={{ background: 'var(--copper)' }}
                 onClick={() => softDelete(confirmSoftDelete)}
               >
-                Revoke
+                Revogar
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600 }}>
-            Revoke {confirmSoftDelete.display_name}? Dispatch stops within
-            seconds (Redis pubsub eviction); the row stays in the list with
-            status=revoked so historical webhook_deliveries keep their FK
-            target. Use Purge to remove the row entirely after the live
-            deliveries terminate.
+            Revogar {confirmSoftDelete.display_name}? O envio para em segundos (expulsão via Redis pubsub); o registro continua na lista com status=revoked para que o histórico de webhook_deliveries mantenha a referência. Use Expurgar para remover o registro por completo após as entregas em andamento terminarem.
           </p>
         </Modal>
       )}
 
       {confirmPurge && (
         <Modal
-          title="Purge webhook"
+          title="Expurgar webhook"
           onClose={() => setConfirmPurge(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setConfirmPurge(null)}>Cancel</button>
+              <button className="btn" onClick={() => setConfirmPurge(null)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 style={{ background: 'var(--danger)' }}
                 onClick={() => hardPurge(confirmPurge)}
               >
-                Purge
+                Expurgar
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>
-            Permanently delete {confirmPurge.display_name}?
+            Excluir permanentemente {confirmPurge.display_name}?
           </p>
           <p style={{ fontSize: 13 }}>
-            The row is removed and a tombstone is written. The next admin
-            who creates a webhook with the same delivery URL ({confirmPurge.delivery_url})
-            will see the URL-reuse warning. Refused while pending or
-            in_flight deliveries reference this subscription.
+            O registro é removido e um marcador é gravado. O próximo administrador que criar um webhook com a mesma URL de entrega ({confirmPurge.delivery_url}) verá o aviso de URL reutilizada. Recusado enquanto houver entregas pending ou in_flight referenciando esta assinatura.
           </p>
           {purgeError && (
             <div className="form-error" style={{ marginTop: 12 }}>
               <div style={{ fontWeight: 600 }}>
-                {purgeError.live_count} live deliver{purgeError.live_count === 1 ? 'y' : 'ies'} block this purge.
+                {purgeError.live_count} entrega ativa{purgeError.live_count === 1 ? 'y' : 'ies'} bloqueiam este expurgo.
               </div>
               <div style={{ marginTop: 4, fontSize: 12 }}>{purgeError.detail}</div>
             </div>

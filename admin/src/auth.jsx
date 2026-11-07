@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
     if (!res || !res.ok) {
       const data = res ? await res.json().catch(() => ({})) : {};
       // V-021: never echo the raw backend error string to the user.
-      throw new Error(friendlyError(data, 'Login failed. Please try again.'));
+      throw new Error(friendlyError(data, 'Falha no login. Tente novamente.'));
     }
     const data = await res.json();
     // Page permissions (mig 061): USERs are allowed into the admin shell.

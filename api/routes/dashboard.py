@@ -274,9 +274,9 @@ def _parse_dashboard_range():
         start_dt = date.fromisoformat(start_str)
         end_dt = date.fromisoformat(end_str)
     except ValueError:
-        return None, None, (jsonify({"error": "start/end must be YYYY-MM-DD"}), 422)
+        return None, None, (jsonify({"error": "start/end devem estar no formato AAAA-MM-DD"}), 422)
     if end_dt < start_dt:
-        return None, None, (jsonify({"error": "end must be on or after start"}), 422)
+        return None, None, (jsonify({"error": "end deve ser igual ou posterior a start"}), 422)
     return start_dt, end_dt, None
 
 
@@ -300,7 +300,7 @@ def received():
     """
     warehouse_id = request.args.get("warehouse_id", type=int)
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id is required"}), 422
+        return jsonify({"error": "warehouse_id é obrigatório"}), 422
     start_dt, end_dt, err = _parse_dashboard_range()
     if err is not None:
         return err
@@ -431,7 +431,7 @@ def shipping_health():
     """
     warehouse_id = request.args.get("warehouse_id", type=int)
     if not warehouse_id:
-        return jsonify({"error": "warehouse_id is required"}), 422
+        return jsonify({"error": "warehouse_id é obrigatório"}), 422
     start_dt, end_dt, err = _parse_dashboard_range()
     if err is not None:
         return err

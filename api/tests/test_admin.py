@@ -104,7 +104,7 @@ class TestWarehouses:
             "warehouse_code": "APT-LAB", "warehouse_name": "Dupe"
         }, headers=auth_headers)
         assert resp.status_code == 400
-        assert "Duplicate" in resp.get_json()["error"]
+        assert "duplicado" in resp.get_json()["error"]
 
     def test_update_warehouse(self, client, auth_headers):
         resp = client.put("/api/admin/warehouses/1", json={
@@ -269,14 +269,14 @@ class TestItems:
             "sku": "TST-001", "item_name": "Dupe"
         }, headers=auth_headers)
         assert resp.status_code == 400
-        assert "Duplicate SKU" in resp.get_json()["error"]
+        assert "SKU duplicado" in resp.get_json()["error"]
 
     def test_create_item_duplicate_upc(self, client, auth_headers):
         resp = client.post("/api/admin/items", json={
             "sku": "UNIQUE-SKU", "item_name": "Dupe UPC", "upc": "100000000001"
         }, headers=auth_headers)
         assert resp.status_code == 400
-        assert "Duplicate UPC" in resp.get_json()["error"]
+        assert "UPC duplicado" in resp.get_json()["error"]
 
     def test_update_item(self, client, auth_headers):
         resp = client.put("/api/admin/items/1", json={"item_name": "Updated Widget"}, headers=auth_headers)
@@ -316,7 +316,7 @@ class TestItems:
         # Item 1 has inventory, should fail
         resp = client.delete("/api/admin/items/1", headers=auth_headers)
         assert resp.status_code == 400
-        assert "existing inventory" in resp.get_json()["error"]
+        assert "estoque existente" in resp.get_json()["error"]
 
     def test_delete_item_without_inventory(self, client, auth_headers):
         # Create an item with no inventory, then hard delete
@@ -325,7 +325,7 @@ class TestItems:
 
         resp = client.delete(f"/api/admin/items/{item_id}", headers=auth_headers)
         assert resp.status_code == 200
-        assert resp.get_json()["message"] == "Item deleted"
+        assert resp.get_json()["message"] == "Material excluído"
 
         exists = _query_val("SELECT 1 FROM items WHERE item_id = %s", (item_id,))
         assert exists is None
@@ -442,7 +442,7 @@ class TestPurchaseOrderStatusChange:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "CLOSED" in resp.get_json()["error"]
+        assert "FECHADO" in resp.get_json()["error"]
 
     def test_archive_after_close_succeeds(self, client, auth_headers):
         client.post("/api/admin/purchase-orders/1/close", headers=auth_headers)
@@ -549,7 +549,7 @@ class TestPurchaseOrderLineCRUD:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "already on this PO" in resp.get_json()["error"]
+        assert "já está neste PC" in resp.get_json()["error"]
 
     def test_add_line_rejects_unknown_item(self, client, auth_headers):
         resp = client.post(
@@ -604,7 +604,7 @@ class TestPurchaseOrderLineCRUD:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "less than" in resp.get_json()["error"]
+        assert "menor que" in resp.get_json()["error"]
 
     def test_remove_line_succeeds_when_no_receipts(self, client, auth_headers):
         # Add a fresh line, then remove it without receiving against it.
@@ -641,7 +641,7 @@ class TestPurchaseOrderLineCRUD:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "received units" in resp.get_json()["error"]
+        assert "unidades recebidas" in resp.get_json()["error"]
 
     def test_remove_line_blocked_when_closed(self, client, auth_headers):
         detail = client.get("/api/admin/purchase-orders/1", headers=auth_headers).get_json()
@@ -657,7 +657,7 @@ class TestPurchaseOrderLineCRUD:
     def test_close_purchase_order(self, client, auth_headers):
         resp = client.post("/api/admin/purchase-orders/1/close", headers=auth_headers)
         assert resp.status_code == 200
-        assert resp.get_json()["message"] == "Purchase order closed"
+        assert resp.get_json()["message"] == "Pedido de compra fechado"
         assert resp.get_json()["status"] == "CLOSED"
 
     def test_close_already_closed_returns_409(self, client, auth_headers):
@@ -666,14 +666,14 @@ class TestPurchaseOrderLineCRUD:
         client.post("/api/admin/purchase-orders/1/close", headers=auth_headers)
         resp = client.post("/api/admin/purchase-orders/1/close", headers=auth_headers)
         assert resp.status_code == 409
-        assert "already CLOSED" in resp.get_json()["error"]
+        assert "já está FECHADO" in resp.get_json()["error"]
 
     def test_reopen_closed_purchase_order(self, client, auth_headers):
         """Issue #88: reopen transitions CLOSED -> OPEN."""
         client.post("/api/admin/purchase-orders/1/close", headers=auth_headers)
         resp = client.post("/api/admin/purchase-orders/1/reopen", headers=auth_headers)
         assert resp.status_code == 200
-        assert resp.get_json()["message"] == "Purchase order reopened"
+        assert resp.get_json()["message"] == "Pedido de compra reaberto"
         assert resp.get_json()["status"] == "OPEN"
 
     def test_reopen_rejects_non_closed_po(self, client, auth_headers):
@@ -681,7 +681,7 @@ class TestPurchaseOrderLineCRUD:
         reopen request returns 409."""
         resp = client.post("/api/admin/purchase-orders/1/reopen", headers=auth_headers)
         assert resp.status_code == 409
-        assert "CLOSED" in resp.get_json()["error"]
+        assert "FECHADOS" in resp.get_json()["error"]
 
     def test_reopen_missing_po_returns_404(self, client, auth_headers):
         resp = client.post("/api/admin/purchase-orders/99999/reopen", headers=auth_headers)
@@ -1017,7 +1017,7 @@ class TestSalesOrdersPrimaryBin:
     def test_cancel_open_sales_order(self, client, auth_headers):
         resp = client.post("/api/admin/sales-orders/1/cancel", headers=auth_headers)
         assert resp.status_code == 200
-        assert resp.get_json()["message"] == "Sales order cancelled"
+        assert resp.get_json()["message"] == "Pedido de venda cancelado"
         status = _query_val("SELECT status FROM sales_orders WHERE so_id = 1")
         assert status == "CANCELLED"
 
@@ -1116,7 +1116,7 @@ class TestUsers:
             "username": "admin", "password": "testpass1234", "full_name": "Dupe", "role": "ADMIN"
         }, headers=auth_headers)
         assert resp.status_code == 400
-        assert "Duplicate" in resp.get_json()["error"]
+        assert "duplicado" in resp.get_json()["error"]
 
     def test_create_user_invalid_role(self, client, auth_headers):
         resp = client.post("/api/admin/users", json={
@@ -1239,7 +1239,7 @@ class TestUsers:
     def test_cannot_delete_self(self, client, auth_headers):
         resp = client.delete("/api/admin/users/1", headers=auth_headers)
         assert resp.status_code == 400
-        assert "yourself" in resp.get_json()["error"]
+        assert "a si mesmo" in resp.get_json()["error"]
 
 
 # ── Audit Log ─────────────────────────────────────────────────────────────────
@@ -1773,7 +1773,7 @@ class TestSettings:
             "settings": {"require_packing_before_shipping": "false"}
         }, headers=auth_headers)
         assert resp.status_code == 400
-        assert "PACKED" in resp.get_json()["error"]
+        assert "EMBALADO" in resp.get_json()["error"]
 
     def test_toggle_on_always_allowed(self, client, auth_headers):
         """Enabling packing is always allowed."""
@@ -2045,7 +2045,7 @@ class TestRepeatOffender23_WarehouseHardDelete:
 
         resp = client.delete(f"/api/admin/warehouses/{wh_id}", headers=auth_headers)
         assert resp.status_code == 200
-        assert "deleted" in resp.get_json()["message"].lower()
+        assert "excluído" in resp.get_json()["message"].lower()
 
         resp = client.get(f"/api/admin/warehouses/{wh_id}", headers=auth_headers)
         assert resp.status_code == 404
@@ -2101,7 +2101,7 @@ class TestZoneDelete:
 
         resp = client.delete(f"/api/admin/zones/{zone_id}", headers=auth_headers)
         assert resp.status_code == 200
-        assert "deleted" in resp.get_json()["message"].lower()
+        assert "excluída" in resp.get_json()["message"].lower()
 
     def test_delete_zone_with_bins_returns_409(self, client, auth_headers):
         """Zone 1 in the demo seed is the Receiving zone with at least
@@ -2109,8 +2109,8 @@ class TestZoneDelete:
         resp = client.delete("/api/admin/zones/1", headers=auth_headers)
         assert resp.status_code == 409
         body = resp.get_json()
-        assert "bin(s) are assigned" in body["error"]
-        assert "Reassign or delete the bins first" in body["error"]
+        assert "endereço(s) estão atribuídos" in body["error"]
+        assert "Reatribua ou exclua os endereços primeiro" in body["error"]
 
     def test_delete_missing_zone_returns_404(self, client, auth_headers):
         resp = client.delete("/api/admin/zones/99999", headers=auth_headers)
@@ -2139,7 +2139,7 @@ class TestBinDelete:
 
         resp = client.delete(f"/api/admin/bins/{bin_id}", headers=auth_headers)
         assert resp.status_code == 200
-        assert "deleted" in resp.get_json()["message"].lower()
+        assert "excluído" in resp.get_json()["message"].lower()
 
         resp = client.get(f"/api/admin/bins/{bin_id}", headers=auth_headers)
         assert resp.status_code == 404
@@ -2149,8 +2149,8 @@ class TestBinDelete:
         resp = client.delete("/api/admin/bins/3", headers=auth_headers)
         assert resp.status_code == 409
         body = resp.get_json()
-        assert "inventory record" in body["error"].lower()
-        assert "quantity on hand" in body["error"].lower()
+        assert "registro(s) de estoque" in body["error"].lower()
+        assert "quantidade em mãos" in body["error"].lower()
 
     def test_delete_bin_with_preferred_mapping_returns_409(self, client, auth_headers):
         resp = client.post(
@@ -2174,7 +2174,7 @@ class TestBinDelete:
 
         resp = client.delete(f"/api/admin/bins/{bin_id}", headers=auth_headers)
         assert resp.status_code == 409
-        assert "preferred-bin mapping" in resp.get_json()["error"].lower()
+        assert "vínculo(s) de endereço preferencial" in resp.get_json()["error"].lower()
 
     def test_delete_missing_bin_returns_404(self, client, auth_headers):
         resp = client.delete("/api/admin/bins/99999", headers=auth_headers)

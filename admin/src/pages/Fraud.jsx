@@ -10,7 +10,7 @@ import PageHeader from '../components/PageHeader.jsx';
 function AddressSummary({ line1, line2, city, state, postalCode }) {
   const street = [line1, line2].filter(Boolean).join(', ');
   const cityLine = [city, state, postalCode].filter(Boolean).join(' ');
-  if (!street && !cityLine) return <span style={{ color: '#999' }}>(blank)</span>;
+  if (!street && !cityLine) return <span style={{ color: '#999' }}>(vazio)</span>;
   return (
     <div style={{ fontSize: 12, lineHeight: 1.35 }}>
       {street && <div>{street}</div>}
@@ -52,7 +52,7 @@ export function MemoCell({ soId, initial, onSaved }) {
     const res = await api.patch(`/admin/sales-orders/${soId}/memo`, { memo: value });
     setSaving(false);
     if (!res?.ok) {
-      setError('Save failed');
+      setError('Falha ao salvar');
       return;
     }
     setSavedValue(value);
@@ -67,10 +67,10 @@ export function MemoCell({ soId, initial, onSaved }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
-        placeholder="CSR notes…"
+        placeholder="Observações do atendimento…"
         style={{ width: '100%', minWidth: 240, fontSize: 12, resize: 'vertical' }}
       />
-      {saving && <div style={{ fontSize: 11, color: '#666' }}>Saving…</div>}
+      {saving && <div style={{ fontSize: 11, color: '#666' }}>Salvando…</div>}
       {error && <div className="form-error" style={{ fontSize: 11 }}>{error}</div>}
     </div>
   );
@@ -104,18 +104,18 @@ export default function Fraud() {
     setActionError('');
     const res = await api.post(`/admin/sales-orders/${soId}/push-to-queue`);
     if (!res?.ok) {
-      setActionError(`Could not push order ${soId} to queue.`);
+      setActionError(`Não foi possível enviar o pedido ${soId} para a fila.`);
       return;
     }
     setOrders((prev) => prev.filter((o) => o.so_id !== soId));
   }
 
   const columns = [
-    { key: 'so_number', label: 'SO Number', mono: true },
-    { key: 'customer_name', label: 'Customer' },
+    { key: 'so_number', label: 'Número do PV', mono: true },
+    { key: 'customer_name', label: 'Cliente' },
     {
       key: 'billing',
-      label: 'Billing',
+      label: 'Cobrança',
       render: (r) => (
         <AddressSummary
           line1={r.billing_address_line1}
@@ -128,7 +128,7 @@ export default function Fraud() {
     },
     {
       key: 'shipping',
-      label: 'Shipping',
+      label: 'Expedição',
       render: (r) => (
         <AddressSummary
           line1={r.shipping_address_line1}
@@ -163,14 +163,14 @@ export default function Fraud() {
             e.stopPropagation();
             pushToQueue(r.so_id);
           }}
-        >Push to queue</button>
+        >Enviar para a fila</button>
       ),
     },
   ];
 
   return (
     <div>
-      <PageHeader title="Fraud Review" />
+      <PageHeader title="Análise de fraude" />
       {actionError && (
         <div className="section">
           <div className="form-error">{actionError}</div>
@@ -178,13 +178,13 @@ export default function Fraud() {
       )}
       <div className="section">
         <div className="section-title">
-          Orders flagged at ingest{!loading && ` (${orders.length})`}
+          Pedidos sinalizados na entrada{!loading && ` (${orders.length})`}
         </div>
         <DataTable
           rowKey="so_id"
           columns={columns}
           data={orders}
-          emptyMessage={loading ? 'Loading…' : 'No flagged orders'}
+          emptyMessage={loading ? 'Carregando…' : 'Nenhum pedido sinalizado'}
         />
       </div>
     </div>

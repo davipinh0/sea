@@ -162,7 +162,7 @@ export default function Receiving() {
       if (!res?.ok) {
         let data = null;
         try { data = await res?.json(); } catch (_) { /* non-JSON */ }
-        setUnreceiveError(data?.error || 'Failed to reverse receipt');
+        setUnreceiveError(data?.error || 'Falha ao estornar o recebimento');
         return;
       }
       closeUnreceive();
@@ -185,11 +185,11 @@ export default function Receiving() {
     const qty = parseInt(draft.qty, 10);
     const binId = parseInt(draft.bin_id ?? defaultBinId, 10);
     if (isNaN(qty) || qty <= 0) {
-      updateDraft(line.po_line_id, { error: 'Enter a positive quantity' });
+      updateDraft(line.po_line_id, { error: 'Informe uma quantidade positiva' });
       return;
     }
     if (!binId) {
-      updateDraft(line.po_line_id, { error: 'Pick a bin' });
+      updateDraft(line.po_line_id, { error: 'Escolha um endereço' });
       return;
     }
     updateDraft(line.po_line_id, { saving: true, error: '' });
@@ -211,15 +211,15 @@ export default function Receiving() {
       const data = await res?.json();
       updateDraft(line.po_line_id, {
         saving: false,
-        error: data?.error || 'Failed to receive',
+        error: data?.error || 'Falha ao receber',
       });
     }
   }
 
   const columns = [
-    { key: 'po_number', label: 'PO Number', mono: true },
-    { key: 'vendor_name', label: 'Vendor' },
-    { key: 'expected_date', label: 'Expected Date', mono: true, render: (r) => r.expected_date || '-' },
+    { key: 'po_number', label: 'Número do PC', mono: true },
+    { key: 'vendor_name', label: 'Fornecedor' },
+    { key: 'expected_date', label: 'Data prevista', mono: true, render: (r) => r.expected_date || '-' },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
   ];
 
@@ -228,45 +228,44 @@ export default function Receiving() {
 
   return (
     <div>
-      <PageHeader title="Receiving" />
+      <PageHeader title="Recebimento" />
       <div className="filter-bar">
         <select className="form-select" style={{ width: 140 }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="active">Open / Partial</option>
-          <option value="all">All</option>
-          <option value="OPEN">Open</option>
-          <option value="PARTIAL">Partial</option>
-          <option value="RECEIVED">Received</option>
-          <option value="CLOSED">Closed</option>
+          <option value="active">Abertos / Parciais</option>
+          <option value="all">Todos</option>
+          <option value="OPEN">Abrir</option>
+          <option value="PARTIAL">Parcial</option>
+          <option value="RECEIVED">Recebido</option>
+          <option value="CLOSED">Fechado</option>
         </select>
       </div>
-      <DataTable rowKey="po_id" columns={columns} data={pos} onRowClick={viewPO} emptyMessage="No purchase orders" />
+      <DataTable rowKey="po_id" columns={columns} data={pos} onRowClick={viewPO} emptyMessage="Nenhum pedido de compra" />
 
       {selected && detail && (
         <Modal
-          title={`PO ${po?.po_number || selected.po_number}`}
+          title={`PC ${po?.po_number || selected.po_number}`}
           onClose={closeDetail}
-          footer={<button className="btn" onClick={closeDetail}>Close</button>}
+          footer={<button className="btn" onClick={closeDetail}>Fechar</button>}
           size="wide"
         >
           <section className="section">
-            <div className="section-title">PO Summary</div>
+            <div className="section-title">Resumo do PC</div>
             <div className="detail-grid detail-grid-2col" style={{ marginBottom: 0 }}>
-              <span className="detail-label">Vendor</span><span>{po?.vendor_name || '-'}</span>
+              <span className="detail-label">Fornecedor</span><span>{po?.vendor_name || '-'}</span>
               <span className="detail-label">Status</span><span><StatusTag status={po?.status} /></span>
-              <span className="detail-label">Expected Date</span><span className="mono">{po?.expected_date || '-'}</span>
-              <span className="detail-label">Warehouse</span><span className="mono">{po?.warehouse_id ?? '-'}</span>
+              <span className="detail-label">Data prevista</span><span className="mono">{po?.expected_date || '-'}</span>
+              <span className="detail-label">Armazém</span><span className="mono">{po?.warehouse_id ?? '-'}</span>
             </div>
           </section>
 
           <section className="section" style={{ marginBottom: 0 }}>
-            <div className="section-title">Line Items</div>
+            <div className="section-title">Linhas do pedido</div>
             {!canReceive && (
               <p style={{
                 fontSize: 12, color: 'var(--text-secondary)',
                 marginBottom: 8, fontStyle: 'italic',
               }}>
-                PO status is {po?.status}; receiving is disabled until the
-                PO is OPEN or PARTIAL.
+                O status do PC é {po?.status}; o recebimento fica desabilitado até o PC estar ABERTO ou PARCIAL.
               </p>
             )}
             {(detail.lines || []).length > 0 ? (
@@ -276,14 +275,14 @@ export default function Receiving() {
                     <th>SKU</th>
                     <th>UPC</th>
                     <th>MPN</th>
-                    <th>Item</th>
-                    <th style={{ textAlign: 'right' }}>Ordered</th>
-                    <th style={{ textAlign: 'right' }}>Received</th>
-                    <th style={{ textAlign: 'right' }}>Remaining</th>
+                    <th>Material</th>
+                    <th style={{ textAlign: 'right' }}>Pedido</th>
+                    <th style={{ textAlign: 'right' }}>Recebido</th>
+                    <th style={{ textAlign: 'right' }}>Restante</th>
                     {canReceive && (
                       <>
-                        <th style={{ width: 90, textAlign: 'right' }}>Qty</th>
-                        <th style={{ width: 220 }}>Bin</th>
+                        <th style={{ width: 90, textAlign: 'right' }}>Qtd.</th>
+                        <th style={{ width: 220 }}>Endereço</th>
                         <th style={{ width: 110 }}></th>
                       </>
                     )}
@@ -319,10 +318,10 @@ export default function Receiving() {
                                   padding: 0,
                                 }}
                                 title={isExpanded
-                                  ? 'Hide receipt history'
-                                  : 'Show receipt history (with Unreceive)'}
+                                  ? 'Ocultar histórico de recebimentos'
+                                  : 'Mostrar histórico de recebimentos (com estorno)'}
                               >
-                                {isExpanded ? 'Hide' : 'Show'} receipts ({lineReceipts.length})
+                                {isExpanded ? 'Ocultar' : 'Mostrar'} recebimentos ({lineReceipts.length})
                               </button>
                             )}
                           </td>
@@ -367,7 +366,7 @@ export default function Receiving() {
                                   disabled={!lineReceivable || draft.saving}
                                   onClick={() => receiveLine(l)}
                                 >
-                                  {draft.saving ? 'Receiving...' : 'Receive'}
+                                  {draft.saving ? 'Recebendo...' : 'Receber'}
                                 </button>
                               </td>
                             </>
@@ -385,19 +384,19 @@ export default function Receiving() {
                                 {r.received_at ? new Date(r.received_at).toLocaleString() : '-'}
                               </span>
                               {' - '}
-                              <strong>{r.quantity_received}</strong> units to bin{' '}
+                              <strong>{r.quantity_received}</strong> unidades no endereço{' '}
                               <span className="mono">{r.bin_code}</span>
-                              {r.received_by ? <> by <strong>{r.received_by}</strong></> : null}
-                              {r.lot_number ? <> (lot {r.lot_number})</> : null}
-                              {r.serial_number ? <> (serial {r.serial_number})</> : null}
+                              {r.received_by ? <> por <strong>{r.received_by}</strong></> : null}
+                              {r.lot_number ? <> (lote {r.lot_number})</> : null}
+                              {r.serial_number ? <> (série {r.serial_number})</> : null}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <button
                                 className="btn btn-sm btn-danger"
                                 onClick={() => openUnreceive(r)}
-                                title="Reverse this receipt"
+                                title="Estornar este recebimento"
                               >
-                                Unreceive
+                                Estornar recebimento
                               </button>
                             </td>
                           </tr>
@@ -409,7 +408,7 @@ export default function Receiving() {
                     <tr key={`err-${lineId}`}>
                       <td colSpan={canReceive ? 10 : 7}>
                         <div className="form-error" style={{ fontSize: 12, padding: '4px 0' }}>
-                          Line {lineId}: {d.error}
+                          Linha {lineId}: {d.error}
                         </div>
                       </td>
                     </tr>
@@ -417,7 +416,7 @@ export default function Receiving() {
                 </tbody>
               </table>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No line items</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha</p>
             )}
           </section>
         </Modal>
@@ -429,7 +428,7 @@ export default function Receiving() {
           audit row + the receipt.cancelled event payload. */}
       {unreceiving && (
         <Modal
-          title={`Unreceive: ${unreceiving.sku}`}
+          title={`Estornar recebimento: ${unreceiving.sku}`}
           onClose={closeUnreceive}
           footer={
             <>
@@ -437,13 +436,13 @@ export default function Receiving() {
                 className="btn"
                 onClick={closeUnreceive}
                 disabled={unreceiveSubmitting}
-              >Cancel</button>
+              >Cancelar</button>
               <button
                 className="btn btn-danger"
                 onClick={submitUnreceive}
                 disabled={unreceiveSubmitting}
               >
-                {unreceiveSubmitting ? 'Reversing...' : 'Unreceive'}
+                {unreceiveSubmitting ? 'Estornando...' : 'Estornar recebimento'}
               </button>
             </>
           }
@@ -452,32 +451,27 @@ export default function Receiving() {
             <div className="form-error" style={{ marginBottom: 12 }}>{unreceiveError}</div>
           )}
           <p style={{ fontSize: 13, marginBottom: 12 }}>
-            Reverse <strong>{unreceiving.quantity_received}</strong> units of{' '}
+            Estornar <strong>{unreceiving.quantity_received}</strong> unidades de{' '}
             <span className="mono">{unreceiving.sku}</span>{' '}
-            ({unreceiving.item_name}) received to bin{' '}
+            ({unreceiving.item_name}) recebido no endereço{' '}
             <span className="mono">{unreceiving.bin_code}</span>
             {unreceiving.received_at ? (
-              <> on {new Date(unreceiving.received_at).toLocaleString()}</>
+              <> em {new Date(unreceiving.received_at).toLocaleString()}</>
             ) : null}
             {unreceiving.received_by ? (
-              <> by <strong>{unreceiving.received_by}</strong></>
+              <> por <strong>{unreceiving.received_by}</strong></>
             ) : null}.
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            Inventory decrements from the warehouse pool (preferring the
-            receipt's original bin; falls through to other bins holding
-            this item if the goods have already been put away).
-            The PO line counter and PO status update in step, and a
-            receipt.cancelled event fires so a downstream subscriber
-            reverses the inbound count.
+            O estoque é baixado do armazém (preferindo o endereço original do recebimento; passa para outros endereços com este material se já foi armazenado). O contador da linha e o status do PC são atualizados juntos, e um evento receipt.cancelled é disparado para que um assinante externo estorne a contagem de entrada.
           </p>
           <div className="form-group">
-            <label>Reason (optional, audit-logged)</label>
+            <label>Motivo (opcional, registrado na auditoria)</label>
             <input
               className="form-input"
               value={unreceiveReason}
               onChange={(e) => setUnreceiveReason(e.target.value)}
-              placeholder="e.g. double scan"
+              placeholder="ex.: leitura duplicada"
               maxLength={500}
               disabled={unreceiveSubmitting}
             />

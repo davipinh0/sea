@@ -54,12 +54,12 @@ export default function ConsumerGroups() {
     if (cgRes?.ok) {
       setGroups((await cgRes.json()).consumer_groups || []);
     } else {
-      setPageError('Failed to load consumer groups');
+      setPageError('Falha ao carregar os grupos de consumidores');
     }
     if (coRes?.ok) {
       setConnectors((await coRes.json()).connectors || []);
     } else {
-      setPageError('Failed to load connector registry');
+      setPageError('Falha ao carregar o registro de conectores');
     }
     setLoading(false);
   }
@@ -90,7 +90,7 @@ export default function ConsumerGroups() {
     if (!editConnector) return;
     setEditConnectorError('');
     if (!editConnectorName.trim()) {
-      setEditConnectorError('Display name is required');
+      setEditConnectorError('O nome de exibição é obrigatório');
       return;
     }
     if (editConnectorName.trim() === editConnector.display_name) {
@@ -106,7 +106,7 @@ export default function ConsumerGroups() {
       setEditConnector(null);
       loadAll();
     } else {
-      setEditConnectorError(body?.error || 'Failed to update connector');
+      setEditConnectorError(body?.error || 'Falha ao atualizar conector');
     }
   }
 
@@ -130,7 +130,7 @@ export default function ConsumerGroups() {
       return;
     }
     setConfirmDeleteConnector(null);
-    setPageError(body?.error || 'Failed to delete connector');
+    setPageError(body?.error || 'Falha ao excluir conector');
   }
 
   function openEditGroup(g) {
@@ -142,7 +142,7 @@ export default function ConsumerGroups() {
   async function submitCreateConnector() {
     setConnectorError('');
     if (!connectorForm.connector_id.trim() || !connectorForm.display_name.trim()) {
-      setConnectorError('Both fields are required'); return;
+      setConnectorError('Ambos os campos são obrigatórios'); return;
     }
     const res = await api.post('/admin/connector-registry', {
       connector_id: connectorForm.connector_id.trim(),
@@ -153,22 +153,22 @@ export default function ConsumerGroups() {
       setShowCreateConnector(false);
       loadAll();
     } else {
-      setConnectorError(body?.error || 'Failed to create connector');
+      setConnectorError(body?.error || 'Falha ao criar conector');
     }
   }
 
   async function submitCreateGroup() {
     setGroupError('');
-    if (!groupForm.consumer_group_id.trim()) { setGroupError('Group ID is required'); return; }
-    if (!groupForm.connector_id) { setGroupError('Connector is required'); return; }
+    if (!groupForm.consumer_group_id.trim()) { setGroupError('O ID do grupo é obrigatório'); return; }
+    if (!groupForm.connector_id) { setGroupError('O conector é obrigatório'); return; }
     let parsed;
     try {
       parsed = JSON.parse(groupForm.subscription || '{}');
     } catch {
-      setGroupError('Subscription must be valid JSON'); return;
+      setGroupError('A assinatura deve ser um JSON válido'); return;
     }
     if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
-      setGroupError('Subscription must be a JSON object'); return;
+      setGroupError('A assinatura deve ser um objeto JSON'); return;
     }
     const res = await api.post('/admin/consumer-groups', {
       consumer_group_id: groupForm.consumer_group_id.trim(),
@@ -180,7 +180,7 @@ export default function ConsumerGroups() {
       setShowCreateGroup(false);
       loadAll();
     } else {
-      setGroupError(body?.error || 'Failed to create group');
+      setGroupError(body?.error || 'Falha ao criar grupo');
     }
   }
 
@@ -190,10 +190,10 @@ export default function ConsumerGroups() {
     try {
       parsed = JSON.parse(editSubscription || '{}');
     } catch {
-      setEditError('Subscription must be valid JSON'); return;
+      setEditError('A assinatura deve ser um JSON válido'); return;
     }
     if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
-      setEditError('Subscription must be a JSON object'); return;
+      setEditError('A assinatura deve ser um objeto JSON'); return;
     }
     const res = await api.patch(`/admin/consumer-groups/${editGroup.consumer_group_id}`, {
       subscription: parsed,
@@ -203,7 +203,7 @@ export default function ConsumerGroups() {
       setEditGroup(null);
       loadAll();
     } else {
-      setEditError(body?.error || 'Failed to update');
+      setEditError(body?.error || 'Falha ao atualizar');
     }
   }
 
@@ -215,17 +215,17 @@ export default function ConsumerGroups() {
     } else {
       const body = await res?.json();
       setConfirmDelete(null);
-      setPageError(body?.error || 'Delete failed');
+      setPageError(body?.error || 'Falha ao excluir');
     }
   }
 
   const columns = [
-    { key: 'consumer_group_id', label: 'Group ID', mono: true },
-    { key: 'connector_id', label: 'Connector', mono: true },
+    { key: 'consumer_group_id', label: 'ID do grupo', mono: true },
+    { key: 'connector_id', label: 'Conector', mono: true },
     { key: 'last_cursor', label: 'Cursor' },
     {
       key: 'subscription',
-      label: 'Subscription',
+      label: 'Assinatura',
       render: (r) => {
         const s = r.subscription || {};
         const keys = Object.keys(s);
@@ -244,9 +244,9 @@ export default function ConsumerGroups() {
       render: (r) => (
         <div style={{ display: 'flex', gap: 4 }}>
           <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEditGroup(r); }}
-                  aria-label="Edit" title="Edit subscription">&#9998;</button>
+                  aria-label="Editar" title="Editar assinatura">&#9998;</button>
           <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setConfirmDelete(r); }}
-                  aria-label="Delete" title="Delete">&#128465;</button>
+                  aria-label="Excluir" title="Excluir">&#128465;</button>
         </div>
       ),
     },
@@ -254,12 +254,12 @@ export default function ConsumerGroups() {
 
   return (
     <div>
-      <PageHeader title="Consumer groups">
+      <PageHeader title="Grupos de consumidores">
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn" onClick={() => setShowConnectors(true)}>View connectors</button>
-          <button className="btn" onClick={openCreateConnector}>New connector</button>
+          <button className="btn" onClick={() => setShowConnectors(true)}>Ver conectores</button>
+          <button className="btn" onClick={openCreateConnector}>Novo conector</button>
           <button className="btn btn-primary" onClick={openCreateGroup} disabled={connectors.length === 0}>
-            New group
+            Novo grupo
           </button>
         </div>
       </PageHeader>
@@ -267,7 +267,7 @@ export default function ConsumerGroups() {
       {pageError && <div className="form-error" style={{ marginBottom: 12 }}>{pageError}</div>}
       {connectors.length === 0 && !loading && (
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          Create a connector first to provision consumer groups.
+          Crie um conector primeiro para provisionar grupos de consumidores.
         </div>
       )}
 
@@ -275,23 +275,23 @@ export default function ConsumerGroups() {
         rowKey="consumer_group_id"
         columns={columns}
         data={groups}
-        emptyMessage={loading ? 'Loading…' : 'No consumer groups yet'}
+        emptyMessage={loading ? 'Carregando…' : 'Nenhum grupo de consumidores ainda'}
       />
 
       {showCreateGroup && (
         <Modal
-          title="New consumer group"
+          title="Novo grupo de consumidores"
           onClose={() => setShowCreateGroup(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowCreateGroup(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitCreateGroup}>Create</button>
+              <button className="btn" onClick={() => setShowCreateGroup(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitCreateGroup}>Criar</button>
             </>
           }
         >
           {groupError && <div className="form-error" style={{ marginBottom: 12 }}>{groupError}</div>}
           <div className="form-group">
-            <label>Group ID</label>
+            <label>ID do grupo</label>
             <input
               className="form-input"
               value={groupForm.consumer_group_id}
@@ -300,7 +300,7 @@ export default function ConsumerGroups() {
             />
           </div>
           <div className="form-group">
-            <label>Connector</label>
+            <label>Conector</label>
             <select
               className="form-input"
               value={groupForm.connector_id}
@@ -314,7 +314,7 @@ export default function ConsumerGroups() {
             </select>
           </div>
           <div className="form-group">
-            <label>Subscription (JSON object)</label>
+            <label>Assinatura (objeto JSON)</label>
             <textarea
               className="form-input"
               rows={6}
@@ -323,8 +323,7 @@ export default function ConsumerGroups() {
               style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}
             />
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Optional. Supported keys: <code>event_types</code>, <code>warehouse_ids</code>.
-              Unknown keys are stored but ignored on the hot path.
+              Opcional. Chaves suportadas: <code>event_types</code>, <code>warehouse_ids</code>. Chaves desconhecidas são armazenadas mas ignoradas no processamento.
             </div>
           </div>
         </Modal>
@@ -332,18 +331,18 @@ export default function ConsumerGroups() {
 
       {showCreateConnector && (
         <Modal
-          title="New connector"
+          title="Novo conector"
           onClose={() => setShowCreateConnector(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowCreateConnector(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitCreateConnector}>Create</button>
+              <button className="btn" onClick={() => setShowCreateConnector(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitCreateConnector}>Criar</button>
             </>
           }
         >
           {connectorError && <div className="form-error" style={{ marginBottom: 12 }}>{connectorError}</div>}
           <div className="form-group">
-            <label>Connector ID</label>
+            <label>ID do conector</label>
             <input
               className="form-input"
               value={connectorForm.connector_id}
@@ -352,7 +351,7 @@ export default function ConsumerGroups() {
             />
           </div>
           <div className="form-group">
-            <label>Display name</label>
+            <label>Nome de exibição</label>
             <input
               className="form-input"
               value={connectorForm.display_name}
@@ -365,18 +364,18 @@ export default function ConsumerGroups() {
 
       {editGroup && (
         <Modal
-          title={`Edit subscription: ${editGroup.consumer_group_id}`}
+          title={`Editar assinatura: ${editGroup.consumer_group_id}`}
           onClose={() => setEditGroup(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setEditGroup(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitEdit}>Save</button>
+              <button className="btn" onClick={() => setEditGroup(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitEdit}>Salvar</button>
             </>
           }
         >
           {editError && <div className="form-error" style={{ marginBottom: 12 }}>{editError}</div>}
           <div className="form-group">
-            <label>Subscription (JSON object)</label>
+            <label>Assinatura (objeto JSON)</label>
             <textarea
               className="form-input"
               rows={8}
@@ -390,41 +389,39 @@ export default function ConsumerGroups() {
 
       {confirmDelete && (
         <Modal
-          title="Delete consumer group"
+          title="Excluir grupo de consumidores"
           onClose={() => setConfirmDelete(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn" onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn btn-primary" style={{ background: 'var(--copper)' }}
-                      onClick={() => deleteGroup(confirmDelete)}>Delete</button>
+                      onClick={() => deleteGroup(confirmDelete)}>Excluir</button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>
-            Delete {confirmDelete.consumer_group_id}? Connectors that rely on
-            this group for cursor state will start a fresh scan from event_id=0
-            on their next poll.
+            Excluir {confirmDelete.consumer_group_id}? Conectores que dependem deste grupo para o cursor recomeçarão a leitura a partir de event_id=0 na próxima consulta.
           </p>
         </Modal>
       )}
 
       {showConnectors && (
         <Modal
-          title="Registered connectors"
+          title="Conectores registrados"
           onClose={() => setShowConnectors(false)}
-          footer={<button className="btn" onClick={() => setShowConnectors(false)}>Close</button>}
+          footer={<button className="btn" onClick={() => setShowConnectors(false)}>Fechar</button>}
         >
           {connectors.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              No connectors registered yet.
+              Nenhum conector registrado ainda.
             </div>
           ) : (
             <DataTable
               rowKey="connector_id"
               columns={[
-                { key: 'connector_id', label: 'Connector ID', render: (r) => <span className="mono">{r.connector_id}</span> },
-                { key: 'display_name', label: 'Display name' },
-                { key: 'created_at', label: 'Created', render: (r) => formatDate(r.created_at) },
+                { key: 'connector_id', label: 'ID do conector', render: (r) => <span className="mono">{r.connector_id}</span> },
+                { key: 'display_name', label: 'Nome de exibição' },
+                { key: 'created_at', label: 'Criado', render: (r) => formatDate(r.created_at) },
                 {
                   key: 'actions',
                   label: '',
@@ -433,16 +430,16 @@ export default function ConsumerGroups() {
                       <button
                         className="btn btn-sm"
                         onClick={(e) => { e.stopPropagation(); openEditConnector(r); }}
-                        aria-label="Edit"
-                        title="Edit"
+                        aria-label="Editar"
+                        title="Editar"
                       >
                         &#9998;
                       </button>
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={(e) => { e.stopPropagation(); setDeleteConnectorError(null); setConfirmDeleteConnector(r); }}
-                        aria-label="Delete"
-                        title="Delete"
+                        aria-label="Excluir"
+                        title="Excluir"
                       >
                         &#128465;
                       </button>
@@ -458,25 +455,25 @@ export default function ConsumerGroups() {
 
       {editConnector && (
         <Modal
-          title={`Edit connector ${editConnector.connector_id}`}
+          title={`Editar conector ${editConnector.connector_id}`}
           onClose={() => setEditConnector(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setEditConnector(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={submitEditConnector}>Save</button>
+              <button className="btn" onClick={() => setEditConnector(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={submitEditConnector}>Salvar</button>
             </>
           }
         >
           {editConnectorError && <div className="form-error" style={{ marginBottom: 12 }}>{editConnectorError}</div>}
           <div className="form-group">
-            <label>Connector ID</label>
+            <label>ID do conector</label>
             <input className="form-input mono" value={editConnector.connector_id} readOnly disabled />
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Connector ID is the FK target for consumer groups and webhook subscriptions; it cannot be renamed.
+              O ID do conector é a referência dos grupos de consumidores e assinaturas de webhook; não pode ser renomeado.
             </div>
           </div>
           <div className="form-group">
-            <label>Display name</label>
+            <label>Nome de exibição</label>
             <input
               className="form-input"
               value={editConnectorName}
@@ -488,31 +485,31 @@ export default function ConsumerGroups() {
 
       {confirmDeleteConnector && (
         <Modal
-          title="Delete connector"
+          title="Excluir conector"
           onClose={() => setConfirmDeleteConnector(null)}
           footer={
             <>
-              <button className="btn" onClick={() => setConfirmDeleteConnector(null)}>Cancel</button>
+              <button className="btn" onClick={() => setConfirmDeleteConnector(null)}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 style={{ background: 'var(--danger)' }}
                 onClick={() => deleteConnector(confirmDeleteConnector)}
               >
-                Delete
+                Excluir
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>
-            Permanently delete connector {confirmDeleteConnector.connector_id}?
+            Excluir permanentemente o conector {confirmDeleteConnector.connector_id}?
           </p>
           <p style={{ fontSize: 13 }}>
-            Refused while any consumer group or webhook subscription references this connector. Migrate or delete dependents first.
+            Recusado enquanto algum grupo de consumidores ou assinatura de webhook referenciar este conector. Migre ou exclua os dependentes primeiro.
           </p>
           {deleteConnectorError && (
             <div className="form-error" style={{ marginTop: 12 }}>
               <div style={{ fontWeight: 600 }}>
-                Connector is in use: {deleteConnectorError.consumer_groups} consumer group{deleteConnectorError.consumer_groups === 1 ? '' : 's'}, {deleteConnectorError.webhook_subscriptions} webhook subscription{deleteConnectorError.webhook_subscriptions === 1 ? '' : 's'}.
+                O conector está em uso: {deleteConnectorError.consumer_groups} grupo de consumidores{deleteConnectorError.consumer_groups === 1 ? '' : 's'}, {deleteConnectorError.webhook_subscriptions} assinatura de webhook{deleteConnectorError.webhook_subscriptions === 1 ? '' : 's'}.
               </div>
               <div style={{ fontSize: 12, marginTop: 4 }}>{deleteConnectorError.detail}</div>
             </div>

@@ -88,7 +88,7 @@ def create_user(validated):
 
     dup = g.db.execute(text("SELECT 1 FROM users WHERE username = :u"), {"u": data["username"]}).fetchone()
     if dup:
-        return jsonify({"error": f"Duplicate username: {data['username']}"}), 400
+        return jsonify({"error": f"Nome de usuário duplicado: {data['username']}"}), 400
 
     warehouse_ids = data.get("warehouse_ids", [])
     warehouse_id = warehouse_ids[0] if warehouse_ids else data.get("warehouse_id")
@@ -129,15 +129,15 @@ def update_user(user_id, validated):
         text("SELECT user_id, role, is_active FROM users WHERE user_id = :uid"), {"uid": user_id}
     ).fetchone()
     if not existing:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
     # Prevent admin from deactivating themselves or downgrading their own role
     is_self = g.current_user["user_id"] == user_id
     if is_self:
         if "is_active" in data and not data["is_active"]:
-            return jsonify({"error": "Cannot deactivate your own account"}), 400
+            return jsonify({"error": "Você não pode desativar a sua própria conta"}), 400
         if "role" in data and data["role"] != "ADMIN":
-            return jsonify({"error": "Cannot downgrade your own role"}), 400
+            return jsonify({"error": "Você não pode rebaixar a sua própria função"}), 400
 
     # Prevent deactivating or demoting the last active admin.
     # V-031: SELECT ... FOR UPDATE locks every active admin row so that a
@@ -155,7 +155,7 @@ def update_user(user_id, validated):
                 )
             ).fetchall()
             if len(admins) <= 1:
-                return jsonify({"error": "Cannot remove the last active admin"}), 400
+                return jsonify({"error": "Não é possível remover o último administrador ativo"}), 400
 
     ALLOWED_FIELDS = {"full_name", "role", "warehouse_id", "is_active"}
     fields, params = [], {"uid": user_id}
@@ -186,7 +186,7 @@ def update_user(user_id, validated):
         fields.append("password_changed_at = NOW()")
 
     if not fields:
-        return jsonify({"error": "No fields to update"}), 400
+        return jsonify({"error": "Nenhum campo para atualizar"}), 400
 
     g.db.execute(text(f"UPDATE users SET {', '.join(fields)} WHERE user_id = :uid"), params)
     g.db.commit()
@@ -213,10 +213,10 @@ def update_user(user_id, validated):
 def delete_user(user_id):
     existing = g.db.execute(text("SELECT user_id FROM users WHERE user_id = :uid"), {"uid": user_id}).fetchone()
     if not existing:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
     if g.current_user["user_id"] == user_id:
-        return jsonify({"error": "Cannot delete yourself"}), 400
+        return jsonify({"error": "Você não pode excluir a si mesmo"}), 400
 
     # Prevent deleting the last active admin.
     # V-031: same row-locking pattern as update_user so two concurrent
@@ -233,11 +233,11 @@ def delete_user(user_id):
             )
         ).fetchall()
         if len(admins) <= 1:
-            return jsonify({"error": "Cannot delete the last active admin"}), 400
+            return jsonify({"error": "Não é possível excluir o último administrador ativo"}), 400
 
     g.db.execute(text("DELETE FROM users WHERE user_id = :uid"), {"uid": user_id})
     g.db.commit()
-    return jsonify({"message": "User deleted"})
+    return jsonify({"message": "Usuário excluído"})
 
 
 # ── Per-page web-admin permission grants (P6.1) ──────────────────────────────
@@ -255,7 +255,7 @@ def get_user_permissions(user_id):
         {"uid": user_id},
     ).fetchone()
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
     if user.role == "ADMIN":
         # ADMIN bypasses both page and override
@@ -307,7 +307,7 @@ def replace_user_permissions(user_id, validated):
         {"uid": user_id},
     ).fetchone()
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
     requested = list(dict.fromkeys(validated.page_keys))  # de-dup, preserve order
     # Override grants (mig 062) ride on the same junction
@@ -317,7 +317,7 @@ def replace_user_permissions(user_id, validated):
     unknown = [k for k in requested if k not in valid_keys]
     if unknown:
         return jsonify({
-            "error": "Unknown page_key(s)",
+            "error": "page_key(s) desconhecido(s)",
             "unknown": unknown,
         }), 400
 
@@ -687,7 +687,7 @@ def get_setting(setting_key):
         {"key": setting_key},
     ).fetchone()
     if not row:
-        return jsonify({"error": "Setting not found"}), 404
+        return jsonify({"error": "Configuração não encontrada"}), 404
     return jsonify({"key": row.key, "value": row.value})
 
 
@@ -707,7 +707,7 @@ def update_settings(validated):
         ).scalar()
         if packed_count > 0:
             return jsonify({
-                "error": f"Cannot disable packing. {packed_count} order{'s' if packed_count != 1 else ''} in PACKED status. Ship them before disabling."
+                "error": f"Não é possível desativar a embalagem. {packed_count} pedido{'s' if packed_count != 1 else ''} com status EMBALADO. Expeça-os antes de desativar."
             }), 400
 
     for key, value in data["settings"].items():
@@ -722,7 +722,7 @@ def update_settings(validated):
             {"key": key, "value": str(value)},
         )
     g.db.commit()
-    return jsonify({"message": "Settings updated"})
+    return jsonify({"message": "Configurações atualizadas"})
 
 
 # ── Cycle Counts (admin view) ────────────────────────────────────────────────
@@ -902,7 +902,7 @@ def review_adjustments(validated):
             ).fetchone()
             require_separation = sep_row and sep_row.value == "true"
             if require_separation:
-                return jsonify({"error": "Cannot approve your own cycle count"}), 403
+                return jsonify({"error": "Você não pode aprovar a sua própria contagem cíclica"}), 403
 
         if action == "approve":
             # Apply the inventory adjustment
@@ -1123,7 +1123,7 @@ def direct_adjustment(validated):
         {"iid": item_id},
     ).fetchone()
     if not item:
-        return jsonify({"error": "Item not found"}), 404
+        return jsonify({"error": "Material não encontrado"}), 404
 
     # Validate bin exists and belongs to warehouse
     bin_row = g.db.execute(
@@ -1131,7 +1131,7 @@ def direct_adjustment(validated):
         {"bid": bin_id, "wid": warehouse_id},
     ).fetchone()
     if not bin_row:
-        return jsonify({"error": "Bin not found in the specified warehouse"}), 404
+        return jsonify({"error": "Endereço não encontrado no armazém informado"}), 404
 
     # a direct ADD is how a found-in-the-warehouse unit gets onto the
     # books, and it used to leave a backorder waiting on that exact SKU stuck
@@ -1163,7 +1163,7 @@ def direct_adjustment(validated):
         ).fetchone()
         available = inv.quantity_on_hand if inv else 0
         if available < quantity:
-            return jsonify({"error": f"Insufficient inventory. Available: {available}"}), 400
+            return jsonify({"error": f"Estoque insuficiente. Disponível: {available}"}), 400
 
         quantity_change = -quantity
         new_qty = available - quantity

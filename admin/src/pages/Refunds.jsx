@@ -11,7 +11,7 @@ import Modal from '../components/Modal.jsx';
 // downstream ledger; this is the record. A partial refund leaves the original
 // partly refundable, so the
 // same original can spawn several -REFUND / -REFUND-2 memos over time.
-const REFUND_STATUS_OPTIONS = ['All', 'SHIPPED', 'CANCELLED'];
+const REFUND_STATUS_OPTIONS = ['Todos', 'SHIPPED', 'CANCELLED'];
 
 export default function Refunds() {
   const [refunds, setRefunds] = useState([]);
@@ -52,18 +52,18 @@ export default function Refunds() {
   }
 
   const columns = [
-    { key: 'so_number', label: 'Refund', mono: true },
-    { key: 'customer_name', label: 'Customer', render: (r) => r.customer_name || '-' },
+    { key: 'so_number', label: 'Reembolso', mono: true },
+    { key: 'customer_name', label: 'Cliente', render: (r) => r.customer_name || '-' },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
     {
-      key: 'created_at', label: 'Refunded', mono: true,
+      key: 'created_at', label: 'Reembolsado', mono: true,
       render: (r) => (r.created_at ? r.created_at.slice(0, 10) : '-'),
     },
   ];
 
   return (
     <div>
-      <PageHeader title="Refunds" />
+      <PageHeader title="Reembolsos" />
       <div className="filter-bar">
         <select
           className="form-select"
@@ -72,13 +72,13 @@ export default function Refunds() {
           onChange={(e) => setStatusFilter(e.target.value)}
         >
           {REFUND_STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{s === 'All' ? 'All statuses' : s}</option>
+            <option key={s} value={s}>{s === 'All' ? 'Todos os status' : s}</option>
           ))}
         </select>
         <input
           className="form-input"
           style={{ width: 260 }}
-          placeholder="Search by refund number"
+          placeholder="Buscar por número do reembolso"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -89,26 +89,26 @@ export default function Refunds() {
         data={refunds}
         onRowClick={openRefund}
         clickColumn="so_number"
-        emptyMessage="No refunds found"
+        emptyMessage="Nenhum reembolso encontrado"
       />
 
       {selected && detail && (
         <Modal
-          title={`Refund ${detail.so_number}`}
+          title={`Reembolso ${detail.so_number}`}
           onClose={closeDetail}
-          footer={<button className="btn" onClick={closeDetail}>Close</button>}
+          footer={<button className="btn" onClick={closeDetail}>Fechar</button>}
           size="wide"
         >
           <section className="section">
-            <div className="section-title">Summary</div>
+            <div className="section-title">Resumo</div>
             <div className="detail-grid detail-grid-2col" style={{ marginBottom: 0 }}>
               <span className="detail-label">Status</span>
               <span><StatusTag status={detail.status} /></span>
-              <span className="detail-label">Customer</span>
+              <span className="detail-label">Cliente</span>
               <span>{detail.customer_name || '-'}</span>
               {detail.parent_so_number && (
                 <>
-                  <span className="detail-label">Original order</span>
+                  <span className="detail-label">Pedido original</span>
                   <span className="mono">{detail.parent_so_number}</span>
                 </>
               )}
@@ -116,14 +116,14 @@ export default function Refunds() {
           </section>
 
           <section className="section" style={{ marginBottom: 0 }}>
-            <div className="section-title">Refunded Lines</div>
+            <div className="section-title">Linhas reembolsadas</div>
             {lines.length > 0 ? (
               <table className="lines-table">
                 <thead>
                   <tr>
                     <th>SKU</th>
-                    <th>Item</th>
-                    <th style={{ textAlign: 'right' }}>Qty</th>
+                    <th>Material</th>
+                    <th style={{ textAlign: 'right' }}>Qtd.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -137,7 +137,7 @@ export default function Refunds() {
                 </tbody>
               </table>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No refund lines</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha de reembolso</p>
             )}
           </section>
         </Modal>

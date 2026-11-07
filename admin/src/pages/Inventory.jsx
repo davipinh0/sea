@@ -112,17 +112,17 @@ export default function Inventory() {
 
   const columns = [
     { key: 'sku', label: 'SKU', mono: true, sortable: true },
-    { key: 'item_name', label: 'Item Name', sortable: true },
-    { key: 'bin_code', label: 'Bin Code', mono: true, sortable: true },
-    { key: 'zone_name', label: 'Zone', sortable: true },
-    { key: 'quantity_on_hand', label: 'On Hand', sortable: true },
-    { key: 'available', label: 'Available', sortable: true, render: (r) => (r.quantity_on_hand || 0) - (r.committed_to_orders || 0) },
-    { key: 'last_counted_at', label: 'Last Counted', mono: true, sortable: true, render: (r) => r.last_counted_at ? new Date(r.last_counted_at).toLocaleDateString() : '-' },
+    { key: 'item_name', label: 'Nome do material', sortable: true },
+    { key: 'bin_code', label: 'Código do endereço', mono: true, sortable: true },
+    { key: 'zone_name', label: 'Zona', sortable: true },
+    { key: 'quantity_on_hand', label: 'Em estoque', sortable: true },
+    { key: 'available', label: 'Disponível', sortable: true, render: (r) => (r.quantity_on_hand || 0) - (r.committed_to_orders || 0) },
+    { key: 'last_counted_at', label: 'Última contagem', mono: true, sortable: true, render: (r) => r.last_counted_at ? new Date(r.last_counted_at).toLocaleDateString() : '-' },
   ];
 
   return (
     <div>
-      <PageHeader title="Inventory" />
+      <PageHeader title="Estoque" />
       <div className="filter-bar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           className="form-input"
@@ -130,7 +130,7 @@ export default function Inventory() {
           onChange={(e) => { setWarehouseFilter(Number(e.target.value) || null); setPage(1); }}
           style={{ minWidth: 180 }}
         >
-          <option value="">- Select warehouse -</option>
+          <option value="">- Selecione o armazém -</option>
           {warehouses.map((w) => {
             const wId = w.warehouse_id || w.id;
             return (
@@ -147,7 +147,7 @@ export default function Inventory() {
           style={{ minWidth: 200 }}
           disabled={!warehouseFilter || bins.length === 0}
         >
-          <option value="">- All bins in warehouse -</option>
+          <option value="">- Todos os endereços do armazém -</option>
           {bins.map((b) => {
             const bId = b.bin_id || b.id;
             return (
@@ -159,18 +159,18 @@ export default function Inventory() {
         </select>
         <input
           className="form-input"
-          placeholder="Search by SKU or item name (press Enter)"
+          placeholder="Buscar por SKU ou nome do material (pressione Enter)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') commitSearch(); }}
           onBlur={commitSearch}
           style={{ minWidth: 280, flex: 1 }}
         />
-        {loading && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Loading…</span>}
+        {loading && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Carregando…</span>}
       </div>
       {!warehouseFilter && (
         <div style={{ padding: 24, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-          Select a warehouse to view inventory.
+          Selecione um armazém para ver o estoque.
         </div>
       )}
       {warehouseFilter && (

@@ -40,10 +40,10 @@ def get_order(barcode):
     ).fetchone()
 
     if not so:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Pedido não encontrado"}), 404
 
     if so.status != SO_PICKED:
-        return jsonify({"error": f"Order is not ready for packing. Current status: {so.status}"}), 400
+        return jsonify({"error": f"O pedido não está pronto para embalagem. Status atual: {so.status}"}), 400
 
     lines = g.db.execute(
         text(
@@ -128,10 +128,10 @@ def verify_item(validated):
     ).fetchone()
 
     if not so:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Pedido não encontrado"}), 404
 
     if so.status != SO_PICKED:
-        return jsonify({"error": f"Order is not ready for packing. Current status: {so.status}"}), 400
+        return jsonify({"error": f"O pedido não está pronto para embalagem. Status atual: {so.status}"}), 400
 
     # Find matching item on this SO by barcode
     lines = g.db.execute(
@@ -158,13 +158,13 @@ def verify_item(validated):
         # Check if barcode matches any item on the order at all
         any_match = any(_barcode_matches(scanned_barcode, l.upc, l.barcode_aliases) for l in lines)
         if any_match:
-            return jsonify({"error": "Item already fully verified on this order"}), 400
-        return jsonify({"error": "Item not found on this order"}), 400
+            return jsonify({"error": "Material já totalmente conferido neste pedido"}), 400
+        return jsonify({"error": "Material não encontrado neste pedido"}), 400
 
     # Validate quantity
     remaining = matched_line.quantity_picked - matched_line.quantity_packed
     if quantity > remaining:
-        return jsonify({"error": f"Over-pack: only {remaining} items remaining to verify"}), 400
+        return jsonify({"error": f"Excesso na embalagem: restam apenas {remaining} materiais para conferir"}), 400
 
     # Update quantity_packed
     new_packed = matched_line.quantity_packed + quantity
@@ -196,7 +196,7 @@ def verify_item(validated):
     ).fetchone()
 
     return jsonify({
-        "message": "Item verified",
+        "message": "Material conferido",
         "item": {
             "sku": matched_line.sku,
             "item_name": matched_line.item_name,
@@ -235,10 +235,10 @@ def complete_packing(validated):
     ).fetchone()
 
     if not so:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Pedido não encontrado"}), 404
 
     if so.status != SO_PICKED:
-        return jsonify({"error": f"Order is not ready for packing. Current status: {so.status}"}), 400
+        return jsonify({"error": f"O pedido não está pronto para embalagem. Status atual: {so.status}"}), 400
 
     # Check all lines verified
     unverified = g.db.execute(
@@ -252,7 +252,7 @@ def complete_packing(validated):
     ).scalar()
 
     if unverified > 0:
-        return jsonify({"error": f"Cannot complete packing - {unverified} items not yet verified"}), 400
+        return jsonify({"error": f"Não é possível concluir a embalagem - {unverified} materiais ainda não conferidos"}), 400
 
     # Layer 2B: line-level fulfillment guard. The unverified check above
     # only catches packed < picked - a line with picked=0 (because the
@@ -290,8 +290,7 @@ def complete_packing(validated):
         more = "" if len(silently_short) == 1 else f" (+{len(silently_short) - 1} more)"
         return jsonify({
             "error": (
-                f"Cannot complete packing - line under-picked with no short-close marker: "
-                f"sku={first.sku} ordered={first.quantity_ordered} picked={first.quantity_picked}{more}"
+                f"Não é possível concluir a embalagem - linha separada a menos sem marcação de fechamento por falta: sku={first.sku} pedido={first.quantity_ordered} separado={first.quantity_picked}{more}"
             )
         }), 400
 
@@ -400,7 +399,7 @@ def complete_packing(validated):
     g.db.commit()
 
     return jsonify({
-        "message": "Order packed successfully",
+        "message": "Pedido embalado com sucesso",
         "so_number": so.so_number,
         "status": "PACKED",
         "total_items": int(stats.total_items),

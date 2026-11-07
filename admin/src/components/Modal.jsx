@@ -14,8 +14,8 @@ export default function Modal({ title, onClose, children, footer, size, onBack, 
               type="button"
               className="modal-back"
               onClick={onBack}
-              aria-label={backLabel ? `Back to ${backLabel}` : 'Back'}
-              title={backLabel ? `Back to ${backLabel}` : 'Back'}
+              aria-label={backLabel ? `Voltar para ${backLabel}` : 'Voltar'}
+              title={backLabel ? `Voltar para ${backLabel}` : 'Voltar'}
               data-testid="modal-back"
             >
               &#8592;

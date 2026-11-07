@@ -107,7 +107,7 @@ class TestCredentialEndpoints:
         )
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["message"] == "Credentials saved"
+        assert data["message"] == "Credenciais salvas"
         assert "api_key" in data["keys"]
         assert "base_url" in data["keys"]
 
@@ -162,7 +162,7 @@ class TestCredentialEndpoints:
             headers=auth_headers,
         )
         assert resp.status_code == 200
-        assert resp.get_json()["message"] == "Credentials deleted"
+        assert resp.get_json()["message"] == "Credenciais excluídas"
 
         # Verify gone
         resp = client.get(

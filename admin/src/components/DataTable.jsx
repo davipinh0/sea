@@ -92,7 +92,7 @@ export default function DataTable({
   onPageChange,
   onRowClick,
   clickColumn,
-  emptyMessage = 'No records found',
+  emptyMessage = 'Nenhum registro encontrado',
   sortKey,
   sortDir,
   onSort,
@@ -186,25 +186,25 @@ export default function DataTable({
       {pagination && (
         <div className="pagination">
           <span>
-            Page {pagination.page} of {pagination.pages} ({pagination.total} total)
+            Página {pagination.page} de {pagination.pages} ({pagination.total} no total)
           </span>
           <div className="pagination-buttons">
             <button className="btn-sm btn" onClick={exportCSV} style={{ marginRight: 8 }}>
-              Export CSV
+              Exportar CSV
             </button>
             <button
               className="pagination-btn"
               disabled={pagination.page <= 1}
               onClick={() => onPageChange(pagination.page - 1)}
             >
-              Prev
+              Anterior
             </button>
             <button
               className="pagination-btn"
               disabled={pagination.page >= pagination.pages}
               onClick={() => onPageChange(pagination.page + 1)}
             >
-              Next
+              Próxima
             </button>
           </div>
         </div>

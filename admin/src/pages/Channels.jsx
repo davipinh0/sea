@@ -71,7 +71,7 @@ function formToBody(f) {
   let transform = {};
   if (f.transform.trim()) {
     try { transform = JSON.parse(f.transform); }
-    catch { return [null, 'Transform must be valid JSON.']; }
+    catch { return [null, 'A transformação deve ser um JSON válido.']; }
   }
   return [{
     display_name: f.display_name.trim(),
@@ -90,54 +90,54 @@ function ChannelForm({ form, setForm, isEdit }) {
     <>
       {!isEdit && (
         <div className="form-group">
-          <label>Channel ID</label>
+          <label>ID do canal</label>
           <input className="form-input mono" value={form.channel_id}
                  onChange={set('channel_id')} placeholder="amazon-fba" />
         </div>
       )}
       <div className="form-group">
-        <label>Display name</label>
+        <label>Nome de exibição</label>
         <input className="form-input" value={form.display_name}
                onChange={set('display_name')} placeholder="Amazon FBA" />
       </div>
       <div className="form-group">
-        <label>Delivery URL (sink)</label>
+        <label>URL de entrega (destino)</label>
         <input className="form-input mono" value={form.delivery_url}
                onChange={set('delivery_url')} placeholder="https://sink.example.com/availability" />
       </div>
       <div className="form-group">
-        <label>SKU scope &ndash; skus (comma-separated, blank = all)</label>
+        <label>Escopo de SKU – skus (separados por vírgula, vazio = todos)</label>
         <input className="form-input" value={form.skus} onChange={set('skus')}
                placeholder="TST-001, TST-002" />
       </div>
       <div className="form-group">
-        <label>SKU scope &ndash; categories</label>
+        <label>Escopo de SKU – categorias</label>
         <input className="form-input" value={form.categories}
                onChange={set('categories')} placeholder="reels, waders" />
       </div>
       <div className="form-group">
-        <label>SKU scope &ndash; warehouse IDs (blank = all)</label>
+        <label>Escopo de SKU – IDs de armazém (vazio = todos)</label>
         <input className="form-input" value={form.warehouse_ids}
                onChange={set('warehouse_ids')} placeholder="1, 2" />
       </div>
       <div className="form-group">
-        <label>Transform (JSON: rename + constants, blank = none)</label>
+        <label>Transformação (JSON: renomear + constantes, vazio = nenhuma)</label>
         <textarea className="form-input mono" rows={5} value={form.transform}
                   onChange={set('transform')} placeholder={TRANSFORM_PLACEHOLDER} />
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label>Rate (per sec)</label>
+          <label>Taxa (por seg)</label>
           <input className="form-input" type="number" value={form.rate_limit_per_second}
                  onChange={set('rate_limit_per_second')} />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label>Batch size</label>
+          <label>Tamanho do lote</label>
           <input className="form-input" type="number" value={form.batch_size}
                  onChange={set('batch_size')} />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label>Debounce (sec)</label>
+          <label>Debounce (seg)</label>
           <input className="form-input" type="number" value={form.debounce_seconds}
                  onChange={set('debounce_seconds')} />
         </div>
@@ -171,7 +171,7 @@ export default function Channels() {
       const data = await res.json();
       setChannels(data.channels || []);
     } else {
-      setPageError('Could not load channels.');
+      setPageError('Não foi possível carregar os canais.');
     }
     setLoading(false);
   }
@@ -186,7 +186,7 @@ export default function Channels() {
     const res = await api.post('/admin/channels', body);
     const data = await res.json().catch(() => ({}));
     if (res.ok) { setShowCreate(false); setForm(emptyForm()); load(); }
-    else { setCreateError(data.detail || data.error || 'Create failed.'); }
+    else { setCreateError(data.detail || data.error || 'Falha ao criar.'); }
   }
 
   async function submitEdit() {
@@ -196,7 +196,7 @@ export default function Channels() {
     const res = await api.patch(`/admin/channels/${editing.channel_id}`, body);
     const data = await res.json().catch(() => ({}));
     if (res.ok) { setEditing(null); load(); }
-    else { setEditError(data.detail || data.error || 'Update failed.'); }
+    else { setEditError(data.detail || data.error || 'Falha ao atualizar.'); }
   }
 
   async function setStatus(channel, status) {
@@ -221,8 +221,8 @@ export default function Channels() {
   }
 
   const columns = [
-    { key: 'channel_id', label: 'Channel', mono: true },
-    { key: 'display_name', label: 'Name' },
+    { key: 'channel_id', label: 'Canal', mono: true },
+    { key: 'display_name', label: 'Nome' },
     {
       key: 'status', label: 'Status',
       render: (r) => {
@@ -230,8 +230,8 @@ export default function Channels() {
         return <Badge label={b.label} color={b.color} />;
       },
     },
-    { key: 'item_count', label: 'Items' },
-    { key: 'dirty_count', label: 'Pending' },
+    { key: 'item_count', label: 'Materiais' },
+    { key: 'dirty_count', label: 'Pendente' },
     {
       key: 'dlq_count', label: 'DLQ',
       render: (r) => (
@@ -241,7 +241,7 @@ export default function Channels() {
       ),
     },
     {
-      key: 'last_published_at', label: 'Last publish',
+      key: 'last_published_at', label: 'Última publicação',
       render: (r) => (r.last_published_at
         ? new Date(r.last_published_at).toLocaleString() : '—'),
     },
@@ -251,15 +251,15 @@ export default function Channels() {
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="btn btn-sm" onClick={() => {
             setEditing(r); setEditForm(rowToForm(r)); setEditError('');
-          }}>Edit</button>
+          }}>Editar</button>
           {r.status === 'active' ? (
-            <button className="btn btn-sm" onClick={() => setStatus(r, 'paused')}>Pause</button>
+            <button className="btn btn-sm" onClick={() => setStatus(r, 'paused')}>Pausar</button>
           ) : (
-            <button className="btn btn-sm" onClick={() => setStatus(r, 'active')}>Resume</button>
+            <button className="btn btn-sm" onClick={() => setStatus(r, 'active')}>Retomar</button>
           )}
           <button className="btn btn-sm" onClick={() => openDlq(r)}>DLQ</button>
           <button className="btn btn-sm btn-danger" onClick={() => setConfirmDelete(r)}>
-            Delete
+            Excluir
           </button>
         </div>
       ),
@@ -268,26 +268,26 @@ export default function Channels() {
 
   return (
     <div>
-      <PageHeader title="Channels">
+      <PageHeader title="Canais">
         <button className="btn btn-primary" onClick={() => {
           setForm(emptyForm()); setCreateError(''); setShowCreate(true);
-        }}>New channel</button>
+        }}>Novo canal</button>
       </PageHeader>
 
       {pageError && <div className="form-error">{pageError}</div>}
 
       {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Loading&hellip;</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Carregando…</p>
       ) : (
         <DataTable rowKey="channel_id" columns={columns} data={channels}
-                   emptyMessage="No channels configured yet." />
+                   emptyMessage="Nenhum canal configurado ainda." />
       )}
 
       {showCreate && (
-        <Modal title="New channel" onClose={() => setShowCreate(false)} footer={
+        <Modal title="Novo canal" onClose={() => setShowCreate(false)} footer={
           <>
-            <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={submitCreate}>Create</button>
+            <button className="btn" onClick={() => setShowCreate(false)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={submitCreate}>Criar</button>
           </>
         }>
           {createError && <div className="form-error">{createError}</div>}
@@ -296,10 +296,10 @@ export default function Channels() {
       )}
 
       {editing && (
-        <Modal title={`Edit ${editing.channel_id}`} onClose={() => setEditing(null)} footer={
+        <Modal title={`Editar ${editing.channel_id}`} onClose={() => setEditing(null)} footer={
           <>
-            <button className="btn" onClick={() => setEditing(null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={submitEdit}>Save</button>
+            <button className="btn" onClick={() => setEditing(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={submitEdit}>Salvar</button>
           </>
         }>
           {editError && <div className="form-error">{editError}</div>}
@@ -308,15 +308,14 @@ export default function Channels() {
       )}
 
       {confirmDelete && (
-        <Modal title="Revoke channel" onClose={() => setConfirmDelete(null)} footer={
+        <Modal title="Revogar canal" onClose={() => setConfirmDelete(null)} footer={
           <>
-            <button className="btn" onClick={() => setConfirmDelete(null)}>Cancel</button>
-            <button className="btn btn-danger" onClick={doDelete}>Revoke</button>
+            <button className="btn" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="btn btn-danger" onClick={doDelete}>Revogar</button>
           </>
         }>
           <p>
-            Revoke <span className="mono">{confirmDelete.channel_id}</span>? The
-            publisher stops sending to it; the config is kept for the record.
+            Revogar <span className="mono">{confirmDelete.channel_id}</span>? O publicador para de enviar para ele; a configuração é mantida para registro.
           </p>
         </Modal>
       )}
@@ -325,18 +324,18 @@ export default function Channels() {
         <Modal title={`DLQ — ${dlqChannel.channel_id}`}
                onClose={() => setDlqChannel(null)} size="large">
           {dlqRows.length === 0 ? (
-            <p style={{ color: 'var(--text-secondary)' }}>No parked rows.</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Nenhuma linha retida.</p>
           ) : (
             <DataTable
               rowKey="item_id"
               columns={[
                 { key: 'sku', label: 'SKU', mono: true },
-                { key: 'available_qty', label: 'Available' },
-                { key: 'attempt_count', label: 'Attempts' },
-                { key: 'last_error', label: 'Last error' },
+                { key: 'available_qty', label: 'Disponível' },
+                { key: 'attempt_count', label: 'Tentativas' },
+                { key: 'last_error', label: 'Último erro' },
               ]}
               data={dlqRows}
-              emptyMessage="No parked rows."
+              emptyMessage="Nenhuma linha retida."
             />
           )}
         </Modal>

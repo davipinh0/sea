@@ -90,7 +90,7 @@ describe('Backorder Items column', () => {
     expect(screen.getByText('PO-2026-001')).toBeInTheDocument();
     // A date-only string must not be parsed as UTC midnight, which
     // renders a day early in MDT. 08/25, never 08/24.
-    expect(screen.getByText(/expected 08\/25\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/previsto 08\/25\/2026/)).toBeInTheDocument();
   });
 
   it('says so explicitly when nothing is on order', async () => {
@@ -98,7 +98,7 @@ describe('Backorder Items column', () => {
       { sku: 'HAR-DUB-01', item_name: 'Hareline Dubbin Ice Dub', qty: 2, open_po: null },
     ]);
 
-    expect(screen.getByText(/not on an open PO/i)).toBeInTheDocument();
+    expect(screen.getByText(/não está em um pedido de compra aberto/i)).toBeInTheDocument();
   });
 
   it('handles an open PO carrying no expected date', async () => {
@@ -110,7 +110,7 @@ describe('Backorder Items column', () => {
     ]);
 
     expect(screen.getByText('PO-2026-003')).toBeInTheDocument();
-    expect(screen.getByText(/no expected date/i)).toBeInTheDocument();
+    expect(screen.getByText(/sem data prevista/i)).toBeInTheDocument();
   });
 
   it('renders each line of a multi-item backorder independently', async () => {
@@ -125,7 +125,7 @@ describe('Backorder Items column', () => {
     expect(screen.getByText('Hareline Dubbin Ice Dub')).toBeInTheDocument();
     expect(screen.getByText('Loon Outdoors Ergo Nipper')).toBeInTheDocument();
     expect(screen.getByText('PO-2026-001')).toBeInTheDocument();
-    expect(screen.getByText(/not on an open PO/i)).toBeInTheDocument();
+    expect(screen.getByText(/não está em um pedido de compra aberto/i)).toBeInTheDocument();
   });
 
   it('survives a payload with no item name', async () => {
@@ -135,6 +135,6 @@ describe('Backorder Items column', () => {
 
     expect(screen.getByText('HAR-DUB-01')).toBeInTheDocument();
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/not on an open PO/i)).toBeInTheDocument();
+    expect(screen.getByText(/não está em um pedido de compra aberto/i)).toBeInTheDocument();
   });
 });

@@ -7,7 +7,7 @@ import { useAuth } from '../auth.jsx';
 // their own PageHeader + state. Both gate on the sales-orders page key today.
 const TABS = [
   { to: 'rma', label: 'RMA', pageKey: 'sales-orders' },
-  { to: 'refunds', label: 'Refunds', pageKey: 'sales-orders' },
+  { to: 'refunds', label: 'Reembolsos', pageKey: 'sales-orders' },
 ];
 
 export default function Returns() {
@@ -24,7 +24,7 @@ export default function Returns() {
     if (visibleTabs.length === 0) {
       return (
         <div style={{ padding: 24, color: 'var(--text-secondary)' }}>
-          No returns pages granted to your account.
+          Nenhuma página de devoluções liberada para sua conta.
         </div>
       );
     }

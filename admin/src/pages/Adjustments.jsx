@@ -133,19 +133,19 @@ export default function Adjustments() {
     setSuccess('');
 
     if (!form.bin_id || !form.item_id || !form.quantity) {
-      setError('Bin, item, and quantity are required.');
+      setError('Endereço, material e quantidade são obrigatórios.');
       return;
     }
 
     const reason = (form.reason || '').trim();
     if (!reason) {
-      setError('Reason is required for audit traceability.');
+      setError('O motivo é obrigatório para rastreabilidade da auditoria.');
       return;
     }
 
     const qty = parseInt(form.quantity, 10);
     if (isNaN(qty) || qty <= 0) {
-      setError('Quantity must be a positive number.');
+      setError('A quantidade deve ser um número positivo.');
       return;
     }
 
@@ -161,17 +161,17 @@ export default function Adjustments() {
       });
 
       if (res?.ok) {
-        setSuccess('Adjustment created successfully.');
+        setSuccess('Ajuste criado com sucesso.');
         setForm({ bin_id: '', item_id: '', adjustment_type: 'Add', quantity: '', reason: '' });
         setBinSearch('');
         setItemSearch('');
         loadAdjustments();
       } else {
         const data = await res.json().catch(() => null);
-        setError(data?.error || data?.message || 'Failed to create adjustment.');
+        setError(data?.error || data?.message || 'Falha ao criar ajuste.');
       }
     } catch {
-      setError('Network error. Please try again.');
+      setError('Erro de rede. Tente novamente.');
     }
     setSubmitting(false);
   }
@@ -179,17 +179,17 @@ export default function Adjustments() {
   function typeTag(type) {
     if (!type) return '-';
     const t = type.toLowerCase();
-    if (t === 'add') return <span className="tag tag-success">Add</span>;
-    if (t === 'remove') return <span className="tag tag-danger">Remove</span>;
+    if (t === 'add') return <span className="tag tag-success">Adicionar</span>;
+    if (t === 'remove') return <span className="tag tag-danger">Remover</span>;
     return <span className="tag tag-warning">{type}</span>;
   }
 
   return (
     <div>
-      <PageHeader title="Inventory Adjustments" />
+      <PageHeader title="Ajustes de estoque" />
 
       <div className="settings-section">
-        <h3>Create Adjustment</h3>
+        <h3>Criar ajuste</h3>
 
         {success && <div className="alert alert-success" style={{ marginBottom: 12, padding: '8px 12px', background: '#d4edda', color: '#155724', borderRadius: 8 }}>{success}</div>}
         {error && <div className="alert alert-error" style={{ marginBottom: 12, padding: '8px 12px', background: '#f8d7da', color: '#842029', borderRadius: 8 }}>{error}</div>}
@@ -197,10 +197,10 @@ export default function Adjustments() {
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group" ref={binRef} style={{ position: 'relative' }}>
-              <label>Bin {binSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(searching...)</span>}</label>
+              <label>Endereço {binSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(buscando...)</span>}</label>
               <input
                 className="form-input mono"
-                placeholder="Type bin code to search"
+                placeholder="Digite o código do endereço para buscar"
                 value={binSearch}
                 onChange={(e) => { setBinSearch(e.target.value); updateForm('bin_id', ''); setBinOpen(true); }}
                 onFocus={() => setBinOpen(true)}
@@ -217,16 +217,16 @@ export default function Adjustments() {
               )}
               {binOpen && !binSearching && binSearch.trim().length >= 1 && !form.bin_id && binResults.length === 0 && (
                 <div style={{ ...dropdownStyle, padding: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  No bins match "{binSearch.trim()}" in this warehouse.
+                  Nenhum endereço corresponde a "{binSearch.trim()}" neste armazém.
                 </div>
               )}
             </div>
 
             <div className="form-group" ref={itemRef} style={{ position: 'relative' }}>
-              <label>Item {itemSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(searching...)</span>}</label>
+              <label>Material {itemSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(buscando...)</span>}</label>
               <input
                 className="form-input"
-                placeholder="Type SKU or item name (min 2 chars)"
+                placeholder="Digite o SKU ou nome do material (mín. 2 caracteres)"
                 value={itemSearch}
                 onChange={(e) => { setItemSearch(e.target.value); updateForm('item_id', ''); setItemOpen(true); }}
                 onFocus={() => setItemOpen(true)}
@@ -243,7 +243,7 @@ export default function Adjustments() {
               )}
               {itemOpen && !itemSearching && itemSearch.trim().length >= 2 && !form.item_id && itemResults.length === 0 && (
                 <div style={{ ...dropdownStyle, padding: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  No items match "{itemSearch.trim()}".
+                  Nenhum material corresponde a "{itemSearch.trim()}".
                 </div>
               )}
             </div>
@@ -251,37 +251,37 @@ export default function Adjustments() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Type</label>
+              <label>Tipo</label>
               <div style={{ display: 'flex', gap: 16, paddingTop: 6 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input type="radio" name="adjustment_type" value="Add" checked={form.adjustment_type === 'Add'} onChange={() => updateForm('adjustment_type', 'Add')} />
-                  Add
+                  <input type="radio" name="adjustment_type" value="Add" checked={form.adjustment_type === 'Add'} onChange={() => updateForm('adjustment_type', 'Adicionar')} />
+                  Adicionar
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input type="radio" name="adjustment_type" value="Remove" checked={form.adjustment_type === 'Remove'} onChange={() => updateForm('adjustment_type', 'Remove')} />
-                  Remove
+                  <input type="radio" name="adjustment_type" value="Remove" checked={form.adjustment_type === 'Remove'} onChange={() => updateForm('adjustment_type', 'Remover')} />
+                  Remover
                 </label>
               </div>
             </div>
 
             <div className="form-group">
-              <label>Quantity</label>
+              <label>Quantidade</label>
               <input
                 className="form-input"
                 type="number"
                 min="1"
-                placeholder="Qty"
+                placeholder="Qtd."
                 value={form.quantity}
                 onChange={(e) => updateForm('quantity', e.target.value)}
               />
             </div>
 
             <div className="form-group" style={{ flex: 2 }}>
-              <label>Reason / Notes</label>
+              <label>Motivo / Observações</label>
               <textarea
                 className="form-input"
                 rows={2}
-                placeholder="Reason for adjustment..."
+                placeholder="Motivo do ajuste..."
                 value={form.reason}
                 onChange={(e) => updateForm('reason', e.target.value)}
                 style={{ resize: 'vertical' }}
@@ -291,31 +291,31 @@ export default function Adjustments() {
 
           <div style={{ marginTop: 12 }}>
             <button className="btn btn-primary" type="submit" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Create Adjustment'}
+              {submitting ? 'Enviando...' : 'Criar ajuste'}
             </button>
           </div>
         </form>
       </div>
 
       <div className="settings-section" style={{ marginTop: 24 }}>
-        <h3>Recent Adjustments</h3>
+        <h3>Ajustes recentes</h3>
         {loading ? (
-          <p style={{ color: '#888' }}>Loading...</p>
+          <p style={{ color: '#888' }}>Carregando...</p>
         ) : adjustments.length === 0 ? (
-          <p style={{ color: '#888' }}>No adjustments found.</p>
+          <p style={{ color: '#888' }}>Nenhum ajuste encontrado.</p>
         ) : (
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Type</th>
+                  <th>Dados</th>
+                  <th>Tipo</th>
                   <th>SKU</th>
-                  <th>Item</th>
-                  <th>Bin</th>
-                  <th>Qty</th>
-                  <th>Reason</th>
-                  <th>User</th>
+                  <th>Material</th>
+                  <th>Endereço</th>
+                  <th>Qtd.</th>
+                  <th>Motivo</th>
+                  <th>Usuário</th>
                 </tr>
               </thead>
               <tbody>

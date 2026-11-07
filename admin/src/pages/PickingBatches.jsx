@@ -37,7 +37,7 @@ function OrdersCell({ batch }) {
   }
   const orders = batch.orders || [];
   if (orders.length === 0) {
-    return <span style={{ color: 'var(--text-secondary)' }}>(none)</span>;
+    return <span style={{ color: 'var(--text-secondary)' }}>(nenhum)</span>;
   }
   return (
     <div style={{ fontSize: 12, lineHeight: 1.4 }}>
@@ -71,7 +71,7 @@ export default function PickingBatches() {
       setRows(data.pick_batches || []);
     } else {
       setRows([]);
-      setActionError('Failed to load pick batches.');
+      setActionError('Falha ao carregar os lotes de separação.');
     }
     setLoading(false);
   }, [warehouseId]);
@@ -98,7 +98,7 @@ export default function PickingBatches() {
     if (!res?.ok) {
       let data = null;
       try { data = await res?.json(); } catch { /* non-JSON */ }
-      setDeleteError(data?.detail || data?.error || 'Failed to release batch.');
+      setDeleteError(data?.detail || data?.error || 'Falha ao liberar o lote.');
       return;
     }
     let data = null;
@@ -107,29 +107,29 @@ export default function PickingBatches() {
     closeDelete();
     setSuccessBanner(
       freed
-        ? `Released ${deleteTarget.batch_number}. Now pickable: ${freed}.`
-        : `Released ${deleteTarget.batch_number}.`,
+        ? `Liberado ${deleteTarget.batch_number}. Agora separáveis: ${freed}.`
+        : `Liberado ${deleteTarget.batch_number}.`,
     );
     setTimeout(() => setSuccessBanner(''), 8000);
     load();
   }
 
   const columns = [
-    { key: 'batch_number', label: 'Batch #', mono: true },
+    { key: 'batch_number', label: 'Lote nº', mono: true },
     {
       key: 'kind',
-      label: 'Type',
+      label: 'Tipo',
       render: (r) => <StatusTag status={r.kind} />,
     },
-    { key: 'orders', label: 'Orders', render: (r) => <OrdersCell batch={r} /> },
+    { key: 'orders', label: 'Pedidos', render: (r) => <OrdersCell batch={r} /> },
     {
       key: 'assigned_to',
-      label: 'Picker',
+      label: 'Separador',
       render: (r) => r.assigned_to || <span style={{ color: 'var(--text-secondary)' }}>-</span>,
     },
     {
       key: 'progress',
-      label: 'Progress',
+      label: 'Progresso',
       render: (r) => (
         <span className="mono">{r.completed_tasks}/{r.total_tasks}</span>
       ),
@@ -137,7 +137,7 @@ export default function PickingBatches() {
     },
     {
       key: 'created_at',
-      label: 'Age',
+      label: 'Idade',
       render: (r) => (
         <span title={r.created_at ? new Date(r.created_at).toLocaleString() : ''}>
           {formatAge(r.created_at)}
@@ -154,17 +154,17 @@ export default function PickingBatches() {
           <button
             className="btn btn-sm"
             disabled
-            title="Transfer-order batch. Release it from the Transfer Orders screen."
+            title="Lote de ordem de transferência. Libere-o na tela Ordens de transferência."
           >
-            Delete
+            Excluir
           </button>
         ) : (
           <button
             className="btn btn-sm btn-danger"
             onClick={(e) => { e.stopPropagation(); openDelete(r); }}
-            title="Release this batch and free its orders"
+            title="Liberar este lote e soltar seus pedidos"
           >
-            Delete
+            Excluir
           </button>
         )
       ),
@@ -173,9 +173,9 @@ export default function PickingBatches() {
 
   return (
     <div>
-      <PageHeader title="Picking Batches">
+      <PageHeader title="Lotes de separação">
         <button className="btn btn-sm" onClick={load} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Atualizando...' : 'Atualizar'}
         </button>
       </PageHeader>
 
@@ -201,36 +201,32 @@ export default function PickingBatches() {
 
       <div className="section">
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          Active pick batches hold the lock that keeps an order out of any
-          other pick round. Releasing a batch unwinds it -- allocations are
-          freed and picked units are returned to their source bins in the
-          WMS -- and the orders become pickable again. You are responsible
-          for physically returning anything a picker already pulled.
+          Lotes de separação ativos mantêm o bloqueio que impede um pedido de entrar em outra rodada de separação. Liberar um lote o desfaz -- as alocações são liberadas e as unidades separadas voltam aos endereços de origem no sistema -- e os pedidos voltam a ser separáveis. Você é responsável por devolver fisicamente o que o separador já retirou.
         </p>
         <DataTable
           rowKey="batch_id"
           columns={columns}
           data={rows}
           loading={loading}
-          emptyMessage="No active pick batches in this warehouse."
+          emptyMessage="Nenhum lote de separação ativo neste armazém."
         />
       </div>
 
       {deleteTarget && (
         <Modal
-          title={`Release batch ${deleteTarget.batch_number}?`}
+          title={`Liberar lote ${deleteTarget.batch_number}?`}
           onClose={closeDelete}
           footer={
             <>
               <button className="btn" onClick={closeDelete} disabled={deleteSubmitting}>
-                Keep Batch
+                Manter lote
               </button>
               <button
                 className="btn btn-danger"
                 onClick={submitDelete}
                 disabled={deleteSubmitting}
               >
-                {deleteSubmitting ? 'Releasing...' : 'Release Batch'}
+                {deleteSubmitting ? 'Liberando...' : 'Liberar lote'}
               </button>
             </>
           }
@@ -239,17 +235,13 @@ export default function PickingBatches() {
             <div className="form-error" style={{ marginBottom: 12 }}>{deleteError}</div>
           )}
           <p style={{ fontSize: 13, marginBottom: 12 }}>
-            This cancels <strong>{deleteTarget.batch_number}</strong> and unwinds
-            every effect: reserved stock is freed, anything already picked is
-            restored to its source bin in the WMS, and these orders become
-            pickable again:
+            Isto cancela <strong>{deleteTarget.batch_number}</strong> e desfaz todos os efeitos: o estoque reservado é liberado, o que já foi separado volta ao endereço de origem no sistema e estes pedidos voltam a ser separáveis:
           </p>
           <div style={{ fontSize: 13, marginBottom: 12 }}>
             <OrdersCell batch={deleteTarget} />
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Picked-but-unshipped units are returned in the system only. Make
-            sure the picker physically returns them to the shelf.
+            Unidades separadas e não expedidas são devolvidas apenas no sistema. Garanta que o separador as devolva fisicamente à prateleira.
           </p>
         </Modal>
       )}

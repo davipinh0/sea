@@ -112,14 +112,14 @@ export default function PickingTickets() {
       `/admin/sales-orders?q=${encodeURIComponent(term)}&per_page=10`,
     );
     if (!res?.ok) {
-      setLookupError('Could not search sales orders.');
+      setLookupError('Não foi possível buscar os pedidos de venda.');
       return;
     }
     const data = await res.json();
     const matches = data.sales_orders || [];
     const exact = matches.find((o) => o.so_number === term) || matches[0];
     if (!exact) {
-      setLookupError(`No sales order found matching "${term}".`);
+      setLookupError(`Nenhum pedido de venda encontrado para "${term}".`);
       return;
     }
     openTicketInNewTab(exact.so_id);
@@ -159,23 +159,23 @@ export default function PickingTickets() {
   }
 
   const columns = [
-    { key: 'so_number', label: 'SO Number', mono: true, sortable: true },
-    { key: 'customer_name', label: 'Customer', sortable: true },
+    { key: 'so_number', label: 'Número do PV', mono: true, sortable: true },
+    { key: 'customer_name', label: 'Cliente', sortable: true },
     {
       key: 'ship_by_date',
-      label: 'Ship By',
+      label: 'Expedir até',
       mono: true,
       sortable: true,
       render: (r) => (r.ship_by_date ? formatDateOnly(r.ship_by_date) : '-'),
     },
-    { key: 'ship_method', label: 'Ship Method', sortable: true, render: (r) => r.ship_method || '-' },
+    { key: 'ship_method', label: 'Método de envio', sortable: true, render: (r) => r.ship_method || '-' },
     {
       // Lowest-pick_sequence preferred bin across the SO's line items.
       // Sorting by this column orders the queue in warehouse-walking
       // order so the picker can fill the cart left-to-right and the
       // shipper unpacks in the same order.
       key: 'primary_bin_code',
-      label: 'Bin',
+      label: 'Endereço',
       mono: true,
       sortable: true,
       render: (r) => r.primary_bin_code || '-',
@@ -191,7 +191,7 @@ export default function PickingTickets() {
             e.stopPropagation();
             openTicketInNewTab(r.so_id);
           }}
-        >Print Ticket</button>
+        >Imprimir ficha</button>
       ),
     },
   ];
@@ -202,7 +202,7 @@ export default function PickingTickets() {
   if (longOrders) {
     columns.unshift({
       key: 'line_count',
-      label: 'Items',
+      label: 'Materiais',
       mono: true,
       render: (r) => (r.line_count ?? '-'),
     });
@@ -215,7 +215,7 @@ export default function PickingTickets() {
   if (multiOrders) {
     columns.unshift({
       key: '_group',
-      label: 'Group',
+      label: 'Grupo',
       mono: true,
       render: (r) => `#${r._groupIndex} (${r._groupSize})`,
     });
@@ -288,20 +288,20 @@ export default function PickingTickets() {
 
   return (
     <div>
-      <PageHeader title="Picking Tickets" />
+      <PageHeader title="Fichas de separação" />
 
       <div className="section">
-        <div className="section-title">Find a ticket</div>
+        <div className="section-title">Encontrar uma ficha</div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', maxWidth: 520 }}>
           <input
             className="form-input"
             style={{ flex: 1 }}
-            placeholder="Sales order number, e.g. 648415"
+            placeholder="Número do pedido de venda, ex.: 648415"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={onSearchKey}
           />
-          <button className="btn btn-primary" onClick={openTicket}>Open</button>
+          <button className="btn btn-primary" onClick={openTicket}>Abrir</button>
         </div>
         {lookupError && (
           <div className="form-error" style={{ marginTop: 8 }}>{lookupError}</div>
@@ -318,7 +318,7 @@ export default function PickingTickets() {
             marginBottom: 8,
           }}
         >
-          <div className="section-title" style={{ marginBottom: 0 }}>Orders ready to pick</div>
+          <div className="section-title" style={{ marginBottom: 0 }}>Pedidos prontos para separar</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <label style={{ fontSize: 13, color: '#555' }}>Status</label>
             <select
@@ -334,43 +334,43 @@ export default function PickingTickets() {
             <label style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 13, color: '#555', cursor: 'pointer',
-            }} title="Hide orders whose picking ticket has already been rendered (mig 064 printed_at)">
+            }} title="Ocultar pedidos cuja ficha de separação já foi gerada (mig 064 printed_at)">
               <input
                 type="checkbox"
                 checked={hidePrinted}
                 onChange={(e) => setHidePrinted(e.target.checked)}
               />
-              Hide Printed
+              Ocultar impressos
             </label>
             <label style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 13, color: '#555', cursor: 'pointer',
-            }} title="Show only orders that share a shipping address with another order in the queue, clustered so they can be boxed and shipped together">
+            }} title="Mostrar só pedidos que compartilham endereço de entrega com outro pedido da fila, agrupados para serem embalados e expedidos juntos">
               <input
                 type="checkbox"
                 checked={multiOrders}
                 onChange={(e) => setMultiOrders(e.target.checked)}
               />
-              Multi-Orders
+              Pedidos múltiplos
             </label>
             <label style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 13, color: '#555', cursor: 'pointer',
-            }} title={`Show only long orders -- ${LONG_ORDER_MIN_LINES}+ line items -- so the picking-heavy orders can be batch-printed`}>
+            }} title={`Mostrar só pedidos longos -- ${LONG_ORDER_MIN_LINES}+ linhas -- para que os pedidos com muita separação possam ser impressos em lote`}>
               <input
                 type="checkbox"
                 checked={longOrders}
                 onChange={(e) => setLongOrders(e.target.checked)}
               />
-              Long Orders
+              Pedidos longos
             </label>
             <button
               className="btn btn-secondary"
               onClick={() => setRefreshCounter((c) => c + 1)}
               disabled={refreshing}
-              title="Re-fetch the list from the server (e.g. to pick up just-pushed customer name + shipping address)"
+              title="Buscar a lista novamente no servidor (ex.: para trazer nome do cliente + endereço de entrega recém-enviados)"
             >
-              {refreshing ? 'Refreshing…' : 'Refresh'}
+              {refreshing ? 'Atualizando…' : 'Atualizar'}
             </button>
             <button
               className="btn btn-primary"
@@ -378,13 +378,13 @@ export default function PickingTickets() {
               disabled={displayOrders.length === 0}
               title={
                 displayOrders.length > PRINT_BATCH_LIMIT
-                  ? `Queue has ${displayOrders.length}; one tab prints the top ${PRINT_BATCH_LIMIT} in the current sort. Clear them and Print All again for the rest.`
+                  ? `A fila tem ${displayOrders.length}; uma aba imprime os primeiros ${PRINT_BATCH_LIMIT} na ordenação atual. Limpe-os e use Imprimir todos novamente para o restante.`
                   : undefined
               }
             >
               {displayOrders.length > PRINT_BATCH_LIMIT
-                ? `Print First ${PRINT_BATCH_LIMIT} (of ${displayOrders.length})`
-                : `Print All (${displayOrders.length})`}
+                ? `Imprimir os primeiros ${PRINT_BATCH_LIMIT} (de ${displayOrders.length})`
+                : `Imprimir todos (${displayOrders.length})`}
             </button>
           </div>
         </div>
@@ -394,12 +394,12 @@ export default function PickingTickets() {
           data={displayOrders}
           emptyMessage={
             multiOrders && longOrders
-              ? 'No long orders share an address in this queue'
+              ? 'Nenhum pedido longo compartilha endereço nesta fila'
               : multiOrders
-                ? 'No multi-order groups in this queue'
+                ? 'Nenhum grupo de pedidos múltiplos nesta fila'
                 : longOrders
-                  ? 'No long orders in this queue'
-                  : 'No orders ready for picking'
+                  ? 'Nenhum pedido longo nesta fila'
+                  : 'Nenhum pedido pronto para separação'
           }
           onRowClick={(r) => openTicketInNewTab(r.so_id)}
           // In Multi-Orders view the address clustering IS the order, so

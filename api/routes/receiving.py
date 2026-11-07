@@ -56,10 +56,10 @@ def lookup_po(barcode):
     ).fetchone()
 
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
 
     if po.status == PO_CLOSED:
-        return jsonify({"error": "Purchase order is closed"}), 400
+        return jsonify({"error": "O pedido de compra está fechado"}), 400
 
     lines = g.db.execute(
         text(
@@ -136,10 +136,10 @@ def receive_items(validated):
     ).fetchone()
 
     if not po:
-        return jsonify({"error": "Purchase order not found"}), 404
+        return jsonify({"error": "Pedido de compra não encontrado"}), 404
 
     if po.status not in (PO_OPEN, PO_PARTIAL):
-        return jsonify({"error": f"Purchase order status is {po.status}, cannot receive"}), 400
+        return jsonify({"error": f"O status do pedido de compra é {po.status}, não é possível receber"}), 400
 
     warehouse_id = po.warehouse_id
     username = g.current_user["username"]
@@ -199,9 +199,9 @@ def receive_items(validated):
                 {"bin_id": bin_id},
             ).fetchone()
             if not bin_row:
-                return jsonify({"error": f"Bin {bin_id} not found"}), 404
+                return jsonify({"error": f"Endereço {bin_id} não encontrado"}), 404
             if bin_row.warehouse_id != warehouse_id:
-                return jsonify({"error": f"Bin {bin_id} does not belong to this PO's warehouse"}), 400
+                return jsonify({"error": f"O endereço {bin_id} não pertence ao armazém deste PC"}), 400
             _validated_bin_warehouse[bin_id] = bin_row.warehouse_id
 
         # Find matching PO line. V-029: SELECT ... FOR UPDATE holds a
@@ -224,7 +224,7 @@ def receive_items(validated):
         ).fetchone()
 
         if not po_line:
-            return jsonify({"error": f"Item {item_id} is not on PO {po_id}"}), 400
+            return jsonify({"error": f"O material {item_id} não está no PC {po_id}"}), 400
 
         # Check for over-receipt
         remaining = po_line.quantity_ordered - po_line.quantity_received
@@ -234,9 +234,7 @@ def receive_items(validated):
             ).fetchone()
             if not over_receipt_row or over_receipt_row.value != "true":
                 return jsonify({
-                    "error": f"Over-receipt not allowed on line {po_line.line_number}: "
-                             f"requested {quantity} but only {remaining} remaining. "
-                             f"Enable 'allow_over_receipt' in Settings to permit this."
+                    "error": f"Recebimento acima do pedido não permitido na linha {po_line.line_number}: solicitado {quantity}, mas restam apenas {remaining}. Ative 'allow_over_receipt' nas Configurações para permitir."
                 }), 400
             warnings.append(
                 f"Over-receipt on line {po_line.line_number}: received {quantity} but only {remaining} remaining"
@@ -430,7 +428,7 @@ def receive_items(validated):
         )
 
     return jsonify({
-        "message": "Receipt submitted successfully",
+        "message": "Recebimento registrado com sucesso",
         "receipt_ids": receipt_ids,
         "po_status": po_status,
         "warnings": warnings,
@@ -449,7 +447,7 @@ def cancel_receiving(validated):
     """
     receipt_ids = validated.receipt_ids
     if not receipt_ids:
-        return jsonify({"message": "Nothing to cancel"}), 200
+        return jsonify({"message": "Nada a cancelar"}), 200
 
     username = g.current_user["username"]
     reversed_count = 0
@@ -485,8 +483,7 @@ def cancel_receiving(validated):
     if mismatched:
         return jsonify({
             "error": (
-                "receipt_ids span multiple purchase orders; refusing to "
-                "cross-cancel. Cancel one PO at a time."
+                "receipt_ids abrangem vários pedidos de compra; cancelamento cruzado recusado. Cancele um PC por vez."
             ),
             "po_id": validated.po_id,
             "mismatched_receipt_ids": [r.receipt_id for r in mismatched],
@@ -577,4 +574,4 @@ def cancel_receiving(validated):
         )
 
     g.db.commit()
-    return jsonify({"message": f"Cancelled {reversed_count} receipt(s)", "reversed": reversed_count})
+    return jsonify({"message": f"{reversed_count} recebimento(s) cancelado(s)", "reversed": reversed_count})

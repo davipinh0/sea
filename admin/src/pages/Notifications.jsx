@@ -32,7 +32,7 @@ const SUPPORTED_CHANNELS = [
 // rejected at create/PATCH time.
 const EVENT_TYPE_GROUPS = [
   {
-    group: 'Backorder events',
+    group: 'Eventos de pendência',
     options: [
       { value: 'backorder.opened',      label: 'backorder.opened',      desc: 'an item was shorted on an order' },
       { value: 'backorder.fulfillable', label: 'backorder.fulfillable', desc: 'a backorder is ready to ship' },
@@ -40,7 +40,7 @@ const EVENT_TYPE_GROUPS = [
     ],
   },
   {
-    group: 'Dispatcher health alerts',
+    group: 'Alertas de saúde do dispatcher',
     options: [
       { value: 'dispatcher.delivery_stalled',     label: 'dispatcher.delivery_stalled',     desc: 'a webhook delivery is stuck in-flight' },
       { value: 'dispatcher.dlq_growth',           label: 'dispatcher.dlq_growth',           desc: 'events are dead-lettering' },
@@ -104,8 +104,8 @@ function TestSendOutcome({ outcome }) {
       }}
     >
       {ok
-        ? `Delivered (status ${outcome.status_code || 200}).`
-        : `Send failed: ${outcome.error_kind || 'unknown'}${outcome.status_code ? ` (status ${outcome.status_code})` : ''}${outcome.error_detail ? `\n${outcome.error_detail}` : ''}`}
+        ? `Entregue (status ${outcome.status_code || 200}).`
+        : `Falha no envio: ${outcome.error_kind || 'unknown'}${outcome.status_code ? ` (status ${outcome.status_code})` : ''}${outcome.error_detail ? `\n${outcome.error_detail}` : ''}`}
     </div>
   );
 }
@@ -153,7 +153,7 @@ export default function Notifications() {
       setRows(data.notification_webhooks || []);
     } else {
       setRows([]);
-      setPageError('Failed to load notification webhooks.');
+      setPageError('Falha ao carregar os webhooks de notificação.');
     }
     setLoading(false);
   }, [warehouseId]);
@@ -185,15 +185,15 @@ export default function Notifications() {
 
   async function submitCreate() {
     if (!warehouseId) {
-      setCreateError('Pick a warehouse from the top bar first.');
+      setCreateError('Escolha um armazém na barra superior primeiro.');
       return;
     }
     if (!createForm.url) {
-      setCreateError('URL is required.');
+      setCreateError('A URL é obrigatória.');
       return;
     }
     if (!createForm.event_filter || createForm.event_filter.length === 0) {
-      setCreateError('Select at least one event type.');
+      setCreateError('Selecione pelo menos um tipo de evento.');
       return;
     }
     setCreateSubmitting(true);
@@ -211,11 +211,11 @@ export default function Notifications() {
     if (!res?.ok) {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON */ }
-      setCreateError(data?.error || 'Failed to create webhook.');
+      setCreateError(data?.error || 'Falha ao criar webhook.');
       return;
     }
     closeCreate();
-    flashSuccess('Notification webhook created.');
+    flashSuccess('Webhook de notificação criado.');
     load();
   }
 
@@ -227,7 +227,7 @@ export default function Notifications() {
     if (!res?.ok) {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON */ }
-      setPageError(data?.error || 'Failed to toggle webhook.');
+      setPageError(data?.error || 'Falha ao alternar webhook.');
       return;
     }
     load();
@@ -248,7 +248,7 @@ export default function Notifications() {
 
   async function submitRotate() {
     if (!rotateUrl) {
-      setRotateError('New URL is required.');
+      setRotateError('A nova URL é obrigatória.');
       return;
     }
     setRotateSubmitting(true);
@@ -261,11 +261,11 @@ export default function Notifications() {
     if (!res?.ok) {
       let data = null;
       try { data = await res?.json(); } catch (_) { /* non-JSON */ }
-      setRotateError(data?.error || 'Failed to rotate URL.');
+      setRotateError(data?.error || 'Falha ao trocar a URL.');
       return;
     }
     closeRotate();
-    flashSuccess('Webhook URL rotated.');
+    flashSuccess('URL do webhook trocada.');
     load();
   }
 
@@ -285,7 +285,7 @@ export default function Notifications() {
         [row.webhook_id]: {
           delivered: false,
           error_kind: 'request_failed',
-          error_detail: outcome?.error || 'request failed',
+          error_detail: outcome?.error || 'falha na requisição',
         },
       }));
       return;
@@ -309,24 +309,24 @@ export default function Notifications() {
     );
     setDeleteSubmitting(false);
     if (!res?.ok) {
-      setPageError('Failed to delete webhook.');
+      setPageError('Falha ao excluir webhook.');
       closeDelete();
       return;
     }
     closeDelete();
-    flashSuccess('Webhook deleted.');
+    flashSuccess('Webhook excluído.');
     load();
   }
 
   const columns = [
     { key: 'webhook_id', label: 'ID', mono: true },
-    { key: 'channel_kind', label: 'Channel' },
+    { key: 'channel_kind', label: 'Canal' },
     { key: 'host_preview', label: 'Host',
       render: (r) => r.host_preview
         ? <span className="mono" style={{ fontSize: 12 }}>{r.host_preview}</span>
-        : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>(decrypt failed)</span>,
+        : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>(falha ao descriptografar)</span>,
     },
-    { key: 'event_filter', label: 'Events',
+    { key: 'event_filter', label: 'Eventos',
       render: (r) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {(r.event_filter || []).map((e) => (
@@ -335,7 +335,7 @@ export default function Notifications() {
         </div>
       ),
     },
-    { key: 'enabled', label: 'Enabled',
+    { key: 'enabled', label: 'Ativado',
       render: (r) => (
         <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <input
@@ -343,14 +343,14 @@ export default function Notifications() {
             checked={r.enabled}
             onChange={(e) => { e.stopPropagation(); togglEnabled(r); }}
           />
-          <span style={{ fontSize: 12 }}>{r.enabled ? 'On' : 'Off'}</span>
+          <span style={{ fontSize: 12 }}>{r.enabled ? 'Ligado' : 'Desligado'}</span>
         </label>
       ),
     },
-    { key: 'created_at', label: 'Created',
+    { key: 'created_at', label: 'Criado',
       render: (r) => r.created_at ? new Date(r.created_at).toLocaleString() : '-',
     },
-    { key: 'actions', label: 'Actions',
+    { key: 'actions', label: 'Ações',
       render: (r) => (
         <div onClick={(e) => e.stopPropagation()}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -358,15 +358,15 @@ export default function Notifications() {
               className="btn btn-sm"
               onClick={() => testSend(r)}
               disabled={!!testInFlight[r.webhook_id]}
-              title="Send a sample backorder.opened card to verify the channel"
+              title="Enviar um cartão de exemplo backorder.opened para verificar o canal"
             >
-              {testInFlight[r.webhook_id] ? 'Sending...' : 'Test'}
+              {testInFlight[r.webhook_id] ? 'Enviando...' : 'Testar'}
             </button>
             <button className="btn btn-sm" onClick={() => openRotate(r)}>
-              Rotate URL
+              Trocar URL
             </button>
             <button className="btn btn-sm btn-danger" onClick={() => openDelete(r)}>
-              Delete
+              Excluir
             </button>
           </div>
           <TestSendOutcome outcome={testOutcomes[r.webhook_id]} />
@@ -377,18 +377,18 @@ export default function Notifications() {
 
   return (
     <div>
-      <PageHeader title="Notifications">
+      <PageHeader title="Notificações">
         <button
           className="btn btn-primary"
           onClick={openCreate}
           disabled={!warehouseId}
         >
-          New Webhook
+          Novo webhook
         </button>
       </PageHeader>
       {!warehouseId && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Pick a warehouse from the top bar to manage its notification webhooks.
+          Escolha um armazém na barra superior para gerenciar seus webhooks de notificação.
         </p>
       )}
       {successBanner && (
@@ -416,23 +416,23 @@ export default function Notifications() {
           columns={columns}
           data={rows}
           loading={loading}
-          emptyMessage="No notification webhooks configured for this warehouse."
+          emptyMessage="Nenhum webhook de notificação configurado para este armazém."
         />
       </div>
 
       {creating && (
         <Modal
-          title="New Notification Webhook"
+          title="Novo webhook de notificação"
           onClose={closeCreate}
           footer={
             <>
-              <button className="btn" onClick={closeCreate} disabled={createSubmitting}>Cancel</button>
+              <button className="btn" onClick={closeCreate} disabled={createSubmitting}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 onClick={submitCreate}
                 disabled={createSubmitting}
               >
-                {createSubmitting ? 'Creating...' : 'Create'}
+                {createSubmitting ? 'Criando...' : 'Criar'}
               </button>
             </>
           }
@@ -441,15 +441,11 @@ export default function Notifications() {
             <div className="form-error" style={{ marginBottom: 12 }}>{createError}</div>
           )}
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            URL is encrypted at rest and never returned by the API. The
-            value you enter here is the only chance to capture it
-            visually -- record it elsewhere if you need a backup.
-            "Rotate URL" later replaces the ciphertext but does not
-            expose the old value.
+            A URL é criptografada e nunca é retornada pela API. O valor digitado aqui é a única chance de vê-lo -- guarde-o em outro lugar se precisar de cópia. "Trocar URL" depois substitui o valor criptografado, mas não expõe o anterior.
           </p>
           <div className="form-row">
             <div className="form-group">
-              <label>Channel</label>
+              <label>Canal</label>
               <select
                 className="form-select"
                 value={createForm.channel_kind}
@@ -461,14 +457,14 @@ export default function Notifications() {
               </select>
             </div>
             <div className="form-group">
-              <label>Enabled</label>
+              <label>Ativado</label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8 }}>
                 <input
                   type="checkbox"
                   checked={createForm.enabled}
                   onChange={(e) => setCreateForm({ ...createForm, enabled: e.target.checked })}
                 />
-                <span style={{ fontSize: 13 }}>Receive events immediately</span>
+                <span style={{ fontSize: 13 }}>Receber eventos imediatamente</span>
               </label>
             </div>
           </div>
@@ -483,18 +479,18 @@ export default function Notifications() {
             />
           </div>
           <div className="form-group">
-            <label>Events</label>
+            <label>Eventos</label>
             <EventFilterCheckboxes
               value={createForm.event_filter}
               onChange={(v) => setCreateForm({ ...createForm, event_filter: v })}
             />
           </div>
           <div className="form-group">
-            <label>HMAC secret (optional)</label>
+            <label>Segredo HMAC (opcional)</label>
             <input
               className="form-input"
               type="text"
-              placeholder="Leave blank for Teams incoming webhooks."
+              placeholder="Deixe em branco para webhooks de entrada do Teams."
               value={createForm.secret}
               onChange={(e) => setCreateForm({ ...createForm, secret: e.target.value })}
             />
@@ -504,17 +500,17 @@ export default function Notifications() {
 
       {rotating && (
         <Modal
-          title={`Rotate URL for webhook #${rotating.webhook_id}`}
+          title={`Trocar URL do webhook nº${rotating.webhook_id}`}
           onClose={closeRotate}
           footer={
             <>
-              <button className="btn" onClick={closeRotate} disabled={rotateSubmitting}>Cancel</button>
+              <button className="btn" onClick={closeRotate} disabled={rotateSubmitting}>Cancelar</button>
               <button
                 className="btn btn-primary"
                 onClick={submitRotate}
                 disabled={rotateSubmitting}
               >
-                {rotateSubmitting ? 'Rotating...' : 'Rotate'}
+                {rotateSubmitting ? 'Trocando...' : 'Trocar'}
               </button>
             </>
           }
@@ -523,12 +519,10 @@ export default function Notifications() {
             <div className="form-error" style={{ marginBottom: 12 }}>{rotateError}</div>
           )}
           <p style={{ fontSize: 13, marginBottom: 12 }}>
-            Replaces the encrypted URL on this row. The previous value
-            is not recoverable from the UI; if you need it, take it
-            from your Teams admin before rotating.
+            Substitui a URL criptografada deste registro. O valor anterior não pode ser recuperado pela interface; se precisar dele, obtenha-o com o administrador do Teams antes de trocar.
           </p>
           <div className="form-group">
-            <label>New URL</label>
+            <label>Nova URL</label>
             <input
               className="form-input"
               type="url"
@@ -542,26 +536,23 @@ export default function Notifications() {
 
       {deleting && (
         <Modal
-          title={`Delete webhook #${deleting.webhook_id}?`}
+          title={`Excluir webhook nº${deleting.webhook_id}?`}
           onClose={closeDelete}
           footer={
             <>
-              <button className="btn" onClick={closeDelete} disabled={deleteSubmitting}>Cancel</button>
+              <button className="btn" onClick={closeDelete} disabled={deleteSubmitting}>Cancelar</button>
               <button
                 className="btn btn-danger"
                 onClick={submitDelete}
                 disabled={deleteSubmitting}
               >
-                {deleteSubmitting ? 'Deleting...' : 'Delete'}
+                {deleteSubmitting ? 'Excluindo...' : 'Excluir'}
               </button>
             </>
           }
         >
           <p style={{ fontSize: 13 }}>
-            Backorder events for this warehouse will no longer reach this
-            destination. The integration_events outbox is unaffected; a
-            future polling worker could still replay if you re-create
-            the row.
+            Os eventos de pendência deste armazém não chegarão mais a este destino. A fila integration_events não é afetada; um worker futuro poderia reenviá-los se você recriar o registro.
           </p>
         </Modal>
       )}

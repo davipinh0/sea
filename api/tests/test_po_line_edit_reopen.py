@@ -78,7 +78,7 @@ class TestOverReceiptReopen:
         # receipt -- the over-receipt is stuck until the PO reopens.
         blocked = _receive(client, auth_headers, item_id=20, qty=1)
         assert blocked.status_code == 400
-        assert "cannot receive" in blocked.get_json()["error"]
+        assert "não é possível receber" in blocked.get_json()["error"]
 
         # Bump quantity_ordered: the line reopens to PARTIAL (and the PO
         # with it) so the remaining unit becomes a normal in-order receipt.
@@ -110,7 +110,7 @@ class TestOverReceiptReopen:
             headers=auth_headers,
         )
         assert resp.status_code == 400
-        assert "less than" in resp.get_json()["error"]
+        assert "menor que" in resp.get_json()["error"]
 
 
 class TestPurchaseOrderEditEvent:

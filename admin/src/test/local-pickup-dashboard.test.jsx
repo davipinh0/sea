@@ -70,7 +70,7 @@ function wire() {
 
 async function openLocalPickupTab() {
   const view = render(<MemoryRouter><Dashboard /></MemoryRouter>);
-  fireEvent.click(await view.findByText('Local Pickup'));
+  fireEvent.click(await view.findByText('Retirada no local'));
   return view;
 }
 
@@ -95,7 +95,7 @@ describe('Dashboard Local Pickup tab', () => {
   it('passes the status filter through to the request', async () => {
     const { findByText, getByDisplayValue } = await openLocalPickupTab();
     await findByText('SO-PICK-1');
-    fireEvent.change(getByDisplayValue('All statuses'), { target: { value: 'PICKED' } });
+    fireEvent.change(getByDisplayValue('Todos os status'), { target: { value: 'PICKED' } });
     await waitFor(() => {
       expect(apiGetMock).toHaveBeenCalledWith(
         expect.stringContaining('status=PICKED'),
@@ -107,7 +107,7 @@ describe('Dashboard Local Pickup tab', () => {
   it('sends OPEN,PICKED when the operator picks the Open + Picked view', async () => {
     const { findByText, getByDisplayValue } = await openLocalPickupTab();
     await findByText('SO-PICK-1');
-    fireEvent.change(getByDisplayValue('All statuses'), { target: { value: 'OPEN,PICKED' } });
+    fireEvent.change(getByDisplayValue('Todos os status'), { target: { value: 'OPEN,PICKED' } });
     await waitFor(() => {
       expect(apiGetMock).toHaveBeenCalledWith(
         // comma is percent-encoded by URLSearchParams
@@ -120,9 +120,9 @@ describe('Dashboard Local Pickup tab', () => {
   it('confirms in a JSX modal (not window.confirm) then ships a PICKED order', async () => {
     const { findByText, getAllByText } = await openLocalPickupTab();
     await findByText('SO-PICK-1');
-    fireEvent.click(getAllByText('Picked Up?')[0]);  // first row = PICKED
+    fireEvent.click(getAllByText('Retirado?')[0]);  // first row = PICKED
     // A JSX confirm modal appears; nothing ships until it is confirmed.
-    const confirmBtn = await findByText('Yes, mark picked up');
+    const confirmBtn = await findByText('Sim, marcar como retirado');
     expect(apiPutMock).not.toHaveBeenCalled();
     fireEvent.click(confirmBtn);
     await waitFor(() => {
@@ -137,8 +137,8 @@ describe('Dashboard Local Pickup tab', () => {
   it('shows a loud modal (no silent no-op) when an OPEN order cannot be picked up', async () => {
     const { findByText, getAllByText } = await openLocalPickupTab();
     await findByText('SO-OPEN-1');
-    fireEvent.click(getAllByText('Picked Up?')[1]);  // second row = OPEN
-    await findByText('Not ready for pickup');
+    fireEvent.click(getAllByText('Retirado?')[1]);  // second row = OPEN
+    await findByText('Não está pronto para retirada');
     expect(apiPutMock).not.toHaveBeenCalled();
   });
 
@@ -147,9 +147,9 @@ describe('Dashboard Local Pickup tab', () => {
   it('opens the shared order modal from the order number', async () => {
     const { findByText, queryByText } = await openLocalPickupTab();
     fireEvent.click(await findByText('SO-PICK-1'));
-    await waitFor(() => expect(queryByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(queryByText('Resumo do pedido')).toBeTruthy());
     // Read-only: the edit form's Save is not reachable from here.
-    expect(queryByText('Save')).toBeNull();
+    expect(queryByText('Salvar')).toBeNull();
   });
 
   it('does not open the order when a non-link cell is clicked', async () => {
@@ -159,18 +159,18 @@ describe('Dashboard Local Pickup tab', () => {
     fireEvent.click(await findByText('Neal Hoffberg'));
     // Give the modal every chance to open before asserting it did not.
     await act(async () => { await Promise.resolve(); });
-    expect(queryByText('Order Summary')).toBeNull();
+    expect(queryByText('Resumo do pedido')).toBeNull();
     expect(await findByText('SO-PICK-1')).toBeTruthy();
   });
 
   it('closing the order modal leaves the pickup queue in place', async () => {
     const { findByText, queryByText } = await openLocalPickupTab();
     fireEvent.click(await findByText('SO-PICK-1'));
-    await waitFor(() => expect(queryByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(queryByText('Resumo do pedido')).toBeTruthy());
 
-    fireEvent.click(await findByText('Close'));
+    fireEvent.click(await findByText('Fechar'));
 
-    await waitFor(() => expect(queryByText('Order Summary')).toBeNull());
+    await waitFor(() => expect(queryByText('Resumo do pedido')).toBeNull());
     expect(queryByText('SO-PICK-1')).toBeTruthy();
     expect(queryByText('SO-OPEN-1')).toBeTruthy();
   });
@@ -180,9 +180,9 @@ describe('Dashboard Local Pickup tab', () => {
     // and admin-pick do not belong on a pickup counter screen.
     const { findByText, getAllByText, queryByText } = await openLocalPickupTab();
     await findByText('SO-PICK-1');
-    fireEvent.click(getAllByText('Edit')[0]);
-    await waitFor(() => expect(queryByText('Customer name')).toBeTruthy());
-    expect(queryByText('Partially Fulfill')).toBeNull();
-    expect(queryByText('Admin Pick')).toBeNull();
+    fireEvent.click(getAllByText('Editar')[0]);
+    await waitFor(() => expect(queryByText('Nome do cliente')).toBeTruthy());
+    expect(queryByText('Atender parcialmente')).toBeNull();
+    expect(queryByText('Separação admin')).toBeNull();
   });
 });

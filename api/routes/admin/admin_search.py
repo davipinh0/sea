@@ -204,7 +204,7 @@ def global_search():
                     "error": "min_length",
                     "min_length": _MIN_QUERY_LENGTH,
                     "detail": (
-                        f"q must be at least {_MIN_QUERY_LENGTH} characters."
+                        f"q deve ter pelo menos {_MIN_QUERY_LENGTH} caracteres."
                     ),
                 }
             ),

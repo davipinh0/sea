@@ -332,9 +332,7 @@ def create_token(validated):
                     "error": "unknown_mapping_overrides_keys",
                     "unknown_keys": unknown_keys,
                     "detail": (
-                        "mapping_overrides keys must be columns on the "
-                        "canonical table(s) for the token's "
-                        "inbound_resources."
+                        "as chaves de mapping_overrides devem ser colunas da(s) tabela(s) canônica(s) dos inbound_resources do token."
                     ),
                 }
             ),
@@ -471,9 +469,9 @@ def rotate_token(token_id):
         {"tid": token_id},
     ).fetchone()
     if not existing:
-        return jsonify({"error": "Token not found"}), 404
+        return jsonify({"error": "Token não encontrado"}), 404
     if existing.status == "revoked":
-        return jsonify({"error": "Cannot rotate a revoked token"}), 400
+        return jsonify({"error": "Não é possível rotacionar um token revogado"}), 400
 
     plaintext = secrets.token_urlsafe(32)
     new_hash = _hash_for_storage(plaintext)
@@ -550,7 +548,7 @@ def revoke_token(token_id):
         {"tid": token_id},
     ).fetchone()
     if not row:
-        return jsonify({"error": "Token not found"}), 404
+        return jsonify({"error": "Token não encontrado"}), 404
     # v1.5.1 V-208 (#141): audit the revocation.
     write_audit_log(
         g.db,
@@ -595,7 +593,7 @@ def delete_token(token_id):
         {"tid": token_id},
     ).fetchone()
     if not result:
-        return jsonify({"error": "Token not found"}), 404
+        return jsonify({"error": "Token não encontrado"}), 404
     write_audit_log(
         g.db,
         action_type=ACTION_TOKEN_DELETE,

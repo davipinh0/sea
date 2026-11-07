@@ -20,7 +20,7 @@ export default function ChangePassword() {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError('As novas senhas não coincidem.');
       return;
     }
 
@@ -32,7 +32,7 @@ export default function ChangePassword() {
 
     if (!res || !res.ok) {
       const data = res ? await res.json().catch(() => ({})) : {};
-      setError(friendlyError(data, 'Could not change password. Please try again.'));
+      setError(friendlyError(data, 'Não foi possível alterar a senha. Tente novamente.'));
       setSubmitting(false);
       return;
     }
@@ -75,17 +75,17 @@ export default function ChangePassword() {
             lineHeight: 1.4,
           }}
         >
-          <strong>First-time setup:</strong> please choose a new admin password before continuing.
+          <strong>Primeiro acesso:</strong> escolha uma nova senha de administrador antes de continuar.
         </div>
       )}
 
-      <h2 style={{ marginTop: 0, marginBottom: 20 }}>Change Password</h2>
+      <h2 style={{ marginTop: 0, marginBottom: 20 }}>Alterar senha</h2>
 
       {error && <div className="login-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Current password</label>
+          <label>Senha atual</label>
           <input
             className="form-input"
             type="password"
@@ -98,7 +98,7 @@ export default function ChangePassword() {
         </div>
 
         <div className="form-group">
-          <label>New password</label>
+          <label>Nova senha</label>
           <input
             className="form-input"
             type="password"
@@ -108,12 +108,12 @@ export default function ChangePassword() {
             required
           />
           <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)', marginTop: 6 }}>
-            At least 8 characters, one letter and one digit. Cannot be "admin".
+            Mínimo de 8 caracteres, com uma letra e um dígito. Não pode ser "admin".
           </div>
         </div>
 
         <div className="form-group">
-          <label>Confirm new password</label>
+          <label>Confirmar nova senha</label>
           <input
             className="form-input"
             type="password"
@@ -126,7 +126,7 @@ export default function ChangePassword() {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Saving...' : 'Change password'}
+            {submitting ? 'Salvando...' : 'Alterar senha'}
           </button>
           {!forced && (
             <button
@@ -135,7 +135,7 @@ export default function ChangePassword() {
               onClick={() => navigate(-1)}
               disabled={submitting}
             >
-              Cancel
+              Cancelar
             </button>
           )}
         </div>

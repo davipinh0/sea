@@ -51,14 +51,14 @@ export default function PreferredBins() {
     if (res?.ok) {
       setShowAdd(false);
       setMessageIsError(false);
-      setMessage('Preferred bin added');
+      setMessage('Endereço preferencial adicionado');
       load();
     } else {
       const data = await res?.json();
       // A Staging / PickableStaging bin is rejected here. Show it
       // as an error, not a green success banner.
       setMessageIsError(true);
-      setMessage(data?.error || 'Failed to add');
+      setMessage(data?.error || 'Falha ao adicionar');
     }
   }
 
@@ -73,12 +73,12 @@ export default function PreferredBins() {
       // Surface the failure instead of silently leaving the old value.
       const data = await res?.json();
       setMessageIsError(true);
-      setMessage(data?.error || 'Failed to update priority');
+      setMessage(data?.error || 'Falha ao atualizar a prioridade');
     }
   }
 
   async function deletePB(pbId) {
-    if (!confirm('Delete this preferred bin?')) return;
+    if (!confirm('Excluir este endereço preferencial?')) return;
     const res = await api.delete(`/admin/preferred-bins/${pbId}`);
     if (res?.ok) load();
   }
@@ -91,7 +91,7 @@ export default function PreferredBins() {
   }
 
   function exportCSV() {
-    const header = 'SKU,Item Name,Bin Code,Zone,Priority,Last Updated';
+    const header = 'SKU,Nome do material,Código do endereço,Zona,Prioridade,Última atualização';
     const csvRows = rows.map((r) =>
       `${sanitize(r.sku)},${sanitize(r.item_name)},${sanitize(r.bin_code)},${sanitize(r.zone_name || '')},${r.priority},${sanitize(r.updated_at || '')}`
     );
@@ -106,10 +106,10 @@ export default function PreferredBins() {
 
   const columns = [
     { key: 'sku', label: 'SKU', mono: true },
-    { key: 'item_name', label: 'Item Name' },
-    { key: 'bin_code', label: 'Preferred Bin', mono: true },
-    { key: 'zone_name', label: 'Zone', render: (r) => r.zone_name || '-' },
-    { key: 'priority', label: 'Priority', render: (r) => {
+    { key: 'item_name', label: 'Nome do material' },
+    { key: 'bin_code', label: 'Endereço preferencial', mono: true },
+    { key: 'zone_name', label: 'Zona', render: (r) => r.zone_name || '-' },
+    { key: 'priority', label: 'Prioridade', render: (r) => {
       if (editingId === r.preferred_bin_id) {
         return (
           <span style={{ display: 'flex', gap: 4 }}>
@@ -135,17 +135,17 @@ export default function PreferredBins() {
         </span>
       );
     }},
-    { key: 'updated_at', label: 'Updated', mono: true, render: (r) => r.updated_at ? new Date(r.updated_at).toLocaleDateString() : '-' },
+    { key: 'updated_at', label: 'Atualizado', mono: true, render: (r) => r.updated_at ? new Date(r.updated_at).toLocaleDateString() : '-' },
     { key: 'actions', label: '', render: (r) => (
-      <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deletePB(r.preferred_bin_id); }}>Delete</button>
+      <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deletePB(r.preferred_bin_id); }}>Excluir</button>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Preferred Bins">
-        <button className="btn" onClick={exportCSV}>Export CSV</button>
-        <button className="btn btn-primary" onClick={openAdd}>Add Preferred Bin</button>
+      <PageHeader title="Endereços preferenciais">
+        <button className="btn" onClick={exportCSV}>Exportar CSV</button>
+        <button className="btn btn-primary" onClick={openAdd}>Adicionar endereço preferencial</button>
       </PageHeader>
 
       {message && (
@@ -155,45 +155,45 @@ export default function PreferredBins() {
       <div className="filter-bar">
         <input
           className="form-input"
-          placeholder="Search by SKU or item name..."
+          placeholder="Buscar por SKU ou nome do material..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <DataTable rowKey="preferred_bin_id" columns={columns} data={rows} emptyMessage="No preferred bins configured" />
+      <DataTable rowKey="preferred_bin_id" columns={columns} data={rows} emptyMessage="Nenhum endereço preferencial configurado" />
 
       {showAdd && (
         <Modal
-          title="Add Preferred Bin"
+          title="Adicionar endereço preferencial"
           onClose={() => setShowAdd(false)}
           footer={
             <>
-              <button className="btn" onClick={() => setShowAdd(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveAdd} disabled={!addForm.item_id || !addForm.bin_id}>Save</button>
+              <button className="btn" onClick={() => setShowAdd(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveAdd} disabled={!addForm.item_id || !addForm.bin_id}>Salvar</button>
             </>
           }
         >
           <div className="form-group">
-            <label>Item</label>
+            <label>Material</label>
             <select className="form-select" value={addForm.item_id} onChange={(e) => setAddForm({ ...addForm, item_id: e.target.value })}>
-              <option value="">Select item...</option>
+              <option value="">Selecione o material...</option>
               {items.map((it) => (
                 <option key={it.item_id} value={it.item_id}>{it.sku} - {it.item_name}</option>
               ))}
             </select>
           </div>
           <div className="form-group">
-            <label>Bin</label>
+            <label>Endereço</label>
             <select className="form-select" value={addForm.bin_id} onChange={(e) => setAddForm({ ...addForm, bin_id: e.target.value })}>
-              <option value="">Select bin...</option>
+              <option value="">Selecione o endereço...</option>
               {bins.map((b) => (
                 <option key={b.bin_id} value={b.bin_id}>{b.bin_code} - {b.zone_name || ''}</option>
               ))}
             </select>
           </div>
           <div className="form-group">
-            <label>Priority</label>
+            <label>Prioridade</label>
             <input className="form-input" type="number" min="1" value={addForm.priority} onChange={(e) => setAddForm({ ...addForm, priority: e.target.value })} style={{ width: 80 }} />
           </div>
         </Modal>

@@ -130,7 +130,7 @@ def login(validated):
         minutes = remaining // 60
         seconds = remaining % 60
         return jsonify({
-            "error": f"Too many failed login attempts for this account. Try again in {minutes}m {seconds}s",
+            "error": f"Muitas tentativas de login com falha nesta conta. Tente novamente em {minutes}m {seconds}s",
         }), 429
 
     user = authenticate_user(g.db, validated.username, validated.password)
@@ -142,10 +142,10 @@ def login(validated):
         locked, _ = _record_failure(g.db, lock_key, allow_lockout=True)
         if locked:
             return jsonify({
-                "error": f"Too many failed login attempts for this account. Locked for {LOCKOUT_MINUTES} minutes",
+                "error": f"Muitas tentativas de login com falha nesta conta. Bloqueada por {LOCKOUT_MINUTES} minutos",
             }), 429
         return jsonify({
-            "error": "Invalid username or password",
+            "error": "Usuário ou senha inválidos",
         }), 401
 
     # Successful login - reset both trackers for this account.
@@ -179,13 +179,13 @@ def logout():
     #   - Expired / invalid auth cookie -> clear cookies silently. The
     #     session is already dead, so stale-cleanup keeps working without
     #     demanding a CSRF token the client no longer has.
-    response = jsonify({"message": "logged out"})
+    response = jsonify({"message": "sessão encerrada"})
     auth_cookie = request.cookies.get(AUTH_COOKIE_NAME)
     if not auth_cookie:
         return response
     payload = decode_token(auth_cookie)
     if payload is not None and not csrf_token_matches():
-        return jsonify({"error": "CSRF token missing or invalid"}), 403
+        return jsonify({"error": "Token CSRF ausente ou inválido"}), 403
     clear_auth_cookies(response)
     return response
 
@@ -203,7 +203,7 @@ def me():
         {"uid": user_id},
     ).fetchone()
     if not row:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
     if row.role == "ADMIN":
         functions = list(ALL_FUNCTIONS)
@@ -268,7 +268,7 @@ def refresh():
         {"uid": g.current_user["user_id"]},
     ).fetchone()
     if not row or not row.is_active:
-        return jsonify({"error": "Account disabled or deleted"}), 401
+        return jsonify({"error": "Conta desativada ou excluída"}), 401
 
     user_dict = {
         "user_id": row.user_id,
@@ -307,7 +307,7 @@ def change_password(validated):
     ).fetchone()
 
     if not row or not bcrypt.checkpw(validated.current_password.encode("utf-8"), row.password_hash.encode("utf-8")):
-        return jsonify({"error": "Current password is incorrect"}), 403
+        return jsonify({"error": "A senha atual está incorreta"}), 403
 
     was_forced = bool(row.must_change_password)
 
@@ -334,4 +334,4 @@ def change_password(validated):
 
     g.db.commit()
 
-    return jsonify({"message": "Password changed"})
+    return jsonify({"message": "Senha alterada"})

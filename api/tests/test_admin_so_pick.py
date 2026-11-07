@@ -175,7 +175,7 @@ class TestAdminPickHappyPath:
 
         assert resp.status_code == 200, resp.get_json()
         body = resp.get_json()
-        assert body["message"] == "Admin pick applied"
+        assert body["message"] == "Separação admin aplicada"
         assert body["promoted_to_picked"] is True
         assert body["picks_applied"] == 1
         assert len(body["pick_task_ids"]) == 1

@@ -231,9 +231,7 @@ def delete_registered_connector(connector_id):
                     "consumer_groups": cg_count,
                     "webhook_subscriptions": ws_count,
                     "detail": (
-                        "the connector still has consumer_groups or "
-                        "webhook_subscriptions referencing it; migrate "
-                        "or delete dependents before retrying."
+                        "o conector ainda tem consumer_groups ou webhook_subscriptions referenciando-o; migre ou exclua os dependentes antes de tentar novamente."
                     ),
                 }
             ),

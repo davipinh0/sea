@@ -12,7 +12,7 @@ import './POSActivity.css';
 const STATUS_OPTIONS = ['', 'OPEN', 'ALLOCATED', 'PICKED', 'PACKED', 'SHIPPED', 'CANCELLED'];
 const ORDER_TYPE_OPTIONS = ['sale', 'refund', 'all'];
 const CHANNEL_OPTIONS = [['', 'All Channels'], ['counter', 'Counter (POS)'], ['phone', 'Phone Order']];
-const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DOW = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const fmtUsd = (c) => (c == null ? '-' : usd.format(c / 100));
@@ -31,8 +31,8 @@ function pct(part, whole) { return whole ? Math.round((part / whole) * 100) : 0;
 const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' }); // YYYY-MM-DD
 function addDays(ymd, n) { const d = new Date(`${ymd}T12:00:00`); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-CA'); }
 function dateLabel(ymd, isToday) {
-  if (isToday) return 'Today';
-  if (ymd === addDays(todayStr(), -1)) return 'Yesterday';
+  if (isToday) return 'Hoje';
+  if (ymd === addDays(todayStr(), -1)) return 'Ontem';
   try { return new Date(`${ymd}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
   catch { return ymd; }
 }
@@ -78,29 +78,29 @@ export default function POSActivity() {
   const asOf = new Date().toLocaleString('en-US', { timeZone: 'America/Denver', hour: 'numeric', minute: '2-digit' });
   const isToday = summary ? summary.is_today : date === todayStr();
   const selLabel = dateLabel(summary?.date || date, isToday);
-  const priorLabel = isToday ? 'yesterday' : 'prior day';
+  const priorLabel = isToday ? 'yesterday' : 'dia anterior';
 
   const columns = [
-    { key: 'so_number', label: 'SO #', mono: true },
-    { key: 'created_at', label: 'Date', render: (r) => fmtTs(r.created_at) },
-    { key: 'channel', label: 'Channel', render: (r) => r.channel || 'POS' },
+    { key: 'so_number', label: 'PV nº', mono: true },
+    { key: 'created_at', label: 'Dados', render: (r) => fmtTs(r.created_at) },
+    { key: 'channel', label: 'Canal', render: (r) => r.channel || 'POS' },
     { key: 'status', label: 'Status' },
     { key: 'terminal_id', label: 'Terminal', mono: true, render: (r) => r.terminal_id || '-' },
-    { key: 'customer_name', label: 'Customer', render: (r) => r.customer_name || '(walk-in)' },
+    { key: 'customer_name', label: 'Cliente', render: (r) => r.customer_name || '(walk-in)' },
     { key: 'total_cents', label: 'Total', render: (r) => fmtUsd(r.total_cents) },
-    { key: 'payment_method', label: 'Tender', render: (r) => r.payment_method || '-' },
-    { key: 'external_txn_ref', label: 'Windcave Ref', mono: true, render: (r) => r.external_txn_ref || '-' },
+    { key: 'payment_method', label: 'Forma de pagamento', render: (r) => r.payment_method || '-' },
+    { key: 'external_txn_ref', label: 'Ref. Windcave', mono: true, render: (r) => r.external_txn_ref || '-' },
   ];
 
   return (
     <div>
-      <PageHeader title="POS Activity">
+      <PageHeader title="Atividade PDV">
         <div className="pos-datebar">
-          <button className={`pos-dbtn${date === todayStr() ? ' on' : ''}`} onClick={() => { setDate(todayStr()); setPage(1); }}>Today</button>
-          <button className={`pos-dbtn${date === addDays(todayStr(), -1) ? ' on' : ''}`} onClick={() => { setDate(addDays(todayStr(), -1)); setPage(1); }}>Yesterday</button>
+          <button className={`pos-dbtn${date === todayStr() ? ' on' : ''}`} onClick={() => { setDate(todayStr()); setPage(1); }}>Hoje</button>
+          <button className={`pos-dbtn${date === addDays(todayStr(), -1) ? ' on' : ''}`} onClick={() => { setDate(addDays(todayStr(), -1)); setPage(1); }}>Ontem</button>
           <input type="date" className="form-input pos-dateinput" value={date} max={todayStr()}
             onChange={(e) => { if (e.target.value) { setDate(e.target.value); setPage(1); } }} />
-          <button className="btn" onClick={() => { loadSummary(); loadOrders(); }}>Refresh</button>
+          <button className="btn" onClick={() => { loadSummary(); loadOrders(); }}>Atualizar</button>
         </div>
       </PageHeader>
 
@@ -109,60 +109,60 @@ export default function POSActivity() {
         <div className="pos-card">
           <div className="pos-hero-top">
             <div>
-              <div className="pos-eyebrow">Net Revenue · {selLabel}</div>
+              <div className="pos-eyebrow">Receita líquida · {selLabel}</div>
               <div className="pos-net">{fmtUsd(net)}</div>
               <DeltaPill cents={vsY} suffix={`vs. ${priorLabel}`} />
               <div className="pos-net-sub">
-                <b>{t.sales_count || 0}</b> sales · <b>{t.refund_count || 0}</b> refunds · avg <b>{fmtUsd(t.avg_sale_cents || 0)}</b>
+                <b>{t.sales_count || 0}</b> vendas · <b>{t.refund_count || 0}</b> reembolsos · média <b>{fmtUsd(t.avg_sale_cents || 0)}</b>
               </div>
             </div>
             <div className="pos-asof">
-              {isToday ? `as of ${asOf} MT` : selLabel}
+              {isToday ? `em ${asOf} MT` : selLabel}
               <div className="pos-term-chips">
                 {terminals.length === 0
-                  ? <span className="pos-chip">no active terminals</span>
+                  ? <span className="pos-chip">nenhum terminal ativo</span>
                   : terminals.map((id) => <span className="pos-chip" key={id}><span className="dot" />{id}</span>)}
               </div>
             </div>
           </div>
           <div className="pos-legend">
             <span><i className="sw today" /> {selLabel}</span>
-            <span><i className="sw yest" /> {isToday ? 'Yesterday' : 'Prior day'}</span>
+            <span><i className="sw yest" /> {isToday ? 'Ontem' : 'Dia anterior'}</span>
           </div>
           <PaceCurve pace={summary?.pace} currentHour={summary?.current_hour ?? 23} />
         </div>
 
         {/* Full KPIs */}
         <div className="pos-kpis">
-          <Kpi label="This Week" value={fmtUsd(wk.this_total_cents || 0)}
+          <Kpi label="Esta semana" value={fmtUsd(wk.this_total_cents || 0)}
             sub={<DeltaText pct={wkDelta} suffix="vs last week" />} rail="var(--accent)" />
           <Kpi label="Counter (POS)" value={fmtUsd(t.counter_cents || 0)}
             sub={`${t.counter_count || 0} sales · ${pct(t.counter_cents, t.sales_total_cents)}%`} rail="var(--copper)" />
-          <Kpi label="Phone Orders" value={fmtUsd(t.phone_cents || 0)}
+          <Kpi label="Pedidos por telefone" value={fmtUsd(t.phone_cents || 0)}
             sub={`${t.phone_count || 0} orders · ${pct(t.phone_cents, t.sales_total_cents)}%`} rail="#1e5f8a" />
-          <Kpi label="Avg Sale" value={fmtUsd(t.avg_sale_cents || 0)} sub="per transaction" rail="var(--purple)" />
-          <Kpi label="Refunds" value={t.refund_count || 0} sub={fmtUsd(t.refund_total_cents || 0)} rail="var(--danger)" />
-          <Kpi label="Active Terminals" value={terminals.length || '-'} sub={`last 24h${terminals.length ? ' · ' + terminals.join(', ') : ''}`} rail="var(--success)" />
+          <Kpi label="Ticket médio" value={fmtUsd(t.avg_sale_cents || 0)} sub="per transaction" rail="var(--purple)" />
+          <Kpi label="Reembolsos" value={t.refund_count || 0} sub={fmtUsd(t.refund_total_cents || 0)} rail="var(--danger)" />
+          <Kpi label="Terminais ativos" value={terminals.length || '-'} sub={`last 24h${terminals.length ? ' · ' + terminals.join(', ') : ''}`} rail="var(--success)" />
         </div>
 
         {/* Trend + composition */}
         <div className="pos-row2">
           <div className="pos-card">
-            <div className="pos-panel-title">Daily revenue · this week vs last</div>
+            <div className="pos-panel-title">Receita diária · esta semana x anterior</div>
             <div className="pos-panel-note">
-              {fmtUsd(wk.this_total_cents || 0)} this week ·{' '}
+              {fmtUsd(wk.this_total_cents || 0)} esta semana ·{' '}
               <DeltaText pct={wkDelta} suffix="vs last week" inline />
             </div>
             <WeekBars week={summary?.week} />
           </div>
           <div className="pos-card">
-            <div className="pos-panel-title">Today's revenue mix</div>
-            <div className="pos-panel-note">how the money came in</div>
-            <SplitBar title="Channel" segs={[
-              { label: 'Counter', cents: t.counter_cents || 0, color: '#c4722a' },
-              { label: 'Phone', cents: t.phone_cents || 0, color: '#1e5f8a' },
+            <div className="pos-panel-title">Composição da receita de hoje</div>
+            <div className="pos-panel-note">como o dinheiro entrou</div>
+            <SplitBar title="Canal" segs={[
+              { label: 'Counter', cents: t.counter_cents || 0, color: '#6B7785' },
+              { label: 'Telefone', cents: t.phone_cents || 0, color: '#1e5f8a' },
             ]} />
-            <SplitBar title="Tender" segs={tenderSegs(summary?.tenders)} />
+            <SplitBar title="Forma de pagamento" segs={tenderSegs(summary?.tenders)} />
           </div>
         </div>
 
@@ -177,20 +177,20 @@ export default function POSActivity() {
           <select className="form-select" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} style={{ width: 'auto' }}>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
           </select>
-          <input className="form-input" placeholder="Terminal ID" value={terminalFilter} onChange={(e) => { setTerminalFilter(e.target.value); setPage(1); }} style={{ maxWidth: 200 }} />
+          <input className="form-input" placeholder="ID do terminal" value={terminalFilter} onChange={(e) => { setTerminalFilter(e.target.value); setPage(1); }} style={{ maxWidth: 200 }} />
         </div>
 
         <DataTable rowKey="so_id" columns={columns} data={salesOrders} pagination={pagination} onPageChange={setPage}
-          emptyMessage={loading ? 'Loading…' : 'No POS orders match the current filters.'} />
+          emptyMessage={loading ? 'Carregando…' : 'Nenhum pedido PDV corresponde aos filtros atuais.'} />
       </div>
     </div>
   );
 }
 
 function tenderSegs(tenders) {
-  const colors = { card: '#8e2715', cash: '#2d7a3a', split: '#c4722a', unknown: '#a89a88' };
+  const colors = { card: '#C2410C', cash: '#2d7a3a', split: '#6B7785', unknown: '#a89a88' };
   return (tenders || []).map((x) => ({
-    label: x.method ? x.method[0].toUpperCase() + x.method.slice(1) : 'Other',
+    label: x.method ? x.method[0].toUpperCase() + x.method.slice(1) : 'Outro',
     cents: x.cents, color: colors[x.method] || '#8a6d1b',
   }));
 }
@@ -223,7 +223,7 @@ function SplitBar({ title, segs }) {
       <div className="pos-split-head"><span>{title}</span><span>{fmtUsd(total)}</span></div>
       <div className="pos-splitbar">
         {total === 0
-          ? <div className="pos-splitseg" style={{ flex: 1, color: 'var(--text-secondary)', justifyContent: 'center' }}>no data</div>
+          ? <div className="pos-splitseg" style={{ flex: 1, color: 'var(--text-secondary)', justifyContent: 'center' }}>sem dados</div>
           : segs.filter((s) => s.cents > 0).map((s) => (
             <div key={s.label} className="pos-splitseg" style={{ flex: s.cents, background: s.color }} title={`${s.label} ${fmtUsd(s.cents)}`}>
               {pct(s.cents, total) >= 8 ? `${pct(s.cents, total)}%` : ''}
@@ -243,7 +243,7 @@ function SplitBar({ title, segs }) {
 const PW = 900, PH = 230, PP = { l: 14, r: 44, t: 18, b: 24 };
 function PaceCurve({ pace, currentHour }) {
   const [hover, setHover] = useState(null);
-  if (!pace) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Loading…</div></div>;
+  if (!pace) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Carregando…</div></div>;
   const td = pace.today.map((p) => p.cents);
   const yd = pace.yesterday.map((p) => p.cents);
 
@@ -254,7 +254,7 @@ function PaceCurve({ pace, currentHour }) {
     if (a > 0 || b > 0) active.push(h);
   }
   const yMax = Math.max(...td, ...yd, 0);
-  if (yMax === 0) return <div className="pos-chart-wrap"><div className="pos-chart-empty">No POS revenue today or yesterday.</div></div>;
+  if (yMax === 0) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Sem receita PDV hoje ou ontem.</div></div>;
 
   let lo = active.length ? Math.max(0, Math.min(...active) - 1) : 8;
   let hi = active.length ? Math.min(23, Math.max(Math.max(...active), currentHour) + 1) : 18;
@@ -282,11 +282,11 @@ function PaceCurve({ pace, currentHour }) {
 
   return (
     <div className="pos-chart-wrap">
-      <svg className="pos-chart" viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="Cumulative revenue, today vs yesterday">
+      <svg className="pos-chart" viewBox={`0 0 ${PW} ${PH}`} role="img" aria-label="Receita acumulada, hoje x ontem">
         <defs>
           <linearGradient id="paceFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#c4722a" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#c4722a" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#6B7785" stopOpacity="0.34" />
+            <stop offset="100%" stopColor="#6B7785" stopOpacity="0.02" />
           </linearGradient>
         </defs>
         {grid.map((g) => {
@@ -307,8 +307,8 @@ function PaceCurve({ pace, currentHour }) {
 
         {area && <path d={area} fill="url(#paceFill)" />}
         <path d={line(yestPts)} fill="none" stroke="#a89a88" strokeWidth="2" strokeDasharray="3 4" />
-        <path d={line(todayPts)} fill="none" stroke="#8e2715" strokeWidth="2.5" />
-        {todayPts.length > 0 && <circle cx={sx(nowH)} cy={sy(td[nowH])} r="4.5" fill="#8e2715" stroke="#fff" strokeWidth="2" />}
+        <path d={line(todayPts)} fill="none" stroke="#C2410C" strokeWidth="2.5" />
+        {todayPts.length > 0 && <circle cx={sx(nowH)} cy={sy(td[nowH])} r="4.5" fill="#C2410C" stroke="#fff" strokeWidth="2" />}
 
         {/* hover hit-areas per hour */}
         {[...Array(hi - lo + 1)].map((_, i) => {
@@ -324,9 +324,9 @@ function PaceCurve({ pace, currentHour }) {
       </svg>
       {hover && (
         <div className="pos-tip" style={{ left: `${(hover.x / PW) * 100}%`, top: `${(sy(Math.max(hover.today, hover.yest)) / PH) * 100}%` }}>
-          <div>by {fmtHour((hover.h + 1) % 24)}</div>
-          {!hover.future && <div className="tip-amt">{fmtUsd(hover.today)} <span style={{ fontWeight: 400 }}>today</span></div>}
-          <div className="tip-muted">{fmtUsd(hover.yest)} yesterday</div>
+          <div>por {fmtHour((hover.h + 1) % 24)}</div>
+          {!hover.future && <div className="tip-amt">{fmtUsd(hover.today)} <span style={{ fontWeight: 400 }}>hoje</span></div>}
+          <div className="tip-muted">{fmtUsd(hover.yest)} ontem</div>
         </div>
       )}
     </div>
@@ -337,10 +337,10 @@ function PaceCurve({ pace, currentHour }) {
 const WW = 900, WH = 200, WP = { l: 14, r: 40, t: 14, b: 22 };
 function WeekBars({ week }) {
   const [hover, setHover] = useState(null);
-  if (!week) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Loading…</div></div>;
+  if (!week) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Carregando…</div></div>;
   const thisW = week.this || [], lastW = week.last || [];
   const yMax = Math.max(...thisW.map((d) => d.net_cents), ...lastW.map((d) => d.net_cents), 0);
-  if (yMax === 0) return <div className="pos-chart-wrap"><div className="pos-chart-empty">No revenue this week or last.</div></div>;
+  if (yMax === 0) return <div className="pos-chart-wrap"><div className="pos-chart-empty">Sem receita nesta semana ou na anterior.</div></div>;
 
   const plotW = WW - WP.l - WP.r, plotH = WH - WP.t - WP.b;
   const slot = plotW / 7;
@@ -350,7 +350,7 @@ function WeekBars({ week }) {
 
   return (
     <div className="pos-chart-wrap">
-      <svg className="pos-chart hoverable" viewBox={`0 0 ${WW} ${WH}`} role="img" aria-label="Daily revenue this week vs last">
+      <svg className="pos-chart hoverable" viewBox={`0 0 ${WW} ${WH}`} role="img" aria-label="Receita diária desta semana x anterior">
         {grid.map((g) => {
           const y = WP.t + plotH - g * plotH;
           return (
@@ -372,8 +372,8 @@ function WeekBars({ week }) {
                 onMouseLeave={() => setHover(null)} />
               {!cur.is_future && (
                 <rect x={cx + 2} y={yb(cur.net_cents)} width={bw} height={Math.max(cur.net_cents > 0 ? 2 : 0, WP.t + plotH - yb(cur.net_cents))}
-                  rx="2" className={`pos-bar${cur.is_today ? ' is-active' : ''}`} fill={cur.is_today ? '#8e2715' : '#c4722a'}
-                  onMouseEnter={() => setHover({ d, which: cur.is_today ? 'today' : 'this week', cents: cur.net_cents, x: cx, y: yb(cur.net_cents) })}
+                  rx="2" className={`pos-bar${cur.is_today ? ' is-active' : ''}`} fill={cur.is_today ? '#C2410C' : '#6B7785'}
+                  onMouseEnter={() => setHover({ d, which: cur.is_today ? 'today' : 'esta semana', cents: cur.net_cents, x: cx, y: yb(cur.net_cents) })}
                   onMouseLeave={() => setHover(null)} />
               )}
               <text x={cx} y={WH - 6} className="pos-axis" textAnchor="middle" fontWeight={cur.is_today ? 700 : 400}>{d}</text>

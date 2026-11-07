@@ -49,7 +49,7 @@ function BarcodeSvg({ value, className, modulePx, height }) {
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label={`Barcode ${value}`}
+      aria-label={`Código de barras ${value}`}
     >
       {bars.map((b) => (
         <rect key={b.key} x={b.x} y={0} width={b.w} height={height} fill="#000" />
@@ -70,10 +70,10 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
     <div className="pt-page">
       {combineSiblings.length > 0 && (
         <div className="pt-combine">
-          <span className="pt-combine-label">SHIP WITH:</span>{' '}
+          <span className="pt-combine-label">EXPEDIR JUNTO COM:</span>{' '}
           {combineSiblings.join(', ')}{' '}
           <span className="pt-combine-count">
-            ({combineSiblings.length + 1} orders, one shipment)
+            ({combineSiblings.length + 1} pedidos, uma remessa)
           </span>
         </div>
       )}
@@ -83,7 +83,7 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
             <td rowSpan={3} className="pt-logo-cell">
               <div className="pt-logo-row">
                 {branding.logo_url && (
-                  <img src={branding.logo_url} className="pt-logo" alt={branding.company_name || 'Company logo'} />
+                  <img src={branding.logo_url} className="pt-logo" alt={branding.company_name || 'Logo da empresa'} />
                 )}
                 {(branding.company_name || branding.company_address) && (
                   <div className="pt-nameandaddress">
@@ -95,13 +95,13 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
                 )}
               </div>
             </td>
-            <td className="pt-right"><span className="pt-title">Packing Slip</span></td>
+            <td className="pt-right"><span className="pt-title">Romaneio</span></td>
           </tr>
           <tr>
-            <td className="pt-right"><span className="pt-number">Order #{orderNumber}</span></td>
+            <td className="pt-right"><span className="pt-number">Pedido nº{orderNumber}</span></td>
           </tr>
           <tr>
-            <td className="pt-right">Must ship by: {formatDateOnly(so.ship_by_date)}</td>
+            <td className="pt-right">Expedir até: {formatDateOnly(so.ship_by_date)}</td>
           </tr>
         </tbody>
       </table>
@@ -111,12 +111,12 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
       <table>
         <tbody>
           <tr>
-            <td className="pt-address-header"><b>Shipping Address</b></td>
+            <td className="pt-address-header"><b>Endereço de entrega</b></td>
             <td></td>
           </tr>
           <tr>
             <td className="pt-address">
-              <b>Ship To:</b><br />
+              <b>Entregar para:</b><br />
               {addressLines.map((l, i) => (
                 <span key={i}>{l}{i < addressLines.length - 1 ? <br /> : null}</span>
               ))}
@@ -135,7 +135,7 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
 
       <table className="pt-body">
         <tbody>
-          <tr><th>Shipping Method</th><th>Order Date</th></tr>
+          <tr><th>Método de envio</th><th>Data do pedido</th></tr>
           <tr>
             <td>{so.ship_method || ''}</td>
             <td>{formatDateOnly(so.order_date || so.created_at)}</td>
@@ -146,11 +146,11 @@ export function TicketDocument({ so, lines, branding = {}, combineWith = [] }) {
       <table className="pt-itemtable">
         <thead>
           <tr>
-            <th className="pt-center" colSpan={3}>Qty</th>
-            <th className="pt-center" colSpan={3}>Shipped</th>
-            <th colSpan={16}>Item</th>
-            <th colSpan={3}>Box</th>
-            <th className="pt-right" colSpan={5}>Bin</th>
+            <th className="pt-center" colSpan={3}>Qtd.</th>
+            <th className="pt-center" colSpan={3}>Expedido</th>
+            <th colSpan={16}>Material</th>
+            <th colSpan={3}>Caixa</th>
+            <th className="pt-right" colSpan={5}>Endereço</th>
             <th className="pt-right" colSpan={4}>UPC</th>
           </tr>
         </thead>
@@ -215,17 +215,17 @@ export default function PickingTicketPrint() {
       const res = await api.get(`/admin/sales-orders/${soId}/picking-ticket`);
       if (cancelled) return;
       if (!res) {
-        setError('Network error.');
+        setError('Erro de rede.');
         setLoading(false);
         return;
       }
       if (res.status === 404) {
-        setError(`Sales order #${soId} not found.`);
+        setError(`Pedido de venda nº${soId} não encontrado.`);
         setLoading(false);
         return;
       }
       if (!res.ok) {
-        setError(`Could not load sales order #${soId}.`);
+        setError(`Não foi possível carregar o pedido de venda nº${soId}.`);
         setLoading(false);
         return;
       }
@@ -253,9 +253,9 @@ export default function PickingTicketPrint() {
     return (
       <div className="pt-root">
         <div className="pt-toolbar pt-no-print">
-          <Link to="/picking-tickets" className="pt-back">&larr; Back</Link>
+          <Link to="/picking-tickets" className="pt-back">← Voltar</Link>
         </div>
-        <div className="pt-page">Loading ticket…</div>
+        <div className="pt-page">Carregando ficha…</div>
       </div>
     );
   }
@@ -264,11 +264,11 @@ export default function PickingTicketPrint() {
     return (
       <div className="pt-root">
         <div className="pt-toolbar pt-no-print">
-          <Link to="/picking-tickets" className="pt-back">&larr; Back</Link>
+          <Link to="/picking-tickets" className="pt-back">← Voltar</Link>
         </div>
         <div className="pt-page">
-          <h2>Could not render ticket</h2>
-          <p>{error || 'Sales order data was empty.'}</p>
+          <h2>Não foi possível gerar a ficha</h2>
+          <p>{error || 'Os dados do pedido de venda vieram vazios.'}</p>
         </div>
       </div>
     );
@@ -277,15 +277,15 @@ export default function PickingTicketPrint() {
   return (
     <div className="pt-root">
       <div className="pt-toolbar pt-no-print">
-        <Link to="/picking-tickets" className="pt-back">&larr; Back</Link>
+        <Link to="/picking-tickets" className="pt-back">← Voltar</Link>
         <button
           onClick={() => setRefreshCounter((c) => c + 1)}
           disabled={loading}
-          title="Re-fetch this ticket's data from the server"
+          title="Buscar novamente os dados desta ficha no servidor"
         >
-          {loading ? 'Refreshing…' : 'Refresh'}
+          {loading ? 'Atualizando…' : 'Atualizar'}
         </button>
-        <button onClick={() => window.print()}>Print</button>
+        <button onClick={() => window.print()}>Imprimir</button>
       </div>
       <TicketDocument so={so} lines={lines} branding={branding} />
     </div>

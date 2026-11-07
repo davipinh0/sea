@@ -12,25 +12,25 @@
 // they are end-user oriented (not internal diagnostics). Keys map to
 // the user-facing string the UI should show.
 const KNOWN_ERROR_MESSAGES = {
-  validation_error: 'One or more fields have invalid values.',
-  unsupported_media_type: 'That request format is not supported.',
-  'Invalid username or password': 'Wrong username or password.',
-  'Account disabled or deleted': 'Your account is no longer active. Contact an admin.',
-  'Token expired': 'Your session has expired. Please sign in again.',
-  Unauthorized: 'You need to sign in to continue.',
-  Forbidden: 'You do not have permission for that action.',
-  'CSRF token missing or invalid': 'Your session is out of sync. Refresh the page and try again.',
-  'Access denied for this warehouse': 'You do not have access to that warehouse.',
-  'Current password is incorrect': 'Current password is incorrect.',
-  'User not found': 'Account not found.',
-  "Password cannot be 'admin'": "Password cannot be 'admin'.",
-  'Password must be at least 8 characters': 'Password must be at least 8 characters.',
-  'Password must contain at least one letter': 'Password must contain at least one letter.',
-  'Password must contain at least one digit': 'Password must contain at least one digit.',
-  password_change_required: 'You must change your password before continuing.',
+  validation_error: 'Um ou mais campos têm valores inválidos.',
+  unsupported_media_type: 'Esse formato de requisição não é suportado.',
+  'Usuário ou senha inválidos': 'Usuário ou senha incorretos.',
+  'Conta desativada ou excluída': 'Sua conta não está mais ativa. Contate um administrador.',
+  'Sessão expirada': 'Sua sessão expirou. Entre novamente.',
+  Unauthorized: 'Você precisa entrar para continuar.',
+  Forbidden: 'Você não tem permissão para essa ação.',
+  'Token CSRF ausente ou inválido': 'Sua sessão está dessincronizada. Atualize a página e tente novamente.',
+  'Acesso negado a este armazém': 'Você não tem acesso a esse armazém.',
+  'A senha atual está incorreta': 'A senha atual está incorreta.',
+  'Usuário não encontrado': 'Conta não encontrada.',
+  "Password cannot be 'admin'": "A senha não pode ser 'admin'.",
+  'Password must be at least 8 characters': 'A senha deve ter pelo menos 8 caracteres.',
+  'Password must contain at least one letter': 'A senha deve conter pelo menos uma letra.',
+  'Password must contain at least one digit': 'A senha deve conter pelo menos um dígito.',
+  password_change_required: 'Você precisa alterar sua senha antes de continuar.',
 };
 
-export function friendlyError(payload, fallback = 'Something went wrong. Please try again.') {
+export function friendlyError(payload, fallback = 'Algo deu errado. Tente novamente.') {
   if (!payload || typeof payload !== 'object') return fallback;
   const code = payload.error;
   if (code && Object.prototype.hasOwnProperty.call(KNOWN_ERROR_MESSAGES, code)) {

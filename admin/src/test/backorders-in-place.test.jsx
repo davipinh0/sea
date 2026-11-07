@@ -113,12 +113,12 @@ describe('Backorders queue click-through ()', () => {
     await act(async () => { fireEvent.click(cell); });
 
     // The order modal is up...
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
     // ...the Sales Orders page was never reached...
     expect(screen.queryByText('SALES ORDERS PAGE')).toBeNull();
     expect(here.path.startsWith('/backorders')).toBe(true);
     // ...and the queue is still behind it.
-    expect(screen.getByText('Backorders')).toBeTruthy();
+    expect(screen.getByText('Pendências')).toBeTruthy();
   });
 
   it('defaults to the Waiting tab and puts it in the URL when switched', async () => {
@@ -127,7 +127,7 @@ describe('Backorders queue click-through ()', () => {
     await screen.findByText('SO-900-BO');
     expect(backordersCalls()[0]).toContain('tab=waiting');
 
-    await act(async () => { fireEvent.click(screen.getByText('Ready to Ship')); });
+    await act(async () => { fireEvent.click(screen.getByText('Pronto para expedir')); });
 
     await waitFor(() => expect(here.path).toContain('tab=ready-to-ship'));
     expect(backordersCalls().some((p) => p.includes('tab=ready-to-ship'))).toBe(true);
@@ -139,7 +139,7 @@ describe('Backorders queue click-through ()', () => {
     await waitFor(() => expect(backordersCalls().length).toBeGreaterThan(0));
     // The queue the operator linked to is the one that gets fetched.
     expect(backordersCalls()[0]).toContain('tab=ready-to-ship');
-    expect(screen.getByRole('tab', { name: 'Ready to Ship' }).getAttribute('aria-selected'))
+    expect(screen.getByRole('tab', { name: 'Pronto para expedir' }).getAttribute('aria-selected'))
       .toBe('true');
   });
 
@@ -155,7 +155,7 @@ describe('Backorders queue click-through ()', () => {
     wire();
     renderAt('/backorders?warehouse=3');
     await screen.findByText('SO-900-BO');
-    await act(async () => { fireEvent.click(screen.getByText('Ready to Ship')); });
+    await act(async () => { fireEvent.click(screen.getByText('Pronto para expedir')); });
     await waitFor(() => expect(here.path).toContain('tab=ready-to-ship'));
     expect(here.path).toContain('warehouse=3');
   });
@@ -165,11 +165,11 @@ describe('Backorders queue click-through ()', () => {
     renderAt();
     await screen.findByText('SO-900-BO');
 
-    await act(async () => { fireEvent.click(screen.getByText('Cancel')); });
+    await act(async () => { fireEvent.click(screen.getByText('Cancelar')); });
 
-    expect(screen.getByText('Cancel backorder SO-900-BO?')).toBeTruthy();
+    expect(screen.getByText('Cancelar pendência SO-900-BO?')).toBeTruthy();
     // stopPropagation held: the order modal did not also open.
-    expect(screen.queryByText('Order Summary')).toBeNull();
+    expect(screen.queryByText('Resumo do pedido')).toBeNull();
   });
 
   it('closing the modal leaves the operator on their tab', async () => {
@@ -177,11 +177,11 @@ describe('Backorders queue click-through ()', () => {
     renderAt('/backorders?tab=ready-to-ship');
     const cell = await screen.findByText('SO-900-BO');
     await act(async () => { fireEvent.click(cell); });
-    await waitFor(() => expect(screen.getByText('Order Summary')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Resumo do pedido')).toBeTruthy());
 
-    await act(async () => { fireEvent.click(screen.getByText('Close')); });
+    await act(async () => { fireEvent.click(screen.getByText('Fechar')); });
 
-    await waitFor(() => expect(screen.queryByText('Order Summary')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Resumo do pedido')).toBeNull());
     expect(here.path).toContain('tab=ready-to-ship');
   });
 });

@@ -184,12 +184,12 @@ export default function InterWarehouseTransfers() {
     setSuccess('');
 
     if (!form.source_warehouse_id || !form.source_bin_id || !form.destination_warehouse_id || !form.destination_bin_id || !form.item_id || !form.quantity) {
-      setError('All fields are required.');
+      setError('Todos os campos são obrigatórios.');
       return;
     }
 
     if (Number(form.quantity) < 1) {
-      setError('Quantity must be at least 1.');
+      setError('A quantidade deve ser pelo menos 1.');
       return;
     }
 
@@ -206,7 +206,7 @@ export default function InterWarehouseTransfers() {
       const res = await api.post('/admin/inter-warehouse-transfer', body);
       if (res?.ok) {
         const data = await res.json();
-        setSuccess(data.message || 'Transfer created successfully.');
+        setSuccess(data.message || 'Transferência criada com sucesso.');
         setForm({ source_warehouse_id: '', source_bin_id: '', destination_warehouse_id: '', destination_bin_id: '', item_id: '', quantity: '' });
         setSourceBinSearch('');
         setDestBinSearch('');
@@ -214,10 +214,10 @@ export default function InterWarehouseTransfers() {
         loadTransfers();
       } else {
         const data = await res.json().catch(() => null);
-        setError(data?.error || `Transfer failed (${res.status}).`);
+        setError(data?.error || `Falha na transferência (${res.status}).`);
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      setError('Erro de rede. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
@@ -235,29 +235,29 @@ export default function InterWarehouseTransfers() {
 
   return (
     <div>
-      <PageHeader title="Inter-Warehouse Transfers" />
+      <PageHeader title="Transferências entre armazéns" />
 
       <div className="settings-section">
-        <h3>Create Transfer</h3>
+        <h3>Criar transferência</h3>
         {error && <div className="form-error" style={{ color: '#c0392b', marginBottom: 12 }}>{error}</div>}
         {success && <div className="form-success" style={{ color: '#27ae60', marginBottom: 12 }}>{success}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
-              <label>Source Warehouse</label>
+              <label>Armazém de origem</label>
               <select className="form-select" value={form.source_warehouse_id} onChange={(e) => updateField('source_warehouse_id', e.target.value)}>
-                <option value="">Select warehouse...</option>
+                <option value="">Selecione o armazém...</option>
                 {warehouses.map((w) => (
                   <option key={w.warehouse_id} value={w.warehouse_id}>{w.warehouse_name} ({w.warehouse_code})</option>
                 ))}
               </select>
             </div>
             <div className="form-group" ref={sourceBinRef} style={{ position: 'relative' }}>
-              <label>Source Bin {sourceBinQuery.searching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(searching...)</span>}</label>
+              <label>Endereço de origem {sourceBinQuery.searching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(buscando...)</span>}</label>
               <input
                 className="form-input mono"
-                placeholder={form.source_warehouse_id ? 'Type bin code to search' : 'Pick warehouse first'}
+                placeholder={form.source_warehouse_id ? 'Digite o código do endereço para buscar' : 'Escolha o armazém primeiro'}
                 value={sourceBinSearch}
                 onChange={(e) => { setSourceBinSearch(e.target.value); updateField('source_bin_id', ''); setSourceBinOpen(true); }}
                 onFocus={() => setSourceBinOpen(true)}
@@ -275,7 +275,7 @@ export default function InterWarehouseTransfers() {
               )}
               {sourceBinOpen && !sourceBinQuery.searching && sourceBinSearch.trim().length >= 1 && !form.source_bin_id && sourceBinQuery.results.length === 0 && (
                 <div style={{ ...dropdownStyle, padding: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  No bins match "{sourceBinSearch.trim()}" in this warehouse.
+                  Nenhum endereço corresponde a "{sourceBinSearch.trim()}" neste armazém.
                 </div>
               )}
             </div>
@@ -283,19 +283,19 @@ export default function InterWarehouseTransfers() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Destination Warehouse</label>
+              <label>Armazém de destino</label>
               <select className="form-select" value={form.destination_warehouse_id} onChange={(e) => updateField('destination_warehouse_id', e.target.value)}>
-                <option value="">Select warehouse...</option>
+                <option value="">Selecione o armazém...</option>
                 {warehouses.map((w) => (
                   <option key={w.warehouse_id} value={w.warehouse_id}>{w.warehouse_name} ({w.warehouse_code})</option>
                 ))}
               </select>
             </div>
             <div className="form-group" ref={destBinRef} style={{ position: 'relative' }}>
-              <label>Destination Bin {destBinQuery.searching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(searching...)</span>}</label>
+              <label>Endereço de destino {destBinQuery.searching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(buscando...)</span>}</label>
               <input
                 className="form-input mono"
-                placeholder={form.destination_warehouse_id ? 'Type bin code to search' : 'Pick warehouse first'}
+                placeholder={form.destination_warehouse_id ? 'Digite o código do endereço para buscar' : 'Escolha o armazém primeiro'}
                 value={destBinSearch}
                 onChange={(e) => { setDestBinSearch(e.target.value); updateField('destination_bin_id', ''); setDestBinOpen(true); }}
                 onFocus={() => setDestBinOpen(true)}
@@ -313,7 +313,7 @@ export default function InterWarehouseTransfers() {
               )}
               {destBinOpen && !destBinQuery.searching && destBinSearch.trim().length >= 1 && !form.destination_bin_id && destBinQuery.results.length === 0 && (
                 <div style={{ ...dropdownStyle, padding: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  No bins match "{destBinSearch.trim()}" in this warehouse.
+                  Nenhum endereço corresponde a "{destBinSearch.trim()}" neste armazém.
                 </div>
               )}
             </div>
@@ -321,10 +321,10 @@ export default function InterWarehouseTransfers() {
 
           <div className="form-row">
             <div className="form-group" ref={itemRef} style={{ position: 'relative' }}>
-              <label>Item {itemSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(searching...)</span>}</label>
+              <label>Material {itemSearching && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>(buscando...)</span>}</label>
               <input
                 className="form-input"
-                placeholder="Type SKU or item name (min 2 chars)"
+                placeholder="Digite o SKU ou nome do material (mín. 2 caracteres)"
                 value={itemSearch}
                 onChange={(e) => { setItemSearch(e.target.value); updateField('item_id', ''); setItemOpen(true); }}
                 onFocus={() => setItemOpen(true)}
@@ -341,40 +341,40 @@ export default function InterWarehouseTransfers() {
               )}
               {itemOpen && !itemSearching && itemSearch.trim().length >= 2 && !form.item_id && itemResults.length === 0 && (
                 <div style={{ ...dropdownStyle, padding: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  No items match "{itemSearch.trim()}".
+                  Nenhum material corresponde a "{itemSearch.trim()}".
                 </div>
               )}
             </div>
             <div className="form-group">
-              <label>Quantity</label>
-              <input className="form-input" type="number" min="1" value={form.quantity} onChange={(e) => updateField('quantity', e.target.value)} placeholder="Qty" />
+              <label>Quantidade</label>
+              <input className="form-input" type="number" min="1" value={form.quantity} onChange={(e) => updateField('quantity', e.target.value)} placeholder="Qtd." />
             </div>
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={submitting}>
-            {submitting ? 'Submitting...' : 'Create Transfer'}
+            {submitting ? 'Enviando...' : 'Criar transferência'}
           </button>
         </form>
       </div>
 
       <div className="settings-section" style={{ marginTop: 24 }}>
-        <h3>Recent Transfers</h3>
+        <h3>Transferências recentes</h3>
         <div className="data-table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Material</th>
+                <th>Qtd.</th>
+                <th>De</th>
+                <th>Até</th>
                 <th>Status</th>
-                <th>Created</th>
+                <th>Criado</th>
               </tr>
             </thead>
             <tbody>
               {transfers.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#999' }}>No transfers found</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#999' }}>Nenhuma transferência encontrada</td></tr>
               )}
               {transfers.map((t) => (
                 <tr key={t.transfer_id || t.id}>

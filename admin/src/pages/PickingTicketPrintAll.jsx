@@ -141,7 +141,7 @@ export default function PickingTicketPrintAll() {
       }
       if (cancelled) return;
       if (out.length === 0) {
-        setError('No tickets could be loaded.');
+        setError('Nenhuma ficha pôde ser carregada.');
         setLoading(false);
         return;
       }
@@ -194,23 +194,23 @@ export default function PickingTicketPrintAll() {
   // tell the queue tabs apart.
   useEffect(() => {
     if (loading) {
-      document.title = 'Loading picking tickets…';
+      document.title = 'Carregando fichas de separação…';
     } else if (error) {
-      document.title = 'Picking tickets - error';
+      document.title = 'Fichas de separação - erro';
     } else {
-      document.title = `Picking tickets (${tickets.length}) - ${status}`;
+      document.title = `Fichas de separação (${tickets.length}) - ${status}`;
     }
   }, [loading, error, tickets.length, status]);
 
   if (loading) {
-    return <div className="pt-root"><div className="pt-page">Loading tickets…</div></div>;
+    return <div className="pt-root"><div className="pt-page">Carregando fichas…</div></div>;
   }
 
   if (error) {
     return (
       <div className="pt-root">
         <div className="pt-page">
-          <h2>Could not render tickets</h2>
+          <h2>Não foi possível gerar as fichas</h2>
           <p>{error}</p>
         </div>
       </div>
@@ -221,8 +221,8 @@ export default function PickingTicketPrintAll() {
     return (
       <div className="pt-root">
         <div className="pt-page">
-          <h2>No tickets to print</h2>
-          <p>No sales orders matched status {status}.</p>
+          <h2>Nenhuma ficha para imprimir</h2>
+          <p>Nenhum pedido de venda com o status {status}.</p>
         </div>
       </div>
     );
@@ -233,14 +233,13 @@ export default function PickingTicketPrintAll() {
       {markPrintedFailed && (
         <div className="pt-toast pt-no-print" role="alert">
           <span>
-            Some tickets may not have been marked as printed. Refresh
-            the list to verify, or retry.
+            Algumas fichas podem não ter sido marcadas como impressas. Atualize a lista para verificar ou tente novamente.
           </span>
           <button type="button" onClick={retryMarkPrinted} disabled={retryingMark}>
-            {retryingMark ? 'Retrying…' : 'Retry'}
+            {retryingMark ? 'Tentando novamente…' : 'Tentar novamente'}
           </button>
           <button type="button" onClick={() => setMarkPrintedFailed(false)}>
-            Dismiss
+            Dispensar
           </button>
         </div>
       )}

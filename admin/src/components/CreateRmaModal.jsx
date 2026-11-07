@@ -47,7 +47,7 @@ export default function CreateRmaModal({ so, lines, onClose, onCreated }) {
       }
     }
     if (body.lines.length === 0) {
-      setError('Select at least one line to return');
+      setError('Selecione pelo menos uma linha para devolver');
       return;
     }
     if (memo.trim()) body.memo = memo.trim();
@@ -58,25 +58,25 @@ export default function CreateRmaModal({ so, lines, onClose, onCreated }) {
       onCreated?.(await res.json());
     } else {
       const data = await res?.json();
-      setError(data?.error || 'Failed to create RMA');
+      setError(data?.error || 'Falha ao criar RMA');
       setSaving(false);
     }
   }
 
   return (
     <Modal
-      title={`Create RMA for ${so.so_number}`}
+      title={`Criar RMA para ${so.so_number}`}
       onClose={onClose}
       size="wide"
       footer={
         <>
-          <button className="btn" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn" onClick={onClose} disabled={saving}>Cancelar</button>
           <button
             className="btn btn-primary"
             onClick={submit}
             disabled={saving || returnableLines.length === 0}
           >
-            {saving ? 'Creating...' : 'Create RMA'}
+            {saving ? 'Criando...' : 'Criar RMA'}
           </button>
         </>
       }
@@ -84,7 +84,7 @@ export default function CreateRmaModal({ so, lines, onClose, onCreated }) {
       {error && <div className="form-error">{error}</div>}
       {returnableLines.length === 0 ? (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          No shipped lines to return.
+          Nenhuma linha expedida para devolver.
         </p>
       ) : (
         <table className="lines-table">
@@ -92,9 +92,9 @@ export default function CreateRmaModal({ so, lines, onClose, onCreated }) {
             <tr>
               <th style={{ width: 36 }}></th>
               <th>SKU</th>
-              <th>Item</th>
-              <th style={{ textAlign: 'right' }}>Shipped</th>
-              <th style={{ width: 100, textAlign: 'right' }}>Return Qty</th>
+              <th>Material</th>
+              <th style={{ textAlign: 'right' }}>Expedido</th>
+              <th style={{ width: 100, textAlign: 'right' }}>Qtd. devolvida</th>
             </tr>
           </thead>
           <tbody>
@@ -140,12 +140,12 @@ export default function CreateRmaModal({ so, lines, onClose, onCreated }) {
       {returnableLines.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            Note (optional)
+            Observação (opcional)
           </label>
           <textarea
             className="form-input"
             rows={2}
-            placeholder="Operator note on this RMA"
+            placeholder="Observação do operador sobre este RMA"
             value={memo}
             data-testid="create-rma-memo"
             onChange={(e) => setMemo(e.target.value)}

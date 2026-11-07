@@ -34,7 +34,7 @@ def create_cycle_count(validated):
         {"wh": warehouse_id},
     ).fetchone()
     if not wh:
-        return jsonify({"error": "Warehouse not found"}), 404
+        return jsonify({"error": "Armazém não encontrado"}), 404
 
     # Validate all bins
     for bid in bin_ids:
@@ -43,7 +43,7 @@ def create_cycle_count(validated):
             {"bid": bid, "wh": warehouse_id},
         ).fetchone()
         if not b:
-            return jsonify({"error": f"Bin {bid} not found in warehouse {warehouse_id}"}), 404
+            return jsonify({"error": f"Endereço {bid} não encontrado no armazém {warehouse_id}"}), 404
 
     username = g.current_user["username"]
     counts = []
@@ -109,7 +109,7 @@ def create_cycle_count(validated):
 
     g.db.commit()
 
-    return jsonify({"message": "Cycle counts created", "counts": counts})
+    return jsonify({"message": "Contagens cíclicas criadas", "counts": counts})
 
 
 @inventory_bp.route("/cycle-count/<int:count_id>")
@@ -130,7 +130,7 @@ def get_cycle_count(count_id):
     ).fetchone()
 
     if not cc:
-        return jsonify({"error": "Cycle count not found"}), 404
+        return jsonify({"error": "Contagem cíclica não encontrada"}), 404
 
     ok, denied = check_warehouse_access(cc.warehouse_id)
     if not ok:
@@ -215,14 +215,14 @@ def submit_cycle_count(validated):
     ).fetchone()
 
     if not cc:
-        return jsonify({"error": "Cycle count not found"}), 404
+        return jsonify({"error": "Contagem cíclica não encontrada"}), 404
 
     ok, denied = check_warehouse_access(cc.warehouse_id)
     if not ok:
         return denied
 
     if cc.status not in (COUNT_PENDING, COUNT_IN_PROGRESS):
-        return jsonify({"error": f"Cycle count status is {cc.status}, cannot submit"}), 400
+        return jsonify({"error": f"O status da contagem cíclica é {cc.status}, não é possível enviar"}), 400
 
     username = g.current_user["username"]
     adjustments = []
@@ -239,7 +239,7 @@ def submit_cycle_count(validated):
             item_id = sub.item_id
             sku = sub.sku or "UNKNOWN"
             if not item_id:
-                return jsonify({"error": "item_id required for unexpected lines"}), 400
+                return jsonify({"error": "item_id é obrigatório para linhas não esperadas"}), 400
 
             # Idempotent per (count_id, item_id): a count covers one bin, so an
             # item belongs to exactly one line. If a line for this item already
@@ -318,7 +318,7 @@ def submit_cycle_count(validated):
         ).fetchone()
 
         if not cl:
-            return jsonify({"error": f"Count line {cl_id} not found on this cycle count"}), 400
+            return jsonify({"error": f"Linha de contagem {cl_id} não encontrada nesta contagem cíclica"}), 400
 
         # 1. Update count line
         g.db.execute(
@@ -409,7 +409,7 @@ def submit_cycle_count(validated):
     g.db.commit()
 
     return jsonify({
-        "message": "Cycle count submitted",
+        "message": "Contagem cíclica enviada",
         "count_id": count_id,
         "bin_code": cc.bin_code,
         "status": final_status,

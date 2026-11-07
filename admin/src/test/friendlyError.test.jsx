@@ -8,19 +8,19 @@ import { friendlyError } from '../utils/friendlyError.js';
 describe('friendlyError', () => {
   it('maps known error codes to user-friendly strings', () => {
     expect(friendlyError({ error: 'validation_error' })).toBe(
-      'One or more fields have invalid values.'
+      'Um ou mais campos têm valores inválidos.'
     );
-    expect(friendlyError({ error: 'Invalid username or password' })).toBe(
-      'Wrong username or password.'
+    expect(friendlyError({ error: 'Usuário ou senha inválidos' })).toBe(
+      'Usuário ou senha incorretos.'
     );
-    expect(friendlyError({ error: 'CSRF token missing or invalid' })).toBe(
-      'Your session is out of sync. Refresh the page and try again.'
+    expect(friendlyError({ error: 'Token CSRF ausente ou inválido' })).toBe(
+      'Sua sessão está dessincronizada. Atualize a página e tente novamente.'
     );
   });
 
   it('returns fallback for unknown error codes', () => {
     expect(friendlyError({ error: 'some_internal_code' })).toBe(
-      'Something went wrong. Please try again.'
+      'Algo deu errado. Tente novamente.'
     );
   });
 
@@ -42,12 +42,12 @@ describe('friendlyError', () => {
   });
 
   it('handles null/non-object payloads safely', () => {
-    expect(friendlyError(null)).toBe('Something went wrong. Please try again.');
-    expect(friendlyError(undefined)).toBe('Something went wrong. Please try again.');
-    expect(friendlyError('some string')).toBe('Something went wrong. Please try again.');
+    expect(friendlyError(null)).toBe('Algo deu errado. Tente novamente.');
+    expect(friendlyError(undefined)).toBe('Algo deu errado. Tente novamente.');
+    expect(friendlyError('some string')).toBe('Algo deu errado. Tente novamente.');
   });
 
   it('handles payload with no error field', () => {
-    expect(friendlyError({})).toBe('Something went wrong. Please try again.');
+    expect(friendlyError({})).toBe('Algo deu errado. Tente novamente.');
   });
 });

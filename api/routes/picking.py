@@ -213,13 +213,13 @@ def get_batch(batch_id):
         {"bid": batch_id},
     ).fetchone()
     if not batch_row:
-        return jsonify({"error": "Batch not found"}), 404
+        return jsonify({"error": "Lote não encontrado"}), 404
     ok, denied = check_warehouse_access(batch_row.warehouse_id)
     if not ok:
         return denied
     result = get_batch_tasks(g.db, batch_id)
     if not result:
-        return jsonify({"error": "Batch not found"}), 404
+        return jsonify({"error": "Lote não encontrado"}), 404
     return jsonify(result)
 
 
@@ -264,7 +264,7 @@ def confirm(validated):
             quantity_picked=validated.quantity_picked,
             username=g.current_user["username"],
         )
-        return jsonify({"message": "Pick confirmed", **result})
+        return jsonify({"message": "Separação confirmada", **result})
     except BarcodeError as e:
         g.db.rollback()
         return jsonify({"error": str(e)}), 400
@@ -294,7 +294,7 @@ def short(validated):
             quantity_available=validated.quantity_available,
             username=g.current_user["username"],
         )
-        return jsonify({"message": "Short pick recorded", **result})
+        return jsonify({"message": "Separação com falta registrada", **result})
     except ValueError as e:
         g.db.rollback()
         return jsonify({"error": str(e)}), 400
@@ -320,7 +320,7 @@ def complete(validated):
             batch_id=validated.batch_id,
             username=g.current_user["username"],
         )
-        return jsonify({"message": "Batch completed", **result})
+        return jsonify({"message": "Lote concluído", **result})
     except ValueError as e:
         g.db.rollback()
         return jsonify({"error": str(e)}), 400
@@ -345,7 +345,7 @@ def cancel_batch(validated):
         {"bid": batch_id},
     ).fetchone()
     if not batch:
-        return jsonify({"error": "Batch not found"}), 404
+        return jsonify({"error": "Lote não encontrado"}), 404
 
     ok, denied = check_warehouse_access(batch.warehouse_id)
     if not ok:
@@ -357,6 +357,6 @@ def cancel_batch(validated):
     )
     g.db.commit()
     return jsonify({
-        "message": "Batch cancelled",
+        "message": "Lote cancelado",
         "released_tasks": result["released_tasks"],
     })

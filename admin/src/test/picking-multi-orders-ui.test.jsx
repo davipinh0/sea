@@ -78,14 +78,14 @@ describe('PickingTickets Multi-Orders toggle', () => {
     expect(screen.getByText('SO-1002')).toBeInTheDocument();
     expect(screen.getByText('SO-1003')).toBeInTheDocument();
     // No Group column in the default view.
-    expect(screen.queryByRole('columnheader', { name: 'Group' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Grupo' })).toBeNull();
   });
 
   it('filters to only same-address groups and labels the cluster when toggled on', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('SO-1001')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByLabelText('Multi-Orders'));
+    fireEvent.click(screen.getByLabelText('Pedidos múltiplos'));
 
     // The 2-order Denver group stays; the lone SO-1003 drops out.
     await waitFor(() => expect(screen.queryByText('SO-1003')).toBeNull());
@@ -93,7 +93,7 @@ describe('PickingTickets Multi-Orders toggle', () => {
     expect(screen.getByText('SO-1002')).toBeInTheDocument();
 
     // Group column appears and labels the cluster #1 with its size (2).
-    expect(screen.getByRole('columnheader', { name: 'Group' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Grupo' })).toBeInTheDocument();
     expect(screen.getAllByText('#1 (2)')).toHaveLength(2);
   });
 
@@ -112,10 +112,10 @@ describe('PickingTickets Multi-Orders toggle', () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByText('SO-1001')).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText('Multi-Orders'));
+    fireEvent.click(screen.getByLabelText('Pedidos múltiplos'));
     // Same street address, different recipients: never a combine group.
     await waitFor(() =>
-      expect(screen.getByText('No multi-order groups in this queue')).toBeInTheDocument(),
+      expect(screen.getByText('Nenhum grupo de pedidos múltiplos nesta fila')).toBeInTheDocument(),
     );
   });
 
@@ -125,14 +125,14 @@ describe('PickingTickets Multi-Orders toggle', () => {
     await waitFor(() => expect(screen.getByText('SO-1001')).toBeInTheDocument());
 
     // Default view: plain Print All, no combine flag.
-    fireEvent.click(screen.getByRole('button', { name: /Print All/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Imprimir todos/ }));
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy.mock.calls[0][0]).not.toContain('combine=1');
 
     // Multi-Orders view: the print tab is told banners were requested.
-    fireEvent.click(screen.getByLabelText('Multi-Orders'));
+    fireEvent.click(screen.getByLabelText('Pedidos múltiplos'));
     await waitFor(() => expect(screen.queryByText('SO-1003')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: /Print All/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Imprimir todos/ }));
     expect(openSpy).toHaveBeenCalledTimes(2);
     const multiUrl = openSpy.mock.calls[1][0];
     expect(multiUrl).toContain('combine=1');
@@ -149,9 +149,9 @@ describe('PickingTickets Multi-Orders toggle', () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByText('SO-1003')).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText('Multi-Orders'));
+    fireEvent.click(screen.getByLabelText('Pedidos múltiplos'));
     await waitFor(() =>
-      expect(screen.getByText('No multi-order groups in this queue')).toBeInTheDocument(),
+      expect(screen.getByText('Nenhum grupo de pedidos múltiplos nesta fila')).toBeInTheDocument(),
     );
   });
 });
@@ -168,9 +168,9 @@ describe('TicketDocument combine banner', () => {
     const { container } = render(<TicketDocument so={so} lines={[]} combineWith={['SO-1002', 'SO-1003']} />);
     const banner = container.querySelector('.pt-combine');
     expect(banner).toBeTruthy();
-    expect(within(banner).getByText('SHIP WITH:')).toBeInTheDocument();
+    expect(within(banner).getByText('EXPEDIR JUNTO COM:')).toBeInTheDocument();
     expect(banner.textContent).toContain('SO-1002, SO-1003');
-    expect(banner.textContent).toContain('3 orders, one shipment');
+    expect(banner.textContent).toContain('3 pedidos, uma remessa');
   });
 
   it('renders no banner when there are no siblings (normal single ticket)', () => {

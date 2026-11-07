@@ -94,7 +94,7 @@ class TestReceivingNoExistenceOracle:
             headers=headers,
         )
         assert resp.status_code == 404
-        assert "not found" in resp.get_json()["error"].lower()
+        assert "não encontrado" in resp.get_json()["error"].lower()
 
     def test_missing_barcode_returns_same_404(self, client):
         headers = _login_as(client, "wh1_recv_missing", [1])
@@ -227,7 +227,7 @@ class TestPreferredBinCrossWarehouse:
             headers=headers,
         )
         assert resp.status_code == 403
-        assert "Access denied" in resp.get_json()["error"]
+        assert "Acesso negado" in resp.get_json()["error"]
 
     def test_non_admin_can_target_bin_in_own_warehouse(self, client):
         headers = _login_as(client, "wh1_pref_ok", [1])

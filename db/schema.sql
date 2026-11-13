@@ -2203,3 +2203,248 @@ CREATE TABLE IF NOT EXISTS channel_recompute_state (
 INSERT INTO channel_recompute_state (only_row, last_cursor)
 VALUES (TRUE, 0)
 ON CONFLICT (only_row) DO NOTHING;
+
+-- ============================================================
+-- 082_sea.sql - SEA (Sistema de Expedição e Armazenamento)
+-- ============================================================
+-- Adapts the Sentry WMS schema for the SEA prototype:
+--   * Ordem de Transferência (OT) = purchase_orders row with an
+--     order_type of PM11 or PM12. Received stock carries the OT number
+--     as inventory.lot_number, which links every unit back to its OT.
+--   * SP12 storage rules: configurable bin capacity, size class
+--     (e.g. A3 for small parts) and material compatibility groups.
+--     All new limits default to NULL = "not configured / no limit";
+--     the prototype never invents numeric capacities.
+--   * Employee badge (RFID/NFC HID, simulated) on users.
+--   * Withdrawals (retiradas) requested at the touchscreen terminal.
+--     Requested quantities are reserved in inventory.quantity_allocated
+--     and only leave quantity_on_hand when the employee confirms the
+--     handover with their badge.
+--
+-- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
+-- ============================================================
+
+-- OT type (PM11 / PM12). NULL for non-SEA purchase orders.
+ALTER TABLE purchase_orders
+    ADD COLUMN IF NOT EXISTS order_type VARCHAR(4)
+    CHECK (order_type IS NULL OR order_type IN ('PM11', 'PM12'));
+CREATE INDEX IF NOT EXISTS ix_purchase_orders_order_type
+    ON purchase_orders(order_type) WHERE order_type IS NOT NULL;
+
+-- Employee badge identifier (simulated RFID/NFC HID reader).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS badge_uid VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_badge_uid
+    ON users(badge_uid) WHERE badge_uid IS NOT NULL;
+
+-- SP12 storage rules. NULL = not configured (no limit / any class).
+ALTER TABLE bins
+    ADD COLUMN IF NOT EXISTS capacity_units INT
+    CHECK (capacity_units IS NULL OR capacity_units > 0);
+ALTER TABLE bins
+    ADD COLUMN IF NOT EXISTS size_class VARCHAR(20)
+    CHECK (size_class IS NULL OR size_class IN ('PEQUENO', 'GRANDE'));
+ALTER TABLE items
+    ADD COLUMN IF NOT EXISTS size_class VARCHAR(20)
+    CHECK (size_class IS NULL OR size_class IN ('PEQUENO', 'GRANDE'));
+-- Materials sharing the same compat_group may share an address.
+-- NULL = only shares an address with the same material.
+ALTER TABLE items ADD COLUMN IF NOT EXISTS compat_group VARCHAR(50);
+
+-- Withdrawals (retiradas) requested at the terminal.
+CREATE TABLE IF NOT EXISTS withdrawals (
+    withdrawal_id        SERIAL PRIMARY KEY,
+    warehouse_id         INT NOT NULL REFERENCES warehouses(warehouse_id),
+    po_id                INT NOT NULL REFERENCES purchase_orders(po_id),
+    status               VARCHAR(20) NOT NULL DEFAULT 'REQUESTED'
+        CHECK (status IN ('REQUESTED', 'PICKING', 'READY', 'DELIVERED', 'CANCELLED')),
+    requested_by         VARCHAR(100) NOT NULL,
+    requested_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    requester_note       VARCHAR(500),
+    picked_by            VARCHAR(100),
+    picking_started_at   TIMESTAMPTZ,
+    ready_at             TIMESTAMPTZ,
+    delivered_to_user_id INT REFERENCES users(user_id),
+    delivered_badge_uid  VARCHAR(64),
+    delivered_at         TIMESTAMPTZ,
+    confirmed_by         VARCHAR(100),
+    cancelled_by         VARCHAR(100),
+    cancelled_at         TIMESTAMPTZ,
+    cancel_reason        VARCHAR(500)
+);
+CREATE INDEX IF NOT EXISTS ix_withdrawals_wh_status ON withdrawals(warehouse_id, status);
+CREATE INDEX IF NOT EXISTS ix_withdrawals_po ON withdrawals(po_id);
+
+CREATE TABLE IF NOT EXISTS withdrawal_lines (
+    withdrawal_line_id SERIAL PRIMARY KEY,
+    withdrawal_id      INT NOT NULL REFERENCES withdrawals(withdrawal_id) ON DELETE CASCADE,
+    inventory_id       INT NOT NULL REFERENCES inventory(inventory_id),
+    item_id            INT NOT NULL REFERENCES items(item_id),
+    bin_id             INT NOT NULL REFERENCES bins(bin_id),
+    lot_number         VARCHAR(50),
+    quantity           INT NOT NULL CHECK (quantity > 0)
+);
+CREATE INDEX IF NOT EXISTS ix_withdrawal_lines_withdrawal ON withdrawal_lines(withdrawal_id);
+
+-- ============================================================
+-- 083_sea_etiqueta.sql - SEA: dados da etiqueta de recebimento
+-- ============================================================
+-- Stores the data printed on the label that travels with each material
+-- (OT, reserva, material, lote, solicitante, recebedor, ordem de serviço).
+--
+-- Mapping onto the existing Sentry tables (no parallel model):
+--   * Recebimento / OT  = purchase_orders
+--       codigo_ot            -> po_number          (existing)
+--       codigo_barras        -> po_barcode         (existing)
+--       empresa_origem       -> vendor_name        (existing)
+--       data_necessaria      -> expected_date      (existing)
+--       tipo_ordem_servico   -> order_type         (mig 082, PM11 / PM12)
+--       numero_ordem_servico -> service_order_number
+--       the remaining label fields are the columns added below.
+--   * Material recebido = purchase_order_lines (one row per material of
+--     the OT) + items (the material master, shared between OTs).
+--     The supplier lot lives on the OT line, separate from the material
+--     code. inventory.lot_number keeps carrying the OT number (mig 082),
+--     which is what ties stock, address and withdrawals back to the OT.
+--
+-- Every new column is nullable: a field that was not identified on the
+-- label stays NULL = "pendente de preenchimento", never guessed.
+--
+-- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
+-- ============================================================
+
+ALTER TABLE purchase_orders
+    ADD COLUMN IF NOT EXISTS reservation_number   VARCHAR(40),
+    ADD COLUMN IF NOT EXISTS label_date           DATE,
+    ADD COLUMN IF NOT EXISTS department           VARCHAR(60),
+    ADD COLUMN IF NOT EXISTS pickup_location      VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS unload_location      VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS requester_name       VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS receiver_name        VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS service_order_number VARCHAR(40),
+    -- Where the OT data came from: typed in, read from a label, or (future)
+    -- fetched from the corporate system.
+    ADD COLUMN IF NOT EXISTS data_source          VARCHAR(20)
+        CHECK (data_source IS NULL OR data_source IN ('MANUAL', 'ETIQUETA', 'INTEGRACAO')),
+    -- Label content that was not recognized, or that disagreed with what
+    -- was already registered: kept for the operator to review, never
+    -- discarded and never written over existing data.
+    ADD COLUMN IF NOT EXISTS review_notes         TEXT;
+
+CREATE INDEX IF NOT EXISTS ix_purchase_orders_reservation
+    ON purchase_orders(reservation_number) WHERE reservation_number IS NOT NULL;
+
+ALTER TABLE purchase_order_lines
+    ADD COLUMN IF NOT EXISTS lot_number  VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS expiry_date DATE,
+    ADD COLUMN IF NOT EXISTS uom         VARCHAR(10),
+    ADD COLUMN IF NOT EXISTS created_at  TIMESTAMPTZ DEFAULT NOW();
+
+-- Unit of measure of the material master (KG, UN, M ...).
+ALTER TABLE items ADD COLUMN IF NOT EXISTS uom VARCHAR(10);
+
+-- ============================================================
+-- 084_sea_notificacoes.sql - SEA: e-mail dos usuários e notificações
+-- ============================================================
+--   * users.email: e-mail corporativo do usuário. Serve para (a) entrar
+--     no terminal de retirada com o e-mail e (b) receber as notificações
+--     por e-mail (somente administradores ativos com e-mail cadastrado).
+--   * sea_notifications: uma linha por evento operacional (retirada
+--     solicitada, recebimento, armazenagem concluída). O painel lê esta
+--     tabela para avisar o operador; email_status registra o envio.
+--
+-- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
+-- ============================================================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(254);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email
+    ON users (LOWER(email)) WHERE email IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS sea_notifications (
+    notification_id SERIAL PRIMARY KEY,
+    warehouse_id    INT NOT NULL REFERENCES warehouses(warehouse_id),
+    kind            VARCHAR(30) NOT NULL
+        CHECK (kind IN ('RETIRADA_SOLICITADA', 'RECEBIMENTO', 'ARMAZENAGEM_CONCLUIDA')),
+    title           VARCHAR(200) NOT NULL,
+    message         VARCHAR(1000) NOT NULL,
+    ot              VARCHAR(50),
+    created_by      VARCHAR(100),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- PENDENTE: aguardando envio. ENVIADO. SEM_DESTINATARIO: nenhum
+    -- administrador com e-mail. NAO_CONFIGURADO: servidor SMTP não
+    -- configurado. FALHA: o envio falhou (email_error guarda o motivo).
+    email_status    VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
+        CHECK (email_status IN ('PENDENTE', 'ENVIADO', 'SEM_DESTINATARIO',
+                                'NAO_CONFIGURADO', 'FALHA')),
+    email_sent_at   TIMESTAMPTZ,
+    email_error     VARCHAR(500)
+);
+CREATE INDEX IF NOT EXISTS ix_sea_notifications_wh
+    ON sea_notifications (warehouse_id, notification_id DESC);
+
+-- ============================================================
+-- 085_sea_base_sap.sql - SEA: base de dados vinda do SAP
+-- ============================================================
+-- Espelho, dentro do SEA, dos três conjuntos de dados que vêm do SAP:
+--   * sap_orders             ordens (PM11 / PM12)
+--   * sap_materials          materiais
+--   * sap_reservations       OTs / reservas abertas (cabeçalho)
+--   * sap_reservation_items  materiais de cada OT: de qual ordem,
+--                            quantidade e unidade
+--
+-- O recebimento lê o código de barras da OT e procura nesta base
+-- (services/sap_base.py). O que é encontrado passa pelo mesmo cadastro
+-- de uma etiqueta (purchase_orders / purchase_order_lines / items), de
+-- modo que recebimento, armazenagem e retirada não mudam.
+--
+-- A base é só espelho: o SEA nunca escreve nela a partir da operação.
+-- Ela é carregada por importação (Sistema > Importação) e, no futuro,
+-- pela integração com o SAP.
+--
+-- Uma OT traz materiais de várias ordens, então a ordem passa a ser
+-- guardada também em cada material da OT (purchase_order_lines).
+--
+-- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS sap_orders (
+    order_number VARCHAR(40) PRIMARY KEY,
+    order_type   VARCHAR(4) NOT NULL CHECK (order_type IN ('PM11', 'PM12')),
+    description  VARCHAR(200),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sap_materials (
+    material_code VARCHAR(50) PRIMARY KEY,
+    description   VARCHAR(200) NOT NULL,
+    uom           VARCHAR(10),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sap_reservations (
+    ot_number          VARCHAR(50) PRIMARY KEY,
+    reservation_number VARCHAR(40),
+    requester_name     VARCHAR(120),
+    needed_date        DATE,
+    department         VARCHAR(60),
+    pickup_location    VARCHAR(120),
+    unload_location    VARCHAR(120),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sap_reservation_items (
+    reservation_item_id SERIAL PRIMARY KEY,
+    ot_number     VARCHAR(50) NOT NULL REFERENCES sap_reservations(ot_number) ON DELETE CASCADE,
+    order_number  VARCHAR(40) NOT NULL REFERENCES sap_orders(order_number),
+    material_code VARCHAR(50) NOT NULL REFERENCES sap_materials(material_code),
+    quantity      INT NOT NULL CHECK (quantity > 0),
+    uom           VARCHAR(10),
+    -- O SEA mantém um registro por material em cada OT.
+    UNIQUE (ot_number, material_code)
+);
+CREATE INDEX IF NOT EXISTS ix_sap_reservation_items_order
+    ON sap_reservation_items(order_number);
+
+ALTER TABLE purchase_order_lines
+    ADD COLUMN IF NOT EXISTS service_order_number VARCHAR(40),
+    ADD COLUMN IF NOT EXISTS service_order_type   VARCHAR(4)
+        CHECK (service_order_type IS NULL OR service_order_type IN ('PM11', 'PM12'));

@@ -51,7 +51,7 @@ export default function LoginScreen() {
   const handleConnect = async () => {
     const trimmed = connectUrl.replace(/\/+$/, '').trim();
     if (!trimmed) {
-      setConnectError('Enter a server URL');
+      setConnectError('Informe a URL do servidor');
       return;
     }
     setConnecting(true);
@@ -61,12 +61,12 @@ export default function LoginScreen() {
       const timeout = setTimeout(() => controller.abort(), 5000);
       const resp = await fetch(`${trimmed}/api/health`, { signal: controller.signal });
       clearTimeout(timeout);
-      if (!resp.ok) throw new Error('Bad response');
+      if (!resp.ok) throw new Error('Resposta inválida');
       await setApiUrl(trimmed);
       setServerDisplay(trimmed);
       setNeedsSetup(false);
     } catch (err) {
-      setConnectError(`Could not connect: ${err.message}`);
+      setConnectError(`Não foi possível conectar: ${err.message}`);
     } finally {
       setConnecting(false);
     }
@@ -74,7 +74,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      setError('Username and password are required');
+      setError('Usuário e senha são obrigatórios');
       return;
     }
     setError('');
@@ -84,10 +84,10 @@ export default function LoginScreen() {
       await login(username, password);
     } catch (err) {
       if (err.response?.status === 401) {
-        setError('Invalid credentials');
+        setError('Credenciais inválidas');
         setPassword('');
       } else {
-        setError('Connection error - check WiFi');
+        setError('Erro de conexão - verifique o Wi-Fi');
       }
     } finally {
       setLoading(false);
@@ -113,12 +113,12 @@ export default function LoginScreen() {
       const timeout = setTimeout(() => controller.abort(), 5000);
       const resp = await fetch(`${trimmed}/api/health`, { signal: controller.signal });
       clearTimeout(timeout);
-      if (!resp.ok) throw new Error('Bad response');
+      if (!resp.ok) throw new Error('Resposta inválida');
       await setApiUrl(trimmed);
       setServerDisplay(trimmed);
       setShowServerModal(false);
     } catch {
-      setModalError('Could not connect to server');
+      setModalError('Não foi possível conectar ao servidor');
     } finally {
       setModalChecking(false);
     }
@@ -135,12 +135,12 @@ export default function LoginScreen() {
       >
         <View style={styles.container}>
           <View style={styles.logoSection}>
-            <Text style={styles.logoText}>SENTRY</Text>
-            <Text style={styles.logoSubtext}>WAREHOUSE MANAGEMENT</Text>
+            <Text style={styles.logoText}>SEA</Text>
+            <Text style={styles.logoSubtext}>SISTEMA DE EXPEDIÇÃO E ARMAZENAMENTO</Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.setupLabel}>SERVER URL</Text>
+            <Text style={styles.setupLabel}>URL DO SERVIDOR</Text>
             <TextInput
               style={styles.input}
               value={connectUrl}
@@ -179,14 +179,14 @@ export default function LoginScreen() {
     >
       <View style={styles.container}>
         <View style={styles.logoSection}>
-          <Text style={styles.logoText}>SENTRY</Text>
-          <Text style={styles.logoSubtext}>WAREHOUSE MANAGEMENT</Text>
+          <Text style={styles.logoText}>SEA</Text>
+          <Text style={styles.logoSubtext}>SISTEMA DE EXPEDIÇÃO E ARMAZENAMENTO</Text>
         </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Username"
+            placeholder="Usuário"
             placeholderTextColor={colors.textPlaceholder}
             value={username}
             onChangeText={setUsername}
@@ -195,7 +195,7 @@ export default function LoginScreen() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder="Senha"
             placeholderTextColor={colors.textPlaceholder}
             value={password}
             onChangeText={setPassword}
@@ -207,7 +207,7 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
           >
-            <Text style={styles.loginButtonText}>{loading ? 'LOGGING IN...' : 'LOGIN'}</Text>
+            <Text style={styles.loginButtonText}>{loading ? 'ENTRANDO...' : 'LOGIN'}</Text>
           </TouchableOpacity>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -225,7 +225,7 @@ export default function LoginScreen() {
       <Modal visible={showServerModal} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowServerModal(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>SERVER URL</Text>
+            <Text style={styles.modalTitle}>URL DO SERVIDOR</Text>
             <TextInput
               style={styles.modalInput}
               value={serverUrl}
@@ -249,7 +249,7 @@ export default function LoginScreen() {
                 <Text style={styles.modalSaveBtnText}>{modalChecking ? 'CHECKING...' : 'SAVE'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowServerModal(false)}>
-                <Text style={styles.modalCancelBtnText}>CANCEL</Text>
+                <Text style={styles.modalCancelBtnText}>CANCELAR</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

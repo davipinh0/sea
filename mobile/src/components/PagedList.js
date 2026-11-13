@@ -25,7 +25,7 @@ export default function PagedList({ items, pageSize = 20, renderItem }) {
             <Text style={[styles.pageArrow, page === 0 && styles.pageArrowDisabled]}>{'<'}</Text>
           </TouchableOpacity>
           <Text style={styles.pageText}>
-            Page {page + 1} of {totalPages}
+            Página {page + 1} de {totalPages}
           </Text>
           <TouchableOpacity
             style={styles.pageButton}

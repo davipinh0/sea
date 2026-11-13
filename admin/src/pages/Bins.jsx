@@ -7,6 +7,12 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 
 const BIN_TYPES = ['Staging', 'PickableStaging', 'Pickable'];
+// The stored values are the Sentry ones; the operator sees these names.
+const BIN_TYPE_LABELS = {
+  Staging: 'Recebimento',
+  PickableStaging: 'Recebimento (permite retirada)',
+  Pickable: 'Armazenagem',
+};
 
 export default function Bins() {
   const { warehouseId } = useWarehouse();
@@ -147,6 +153,9 @@ export default function Bins() {
       zone_id: form.zone_id ? Number(form.zone_id) : null,
       aisle: form.aisle || null,
       pick_sequence: form.pick_sequence !== '' && form.pick_sequence != null ? Number(form.pick_sequence) : 0,
+      // SEA SP12 rules: blank = not configured (no limit / any size).
+      capacity_units: form.capacity_units !== '' && form.capacity_units != null ? Number(form.capacity_units) : null,
+      size_class: form.size_class || null,
     };
     const res = editing
       ? await api.put(`/admin/bins/${selected.bin_id}`, { ...body, is_active: !!form.is_active })
@@ -163,10 +172,12 @@ export default function Bins() {
   const columns = [
     { key: 'bin_code', label: 'Código do endereço', mono: true },
     { key: 'bin_barcode', label: 'Código de barras', mono: true },
-    { key: 'bin_type', label: 'Tipo' },
+    { key: 'bin_type', label: 'Tipo', render: (r) => BIN_TYPE_LABELS[r.bin_type] || r.bin_type },
     { key: 'zone_name', label: 'Zona' },
     { key: 'aisle', label: 'Corredor' },
     { key: 'pick_sequence', label: 'Seq. separação' },
+    { key: 'capacity_units', label: 'Capacidade', render: (r) => r.capacity_units ?? 'Não configurada' },
+    { key: 'size_class', label: 'Tamanho', render: (r) => r.size_class || '-' },
     { key: 'is_active', label: 'Ativo', render: (r) => r.is_active ? 'Sim' : 'Não' },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
@@ -177,7 +188,7 @@ export default function Bins() {
   ];
 
   const invCols = [
-    { key: 'sku', label: 'SKU', mono: true },
+    { key: 'sku', label: 'Código', mono: true },
     { key: 'item_name', label: 'Material' },
     { key: 'quantity_on_hand', label: 'Em estoque' },
     { key: 'quantity_allocated', label: 'Alocado' },
@@ -202,7 +213,7 @@ export default function Bins() {
             <label>Tipo</label>
             <select className="form-select" value={form.bin_type || ''} onChange={(e) => setForm({ ...form, bin_type: e.target.value })}>
               <option value="">Selecione o tipo</option>
-              {BIN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {BIN_TYPES.map((t) => <option key={t} value={t}>{BIN_TYPE_LABELS[t]}</option>)}
             </select>
           </div>
           <div className="form-group">
@@ -221,6 +232,20 @@ export default function Bins() {
           <div className="form-group">
             <label>Sequência de separação</label>
             <input className="form-input" type="number" value={form.pick_sequence ?? ''} onChange={(e) => setForm({ ...form, pick_sequence: e.target.value })} />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="bin-capacity">Capacidade (unidades)</label>
+            <input id="bin-capacity" className="form-input" type="number" min="1" placeholder="Não configurada" value={form.capacity_units ?? ''} onChange={(e) => setForm({ ...form, capacity_units: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="bin-size">Classe de tamanho</label>
+            <select id="bin-size" className="form-select" value={form.size_class || ''} onChange={(e) => setForm({ ...form, size_class: e.target.value })}>
+              <option value="">Qualquer material</option>
+              <option value="PEQUENO">Somente pequenos (ex.: A3, parafusos)</option>
+              <option value="GRANDE">Somente grandes (ex.: A2)</option>
+            </select>
           </div>
         </div>
       </>
@@ -259,7 +284,7 @@ export default function Bins() {
           <div className="detail-grid">
             <span className="detail-label">Código</span><span className="mono">{detail.bin_code}</span>
             <span className="detail-label">Código de barras</span><span className="mono">{detail.bin_barcode}</span>
-            <span className="detail-label">Tipo</span><span>{detail.bin_type}</span>
+            <span className="detail-label">Tipo</span><span>{BIN_TYPE_LABELS[detail.bin_type] || detail.bin_type}</span>
             <span className="detail-label">Zona</span><span>{detail.zone_name || '-'}</span>
             <span className="detail-label">Corredor</span><span>{detail.aisle || '-'}</span>
             <span className="detail-label">Seq. separação</span><span>{detail.pick_sequence ?? '-'}</span>

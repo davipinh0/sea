@@ -28,7 +28,7 @@ export default function ModeSelector({
             style={[styles.option, mode === 'standard' && styles.optionActive]}
             onPress={() => onChangeMode('standard')}
           >
-            <Text style={[styles.optionLabel, mode === 'standard' && styles.optionLabelActive]}>STANDARD</Text>
+            <Text style={[styles.optionLabel, mode === 'standard' && styles.optionLabelActive]}>PADRÃO</Text>
             <Text style={styles.optionDesc}>{standardDesc}</Text>
           </TouchableOpacity>
           <TouchableOpacity

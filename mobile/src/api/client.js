@@ -86,7 +86,7 @@ async function request(method, path, body, requestOptions = {}) {
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      const timeoutErr = new Error('Request timeout');
+      const timeoutErr = new Error('Tempo de resposta esgotado');
       timeoutErr.response = null;
       timeoutErr.isTimeout = true;
       throw timeoutErr;

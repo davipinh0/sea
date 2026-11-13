@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import TopBar from './TopBar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Modal from './Modal.jsx';
 import { useAuth } from '../auth.jsx';
+import { reloadIfNewVersion } from '../utils/newVersion.js';
 
 const PERM_POPUP_COOLDOWN_MS = 5000;
 
 export default function Layout() {
   const { user } = useAuth();
+  // A tab left open after an update keeps the old screens: on each
+  // navigation, reload once when the server has a newer build.
+  const { pathname } = useLocation();
+  useEffect(() => { reloadIfNewVersion(); }, [pathname]);
   // Page permissions (mig 061): catch global permission-denied events from
   // api.js and surface a "Permissions Error" modal. Lives on Layout so
   // it covers every page reached through the admin shell.

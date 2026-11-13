@@ -462,6 +462,7 @@ def create_app():
     from routes.dashboard import dashboard_bp
     from routes.dockd import dockd_bp
     from routes.pos import pos_bp
+    from routes.sea import sea_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(lookup_bp, url_prefix="/api/lookup")
@@ -474,6 +475,8 @@ def create_app():
     app.register_blueprint(transfers_bp, url_prefix="/api/transfers")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(warehouses_bp, url_prefix="/api/warehouses")
+    # SEA: Painel, Estoque SP12, OTs, armazenagem SP12 e terminal de retirada.
+    app.register_blueprint(sea_bp, url_prefix="/api/sea")
     # v1.5.0 #122: first /api/v1/* surface. Gated by @require_wms_token
     # per route; cookie-auth users do not see this surface.
     app.register_blueprint(polling_bp, url_prefix="/api/v1/events")

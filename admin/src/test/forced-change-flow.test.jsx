@@ -35,7 +35,7 @@ function mockFetch({ meBody, meStatus = 200, dashboardBody = {} }) {
         json: async () => meBody,
       });
     }
-    if (url.includes('/api/admin/warehouses')) {
+    if (url.includes('/api/sea/locais')) {
       return Promise.resolve({
         status: 200,
         ok: true,

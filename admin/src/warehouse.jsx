@@ -14,11 +14,10 @@ export function WarehouseProvider({ children }) {
 
   useEffect(() => {
     if (!user) return;
-    // P6.1: topbar warehouse picker needs this list but a USER without
-    // the "warehouses" page grant should not see the global modal.
-    // The picker just goes empty (the warehouse_id sessionStorage
-    // value can still drive every other call).
-    api.get('/admin/warehouses', { silentPermissionDenied: true }).then(async (res) => {
+    // SEA: every user needs the list of locations they can work in (the
+    // selector drives every page). /sea/locais returns it for any logged-in
+    // user; /admin/warehouses is only for those who administer locations.
+    api.get('/sea/locais', { silentPermissionDenied: true }).then(async (res) => {
       if (!res?.ok) return;
       const data = await res.json();
       const list = data.warehouses || [];

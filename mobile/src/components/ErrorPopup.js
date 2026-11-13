@@ -9,7 +9,7 @@ export default function ErrorPopup({ visible, message, onDismiss }) {
         <View style={styles.card}>
           <Text style={styles.message}>{message}</Text>
           <TouchableOpacity style={styles.button} onPress={onDismiss}>
-            <Text style={styles.buttonText}>DISMISS</Text>
+            <Text style={styles.buttonText}>FECHAR</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Sentry WMS",
-    "slug": "sentry-wms",
+    "name": "SEA",
+    "slug": "sea-prototipo",
     "version": "1.36.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hightowersystems.sentrywms"
+      "bundleIdentifier": "br.sea.prototipo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.hightowersystems.sentrywms",
+      "package": "br.sea.prototipo",
       "versionCode": 13,
       "usesCleartextTraffic": true,
       "permissions": [

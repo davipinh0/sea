@@ -20,7 +20,7 @@ const KNOWN_ERROR_MESSAGES = {
   Unauthorized: 'Você precisa entrar para continuar.',
   Forbidden: 'Você não tem permissão para essa ação.',
   'Token CSRF ausente ou inválido': 'Sua sessão está dessincronizada. Atualize a página e tente novamente.',
-  'Acesso negado a este armazém': 'Você não tem acesso a esse armazém.',
+  'Acesso negado a este armazém': 'Você não tem acesso a esse local.',
   'A senha atual está incorreta': 'A senha atual está incorreta.',
   'Usuário não encontrado': 'Conta não encontrada.',
   "Password cannot be 'admin'": "A senha não pode ser 'admin'.",

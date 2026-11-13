@@ -16,9 +16,9 @@ not cause a 400 on an otherwise valid row.
 """
 
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # Leading characters that a spreadsheet treats as the start of a formula.
@@ -46,6 +46,16 @@ class _BaseImportRow(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _blank_cells_are_missing(cls, data):
+        # A blank spreadsheet cell arrives as "" (or whitespace). Treat it
+        # as "not provided" so optional typed columns (numbers, the SEA
+        # size_class / order_type choices) do not reject the whole row.
+        if isinstance(data, dict):
+            return {k: (None if isinstance(v, str) and not v.strip() else v) for k, v in data.items()}
+        return data
+
 
 # ---------------------------------------------------------------------------
 # Items
@@ -65,6 +75,9 @@ class ItemImportRow(_BaseImportRow):
     default_bin: Optional[str] = Field(None, max_length=64)
     quantity: Optional[int] = Field(None, ge=0, le=1000000)
     qty: Optional[int] = Field(None, ge=0, le=1000000)  # synonym accepted
+    # SEA SP12 rules (blank = none).
+    size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
+    compat_group: Optional[str] = Field(None, max_length=50)
 
     @field_validator(
         "sku", "item_name", "name", "description", "upc", "mpn", "category", "default_bin",
@@ -102,6 +115,9 @@ class BinImportRow(_BaseImportRow):
     pick_sequence: Optional[int] = Field(None, ge=0)
     putaway_sequence: Optional[int] = Field(None, ge=0)
     description: Optional[str] = Field(None, max_length=200)
+    # SEA SP12 rules (blank = not configured).
+    capacity_units: Optional[int] = Field(None, gt=0, le=10000000)
+    size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
 
     @field_validator(
         "bin_code", "bin_barcode", "zone", "bin_type", "aisle", "description",
@@ -125,6 +141,8 @@ class PurchaseOrderImportRow(_BaseImportRow):
     warehouse_id: Optional[int] = Field(None, gt=0)
     vendor: Optional[str] = Field(None, max_length=200)
     expected_date: Optional[str] = Field(None, max_length=32)
+    # SEA: OT type. Blank keeps a plain purchase order.
+    order_type: Optional[Literal["PM11", "PM12"]] = None
 
     @field_validator("po_number", "sku", "vendor", "expected_date", mode="before")
     @classmethod

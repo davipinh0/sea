@@ -354,6 +354,8 @@ ALL_PAGE_KEYS = (
     # can CRUD + test-send destinations. Distinct from 'webhooks'
     # (signed-envelope HTTP subscribers).
     "webhooks", "notifications", "audit-log", "imports", "integrations", "settings",
+    # SEA: withdrawal queue + touchscreen terminal (Retirada).
+    "retirada",
 )
 
 # Override grants (mig 062): feature-flag grants that ride on the same

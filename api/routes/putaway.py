@@ -13,6 +13,8 @@ from middleware.db import with_db
 from schemas.putaway import ConfirmPutawayRequest, UpdatePreferredRequest
 from services.audit_service import write_audit_log
 from services.inventory_service import move_inventory
+from services import notification_service
+from services.sea_service import SeaError, check_putaway, notify_storage_done, ot_for_lot
 from constants import ACTION_PUTAWAY, BIN_PICKABLE, BIN_STAGING, BIN_PICKABLE_STAGING
 from utils.validation import validate_body
 
@@ -339,18 +341,39 @@ def confirm_putaway(validated):
         return jsonify({"error": "Endereço de origem não encontrado"}), 404
 
     to_bin = g.db.execute(
-        text("SELECT bin_id, bin_code FROM bins WHERE bin_id = :bin_id"),
+        text("SELECT bin_id, bin_code, warehouse_id FROM bins WHERE bin_id = :bin_id"),
         {"bin_id": to_bin_id},
     ).fetchone()
     if not to_bin:
         return jsonify({"error": "Endereço de destino não encontrado"}), 404
 
     username = g.current_user["username"]
-    warehouse_id = from_bin.warehouse_id
 
-    ok, denied = check_warehouse_access(warehouse_id)
+    ok, denied = check_warehouse_access(from_bin.warehouse_id)
     if not ok:
         return denied
+
+    # SEA: an order received in one location (Expedição) is stored in
+    # another (SP12, Contêiner de Solda). Only stock of an SEA order may
+    # change location here, and the user needs access to both. The move is
+    # recorded in the destination, where the material ends up.
+    warehouse_id = to_bin.warehouse_id
+    if to_bin.warehouse_id != from_bin.warehouse_id:
+        if ot_for_lot(g.db, lot_number) is None:
+            return jsonify({
+                "error": "O endereço de destino pertence a outro local.", "user_facing": True,
+            }), 400
+        ok, denied = check_warehouse_access(to_bin.warehouse_id)
+        if not ok:
+            return denied
+
+    # SEA: storage rules (size class, capacity, compatibility). No-op for
+    # stock that is not an SEA OT.
+    try:
+        check_putaway(g.db, item_id=item_id, to_bin_id=to_bin_id,
+                      quantity=quantity, lot_number=lot_number)
+    except SeaError as exc:
+        return jsonify({"error": str(exc), "user_facing": True, **exc.context}), exc.status
 
     # 1 & 2. Move inventory (decrement source, upsert destination)
     try:
@@ -396,11 +419,18 @@ def confirm_putaway(validated):
             "to_bin_id": to_bin_id,
             "to_bin_code": to_bin.bin_code,
             "quantity": quantity,
+            "sku": item.sku,
+            "lot_number": lot_number,
             "transfer_id": transfer_id,
         },
     )
 
+    # SEA: announce when the order has nothing left in the receiving area.
+    notify_storage_done(g.db, warehouse_id=warehouse_id, lot_number=lot_number,
+                        username=username)
+
     g.db.commit()
+    notification_service.dispatch(g.db)
 
     return jsonify({
         "message": "Armazenagem confirmada",

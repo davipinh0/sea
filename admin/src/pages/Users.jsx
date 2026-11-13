@@ -7,91 +7,46 @@ import Modal from '../components/Modal.jsx';
 
 const ROLES = ['ADMIN', 'USER'];
 
+// Mobile app modules used by SEA (Expedição area): receiving and
+// put-away. The other Sentry handheld modules are not part of SEA.
 const ALL_FUNCTIONS = [
-  { key: 'pick', label: 'Separar' },
-  { key: 'pack', label: 'Embalar' },
-  { key: 'ship', label: 'Expedir' },
   { key: 'receive', label: 'Receber' },
   { key: 'putaway', label: 'Armazenagem' },
-  { key: 'count', label: 'Contagem' },
-  { key: 'transfer', label: 'Transferir' },
-  // Retail POS: the register gates login on this grant (ADMIN exempt). Grant it
-  // to retail / customer-service accounts that should be able to sell.
-  { key: 'sell', label: 'Vender (PDV)' },
 ];
 
-// Web-admin page grants (mig 061). Mirrors the sidebar
-// groups so the create / edit modal feels familiar; keys match
-// api/constants.py ALL_PAGE_KEYS exactly. ADMIN users bypass the
-// permission table server-side, so checking these for an ADMIN is
-// purely cosmetic - the PUT endpoint no-ops for ADMIN targets.
+// Web page grants, grouped like the SEA menu. Keys match
+// api/constants.py ALL_PAGE_KEYS. ADMIN users bypass the permission
+// table server-side, so these only matter for USER accounts.
 const PAGE_GROUPS = [
   {
-    label: 'Operação',
+    label: 'Estoque',
     pages: [
-      { key: 'inventory', label: 'Estoque' },
-      { key: 'cycle-counts', label: 'Contagens cíclicas' },
-      { key: 'count-approvals', label: 'Aprovações de contagem' },
-    ],
-  },
-  {
-    label: 'Entrada',
-    pages: [
-      { key: 'purchase-orders', label: 'Pedidos de compra' },
-      { key: 'receiving', label: 'Recebimento' },
-      { key: 'putaway', label: 'Armazenagem' },
-    ],
-  },
-  {
-    label: 'Saída',
-    pages: [
-      { key: 'sales-orders', label: 'Pedidos de venda' },
-      { key: 'fraud', label: 'Fraude' },
-      // picking/packing/shipping retired in favour of the mobile flow;
-      // their page_keys are gone from ALL_PAGE_KEYS so a stale grant
-      // cannot persist past the next permissions save.
-    ],
-  },
-  {
-    label: 'Armazém',
-    pages: [
+      { key: 'inventory', label: 'Visão Geral' },
       { key: 'items', label: 'Materiais' },
-      { key: 'vendors', label: 'Fornecedores' },
-      { key: 'adjustments', label: 'Ajustes de estoque' },
-      { key: 'inter-warehouse-transfers', label: 'Transferências de estoque' },
-      { key: 'transfer-orders', label: 'Ordens de transferência' },
-      { key: 'warehouses', label: 'Armazéns' },
       { key: 'bins', label: 'Endereços' },
-      { key: 'zones', label: 'Zonas' },
-      { key: 'preferred-bins', label: 'Endereços preferenciais' },
+      { key: 'audit-log', label: 'Histórico' },
+    ],
+  },
+  {
+    label: 'Expedição',
+    pages: [
+      { key: 'receiving', label: 'Recebimento de Ordem' },
+      { key: 'putaway', label: 'Armazenagem' },
+      { key: 'purchase-orders', label: 'Ordens' },
+    ],
+  },
+  {
+    label: 'Retirada',
+    pages: [
+      { key: 'retirada', label: 'Fila de retirada e terminal' },
     ],
   },
   {
     label: 'Sistema',
     pages: [
       { key: 'users', label: 'Usuários' },
-      { key: 'api-tokens', label: 'Tokens de API' },
-      { key: 'inbound', label: 'Atividade de entrada' },
-      { key: 'consumer-groups', label: 'Grupos de consumidores' },
-      { key: 'webhooks', label: 'Webhooks' },
-      { key: 'audit-log', label: 'Log de auditoria' },
-      { key: 'imports', label: 'Importações' },
-      { key: 'integrations', label: 'Integrações' },
       { key: 'settings', label: 'Configurações' },
-    ],
-  },
-  // Override grants (mig 062): feature-flag grants. Not pages in the
-  // sidebar; granting one lifts the OPEN-only edit gate on the
-  // matching admin surface (PO header/line edits past CLOSED+ARCHIVED;
-  // SO header/line edits past OPEN). Same storage as page grants so
-  // the multi-select reuses the existing pagePermissions array.
-  {
-    label: 'Permissões especiais',
-    isOverride: true,
-    pages: [      {
-        key: 'so-full-edit',
-        label: 'Edição completa de PV (após ABERTO, incl. source_system + linhas)',
-      },
+      { key: 'imports', label: 'Importação de dados' },
     ],
   },
 ];
@@ -201,7 +156,10 @@ export default function Users() {
       role: form.role,
       warehouse_ids: form.warehouse_ids || [],
       allowed_functions: form.allowed_functions || [],
+      // Empty string clears the e-mail on edit; omitted on create when blank.
+      email: (form.email || '').trim(),
     };
+    if (!editId && !body.email) delete body.email;
     if (!editId) {
       body.username = form.username;
       body.password = form.password;
@@ -311,8 +269,9 @@ export default function Users() {
   const columns = [
     { key: 'username', label: 'Usuário', mono: true },
     { key: 'full_name', label: 'Nome completo' },
+    { key: 'email', label: 'E-mail', render: (r) => r.email || '-' },
     { key: 'role', label: 'Função' },
-    { key: 'warehouse_ids', label: 'Armazéns', render: (r) => warehouseCodes(r.warehouse_ids) },
+    { key: 'warehouse_ids', label: 'Locais', render: (r) => warehouseCodes(r.warehouse_ids) },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
         <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
@@ -350,6 +309,12 @@ export default function Users() {
               <label>Nome completo</label>
               <input className="form-input" value={form.full_name || ''} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
             </div>
+            <div className="form-group">
+              <label htmlFor="user-email">E-mail corporativo</label>
+              <input id="user-email" className="form-input" type="email" value={form.email || ''} placeholder="nome@empresa.com"
+                onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <div className="settings-note">Serve para entrar no terminal de retirada. Administradores recebem neste e-mail os avisos de retirada, recebimento e armazenamento.</div>
+            </div>
           </div>
           <div className="form-group">
             <label>{editId ? 'Nova senha (deixe em branco para manter a atual)' : 'Senha'}</label>
@@ -363,7 +328,7 @@ export default function Users() {
           </div>
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label>Armazéns</label>
+              <label>Locais</label>
               {warehouses.length > 0 && (
                 <span style={{ fontSize: 12 }}>
                   <button
@@ -396,7 +361,7 @@ export default function Users() {
                   <span style={{ color: 'var(--text-secondary)' }}>{wh.warehouse_name}</span>
                 </label>
               ))}
-              {warehouses.length === 0 && <span style={{ color: 'var(--text-secondary)' }}>Nenhum armazém encontrado</span>}
+              {warehouses.length === 0 && <span style={{ color: 'var(--text-secondary)' }}>Nenhum local encontrado</span>}
             </div>
           </div>
           <div className="form-group">

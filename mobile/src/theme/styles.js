@@ -1,33 +1,34 @@
 import { Platform, StyleSheet } from 'react-native';
 
 export const colors = {
-  // Brand
-  accentRed: '#8e2716',
-  copper: '#b87333',
-  cream: '#fdf4e3',
+  // Brand (SEA: orange + graphite). Key names kept from Sentry so every
+  // screen picks up the new palette without further changes.
+  accentRed: '#C2410C',
+  copper: '#F26522',
+  cream: '#FFF1E8',
 
   // Surfaces
   background: '#ffffff',
-  cardBg: '#f7f3ec',
-  cardBorder: '#e0d9cc',
-  inputBg: '#f7f3ec',
-  inputBorder: '#d6cfc0',
+  cardBg: '#F4F5F7',
+  cardBorder: '#E3E5E8',
+  inputBg: '#F4F5F7',
+  inputBorder: '#CDD1D6',
 
   // Text
-  textPrimary: '#1a1a1a',
-  textSecondary: '#7a7060',
-  textMuted: '#999080',
-  textPlaceholder: '#b0a898',
+  textPrimary: '#1F2328',
+  textSecondary: '#555D69',
+  textMuted: '#8A919B',
+  textPlaceholder: '#A3A9B1',
 
   // Status
-  success: '#34a853',
-  warning: '#b87333',
-  danger: '#8e2716',
+  success: '#2d7a3a',
+  warning: '#B45309',
+  danger: '#B42318',
 
   // Utility
-  border: '#e0d9cc',
+  border: '#E3E5E8',
   overlay: 'rgba(0,0,0,0.4)',
-  grayAccent: '#a09b91',
+  grayAccent: '#6B7785',
 };
 
 export const radii = {

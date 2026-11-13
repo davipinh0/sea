@@ -21,7 +21,7 @@ export default function WarehouseSelector({ visible, warehouses, selected, onSel
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={() => {}}>
-          <Text style={styles.title}>SELECT WAREHOUSE</Text>
+          <Text style={styles.title}>SELECIONE O ARMAZÉM</Text>
           <FlatList
             data={warehouses}
             keyExtractor={(item) => String(item.id)}

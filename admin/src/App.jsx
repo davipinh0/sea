@@ -2,47 +2,42 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Layout from './components/Layout.jsx';
+import SectionTabs from './components/SectionTabs.jsx';
+import { canSee } from './utils/permissions.js';
+import { useWarehouse } from './warehouse.jsx';
+import { EXPEDICAO_CODE } from './utils/sea.js';
 import Login from './pages/Login.jsx';
 import ChangePassword from './pages/ChangePassword.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Inventory from './pages/Inventory.jsx';
-import CycleCounts from './pages/CycleCounts.jsx';
-import CycleCountApproval from './pages/CycleCountApproval.jsx';
-import Receiving from './pages/Receiving.jsx';
-import PurchaseOrders from './pages/PurchaseOrders.jsx';
-import SalesOrders from './pages/SalesOrders.jsx';
-import PutAway from './pages/PutAway.jsx';
-import PickingTickets from './pages/PickingTickets.jsx';
-import PickingTicketPrint from './pages/PickingTicketPrint.jsx';
-import PickingTicketPrintAll from './pages/PickingTicketPrintAll.jsx';
-import PickingBatches from './pages/PickingBatches.jsx';
-import Backorders from './pages/Backorders.jsx';
-import RMA from './pages/RMA.jsx';
-import Returns from './pages/Returns.jsx';
-import Refunds from './pages/Refunds.jsx';
-import Bins from './pages/Bins.jsx';
-import Zones from './pages/Zones.jsx';
+import Painel from './pages/Painel.jsx';
+import EstoqueSP12 from './pages/EstoqueSP12.jsx';
 import Items from './pages/Items.jsx';
-import Vendors from './pages/Vendors.jsx';
-import Data from './pages/Data.jsx';
-import Warehouses from './pages/Warehouses.jsx';
-import Users from './pages/Users.jsx';
-import Tokens from './pages/Tokens.jsx';
-import InboundActivity from './pages/InboundActivity.jsx';
-import ConsumerGroups from './pages/ConsumerGroups.jsx';
-import Webhooks from './pages/Webhooks.jsx';
-import Channels from './pages/Channels.jsx';
-import Notifications from './pages/Notifications.jsx';
+import Bins from './pages/Bins.jsx';
 import AuditLog from './pages/AuditLog.jsx';
-import PreferredBins from './pages/PreferredBins.jsx';
+import RecebimentoOT from './pages/RecebimentoOT.jsx';
+import BaseSap from './pages/BaseSap.jsx';
+import ArmazenagemSP12 from './pages/ArmazenagemSP12.jsx';
+import PurchaseOrders from './pages/PurchaseOrders.jsx';
+import Retirada from './pages/Retirada.jsx';
+import TerminalRetirada from './pages/TerminalRetirada.jsx';
+import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
 import Imports from './pages/Imports.jsx';
-import Integrations from './pages/Integrations.jsx';
-import Adjustments from './pages/Adjustments.jsx';
-import InterWarehouseTransfers from './pages/InterWarehouseTransfers.jsx';
-import TransferOrders from './pages/TransferOrders.jsx';
-import POSActivity from './pages/POSActivity.jsx';
-import Fraud from './pages/Fraud.jsx';
+
+// SEA sections. Sub-pages keep the page_key that gates their backend
+// endpoints, so per-tab permissions keep working unchanged.
+const ESTOQUE_TABS = [
+  { to: 'sp12', label: 'Visão Geral', pageKey: 'inventory' },
+  { to: 'materiais', label: 'Materiais', pageKey: 'items' },
+  { to: 'enderecos', label: 'Endereços', pageKey: 'bins' },
+  { to: 'historico', label: 'Histórico', pageKey: 'audit-log' },
+];
+
+const EXPEDICAO_TABS = [
+  { to: 'recebimento', label: 'Recebimento de Ordem', pageKey: 'receiving' },
+  { to: 'armazenagem', label: 'Armazenagem', pageKey: 'putaway' },
+  { to: 'ots', label: 'Ordens', pageKey: 'purchase-orders' },
+  { to: 'base-sap', label: 'SAP', pageKey: 'receiving' },
+];
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -59,92 +54,69 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Pages opened by URL without the permission go back to the Painel
+// (the API refuses them anyway; this avoids an empty screen with an error).
+// The Expedição section exists only at the Expedição location: with
+// another location selected it goes back to the Painel.
+function OnlyAtExpedicao({ children }) {
+  const { warehouse } = useWarehouse();
+  if (warehouse && warehouse.warehouse_code !== EXPEDICAO_CODE) return <Navigate to="/" replace />;
+  return children;
+}
+
+function RequirePage({ pageKey, children }) {
+  const { user } = useAuth();
+  return canSee(user, pageKey) ? children : <Navigate to="/" replace />;
+}
+
+function page(element, fallbackMessage) {
+  return <ErrorBoundary fallbackMessage={fallbackMessage}>{element}</ErrorBoundary>;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      {/* Standalone print views: rendered without the admin Layout
-          chrome so they fill the full window and the per-ticket page
-          break CSS doesn't have to fight a sidebar/header parent.
-          Still gated by ProtectedRoute so auth is required. */}
+      {/* Withdrawal terminal: full-screen kiosk without the admin chrome,
+          sized for a touchscreen. It always opens on its own login screen
+          (the employee identifies there), so it is not behind ProtectedRoute. */}
       <Route
-        path="/picking-tickets/print-all"
-        element={
-          <ProtectedRoute>
-            <ErrorBoundary fallbackMessage="Could not render picking tickets.">
-              <PickingTicketPrintAll />
-            </ErrorBoundary>
-          </ProtectedRoute>
-        }
-      />
-      {/* Individual ticket also renders standalone so the operator can
-          open it from any list / search surface in a new tab without
-          the admin sidebar competing for screen width or breaking the
-          per-page print CSS. */}
-      <Route
-        path="/picking-tickets/:soId/print"
-        element={
-          <ProtectedRoute>
-            <ErrorBoundary fallbackMessage="Could not render picking ticket.">
-              <PickingTicketPrint />
-            </ErrorBoundary>
-          </ProtectedRoute>
-        }
+        path="/retirada/terminal"
+        element={page(<TerminalRetirada />, 'Não foi possível carregar o terminal de retirada.')}
       />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/change-password" element={<ErrorBoundary fallbackMessage="Could not load change-password form."><ChangePassword /></ErrorBoundary>} />
-        <Route path="/" element={<ErrorBoundary fallbackMessage="Could not load dashboard."><Dashboard /></ErrorBoundary>} />
-        <Route path="/inventory" element={<ErrorBoundary fallbackMessage="Could not load inventory."><Inventory /></ErrorBoundary>} />
-        <Route path="/cycle-counts" element={<ErrorBoundary fallbackMessage="Could not load cycle counts."><CycleCounts /></ErrorBoundary>} />
-        <Route path="/count-approvals" element={<ErrorBoundary fallbackMessage="Could not load count approvals."><CycleCountApproval /></ErrorBoundary>} />
-        <Route path="/receiving" element={<ErrorBoundary fallbackMessage="Could not load receiving."><Receiving /></ErrorBoundary>} />
-        <Route path="/purchase-orders" element={<ErrorBoundary fallbackMessage="Could not load purchase orders."><PurchaseOrders /></ErrorBoundary>} />
-        <Route path="/putaway" element={<ErrorBoundary fallbackMessage="Could not load put-away."><PutAway /></ErrorBoundary>} />
-        <Route path="/sales-orders" element={<ErrorBoundary fallbackMessage="Could not load sales orders."><SalesOrders /></ErrorBoundary>} />
-        <Route path="/pos-activity" element={<ErrorBoundary fallbackMessage="Could not load POS activity."><POSActivity /></ErrorBoundary>} />
-        <Route path="/fraud" element={<ErrorBoundary fallbackMessage="Could not load fraud queue."><Fraud /></ErrorBoundary>} />
-        <Route path="/backorders" element={<ErrorBoundary fallbackMessage="Could not load backorders."><Backorders /></ErrorBoundary>} />
-        <Route path="/returns" element={<ErrorBoundary fallbackMessage="Could not load returns."><Returns /></ErrorBoundary>}>
-          <Route path="rma" element={<RMA />} />
-          <Route path="refunds" element={<Refunds />} />
+        <Route path="/change-password" element={page(<ChangePassword />, 'Não foi possível carregar a troca de senha.')} />
+        <Route path="/" element={page(<Painel />, 'Não foi possível carregar o painel.')} />
+
+        <Route path="/estoque" element={page(<SectionTabs basePath="/estoque" tabs={ESTOQUE_TABS} />, 'Não foi possível carregar o estoque.')}>
+          <Route path="sp12" element={<EstoqueSP12 />} />
+          <Route path="materiais" element={<Items />} />
+          <Route path="enderecos" element={<Bins />} />
+          <Route path="historico" element={<AuditLog />} />
         </Route>
-        <Route path="/rma" element={<Navigate to="/returns/rma" replace />} />
-        <Route path="/picking-tickets" element={<ErrorBoundary fallbackMessage="Could not load picking tickets."><PickingTickets /></ErrorBoundary>} />
-        {/* The /picking, /packing, /shipping admin pages were retired:
-            the workflow lives on the handheld scanners, and the
-            admin-side mirrors duplicated state without adding any
-            control surface. Sales Orders + Picking Tickets cover the
-            supervisor view; Dashboard counts still surface throughput. */}
-        <Route path="/picking-batches" element={<ErrorBoundary fallbackMessage="Could not load picking batches."><PickingBatches /></ErrorBoundary>} />
-        <Route path="/items" element={<ErrorBoundary fallbackMessage="Could not load items."><Items /></ErrorBoundary>} />
-        <Route path="/vendors" element={<ErrorBoundary fallbackMessage="Could not load vendors."><Vendors /></ErrorBoundary>} />
-        {/* Warehouse-layout pages consolidated under a single /data
-            parent with a tab strip. The four old top-level paths
-            redirect so existing bookmarks still land in the right tab. */}
-        <Route path="/data" element={<ErrorBoundary fallbackMessage="Could not load warehouse data."><Data /></ErrorBoundary>}>
-          <Route path="warehouses" element={<Warehouses />} />
-          <Route path="bins" element={<Bins />} />
-          <Route path="zones" element={<Zones />} />
-          <Route path="preferred-bins" element={<PreferredBins />} />
+
+        <Route path="/expedicao" element={page(<OnlyAtExpedicao><SectionTabs basePath="/expedicao" tabs={EXPEDICAO_TABS} /></OnlyAtExpedicao>, 'Não foi possível carregar a expedição.')}>
+          <Route path="recebimento" element={<RecebimentoOT />} />
+          <Route path="armazenagem" element={<ArmazenagemSP12 />} />
+          <Route path="ots" element={<PurchaseOrders />} />
+          <Route path="base-sap" element={<BaseSap />} />
         </Route>
-        <Route path="/warehouses" element={<Navigate to="/data/warehouses" replace />} />
-        <Route path="/bins" element={<Navigate to="/data/bins" replace />} />
-        <Route path="/zones" element={<Navigate to="/data/zones" replace />} />
-        <Route path="/preferred-bins" element={<Navigate to="/data/preferred-bins" replace />} />
-        <Route path="/users" element={<ErrorBoundary fallbackMessage="Could not load users."><Users /></ErrorBoundary>} />
-        <Route path="/api-tokens" element={<ErrorBoundary fallbackMessage="Could not load API tokens."><Tokens /></ErrorBoundary>} />
-        <Route path="/inbound" element={<ErrorBoundary fallbackMessage="Could not load Inbound activity."><InboundActivity /></ErrorBoundary>} />
-        <Route path="/consumer-groups" element={<ErrorBoundary fallbackMessage="Could not load consumer groups."><ConsumerGroups /></ErrorBoundary>} />
-        <Route path="/webhooks" element={<ErrorBoundary fallbackMessage="Could not load webhooks."><Webhooks /></ErrorBoundary>} />
-        <Route path="/channels" element={<ErrorBoundary fallbackMessage="Could not load channels."><Channels /></ErrorBoundary>} />
-        <Route path="/notifications" element={<ErrorBoundary fallbackMessage="Could not load notifications."><Notifications /></ErrorBoundary>} />
-        <Route path="/audit-log" element={<ErrorBoundary fallbackMessage="Could not load audit log."><AuditLog /></ErrorBoundary>} />
-        <Route path="/settings" element={<ErrorBoundary fallbackMessage="Could not load settings."><Settings /></ErrorBoundary>} />
-        <Route path="/imports" element={<ErrorBoundary fallbackMessage="Could not load imports."><Imports /></ErrorBoundary>} />
-        <Route path="/integrations" element={<ErrorBoundary fallbackMessage="Could not load integrations."><Integrations /></ErrorBoundary>} />
-        <Route path="/adjustments" element={<ErrorBoundary fallbackMessage="Could not load adjustments."><Adjustments /></ErrorBoundary>} />
-        <Route path="/inter-warehouse-transfers" element={<ErrorBoundary fallbackMessage="Could not load transfers."><InterWarehouseTransfers /></ErrorBoundary>} />
-        <Route path="/transfer-orders" element={<ErrorBoundary fallbackMessage="Could not load transfer orders."><TransferOrders /></ErrorBoundary>} />
+
+        <Route path="/retirada" element={page(<RequirePage pageKey="retirada"><Retirada /></RequirePage>, 'Não foi possível carregar a retirada.')} />
+
+        <Route path="/users" element={page(<RequirePage pageKey="users"><Users /></RequirePage>, 'Não foi possível carregar os usuários.')} />
+        <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />
+        <Route path="/imports" element={page(<RequirePage pageKey="imports"><Imports /></RequirePage>, 'Não foi possível carregar a importação.')} />
+
+        {/* Old Sentry paths that still have a home in SEA. */}
+        <Route path="/inventory" element={<Navigate to="/estoque/sp12" replace />} />
+        <Route path="/items" element={<Navigate to="/estoque/materiais" replace />} />
+        <Route path="/bins" element={<Navigate to="/estoque/enderecos" replace />} />
+        <Route path="/audit-log" element={<Navigate to="/estoque/historico" replace />} />
+        <Route path="/receiving" element={<Navigate to="/expedicao/recebimento" replace />} />
+        <Route path="/putaway" element={<Navigate to="/expedicao/armazenagem" replace />} />
+        <Route path="/purchase-orders" element={<Navigate to="/expedicao/ots" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

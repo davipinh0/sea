@@ -66,6 +66,7 @@ celery_app.conf.beat_schedule = {
 # Auto-discover task modules in the jobs package
 celery_app.autodiscover_tasks(["jobs"], related_name="sync_tasks")
 celery_app.autodiscover_tasks(["jobs"], related_name="cleanup_tasks")
+celery_app.autodiscover_tasks(["jobs"], related_name="notification_tasks")
 
 # Import connector modules so they auto-register in worker processes
 import connectors.example  # noqa: E402, F401

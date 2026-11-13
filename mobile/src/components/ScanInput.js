@@ -3,7 +3,7 @@ import { View, TextInput, StyleSheet } from 'react-native';
 import { colors, fonts, radii } from '../theme/styles';
 import { useScanSettingsContext } from '../context/ScanSettingsContext';
 
-export default function ScanInput({ placeholder = 'SCAN BARCODE', onScan, disabled = false, autoFocus = true, suppressRefocus = false }) {
+export default function ScanInput({ placeholder = 'LEIA O CÓDIGO DE BARRAS', onScan, disabled = false, autoFocus = true, suppressRefocus = false }) {
   const inputRef = useRef(null);
   const [value, setValue] = useState('');
   const bufferRef = useRef('');

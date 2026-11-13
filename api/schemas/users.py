@@ -5,6 +5,8 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 VALID_ROLES = ("ADMIN", "USER")
+# Shape check only (one @, a dotted domain, no spaces); empty is allowed.
+EMAIL_PATTERN = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
 class UpdateUserPagePermissionsRequest(BaseModel):
@@ -24,6 +26,9 @@ class CreateUserRequest(BaseModel):
     warehouse_ids: List[int] = Field(default_factory=list)
     warehouse_id: Optional[int] = Field(None, gt=0)
     allowed_functions: List[str] = Field(default_factory=list)
+    # SEA: corporate e-mail (login at the terminal and notification
+    # recipient for administrators). Empty string clears it.
+    email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
 
     @field_validator("role")
     @classmethod
@@ -41,6 +46,9 @@ class UpdateUserRequest(BaseModel):
     allowed_functions: Optional[List[str]] = None
     is_active: Optional[bool] = None
     password: Optional[str] = Field(None, min_length=1, max_length=256)
+    # SEA: corporate e-mail (login at the terminal and notification
+    # recipient for administrators). Empty string clears it.
+    email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
 
     @field_validator("role")
     @classmethod

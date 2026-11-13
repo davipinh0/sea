@@ -19,6 +19,7 @@ from services.cookie_auth import (
     generate_csrf_token,
     set_auth_cookies,
 )
+from services.identity_provider import get_identity_provider
 from utils.validation import validate_body
 
 ALL_FUNCTIONS = ["receive", "putaway", "pick", "pack", "ship", "count", "transfer"]
@@ -133,7 +134,10 @@ def login(validated):
             "error": f"Muitas tentativas de login com falha nesta conta. Tente novamente em {minutes}m {seconds}s",
         }), 429
 
-    user = authenticate_user(g.db, validated.username, validated.password)
+    # SEA: the login also accepts the corporate e-mail; the identity
+    # provider maps it to the SEA username (None = unknown e-mail).
+    login_name = get_identity_provider().resolve_username(g.db, validated.username)
+    user = authenticate_user(g.db, login_name, validated.password) if login_name else None
 
     if not user:
         # Count the username-only key for observability (never locks) and

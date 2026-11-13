@@ -52,23 +52,27 @@ describe('CSV import templates', () => {
     expect(cols).toContain('expected_date');
   });
 
-  it('sales-orders template includes warehouse_id, required by the import helper', () => {
-    const cols = headers('sales-orders');
-    expect(cols).toContain('so_number');
-    expect(cols).toContain('warehouse_id');
-    expect(cols).toContain('sku');
-    expect(cols).toContain('quantity');
-    expect(cols).toContain('customer');
-    expect(cols).toContain('customer_address');
+  it('purchase-orders (OT) template carries the SEA order_type column', () => {
+    expect(headers('purchase-orders')).toContain('order_type');
   });
 
-  it('inventory-adjustments template carries the five fields the server schema requires', () => {
-    const cols = headers('inventory-adjustments');
-    expect(cols).toContain('sku');
-    expect(cols).toContain('warehouse');
-    expect(cols).toContain('bin');
-    expect(cols).toContain('qty');
-    expect(cols).toContain('memo');
+  it('items and bins templates carry the SP12 rule columns', () => {
+    expect(headers('items')).toEqual(expect.arrayContaining(['size_class', 'compat_group']));
+    expect(headers('bins')).toEqual(expect.arrayContaining(['capacity_units', 'size_class']));
+  });
+
+  it('only SEA entities are offered (no sales orders / adjustments)', () => {
+    expect(Object.keys(CSV_TEMPLATES).sort()).toEqual([
+      'bins', 'items', 'purchase-orders', 'sap-materiais', 'sap-ordens', 'sap-reservas',
+    ]);
+  });
+
+  it('SAP base templates carry the columns the import requires (api/schemas/sap_base.py)', () => {
+    expect(headers('sap-ordens')).toEqual(expect.arrayContaining(['order_number', 'order_type']));
+    expect(headers('sap-materiais')).toEqual(expect.arrayContaining(['material_code', 'description', 'uom']));
+    expect(headers('sap-reservas')).toEqual(expect.arrayContaining([
+      'ot_number', 'order_number', 'material_code', 'quantity', 'uom', 'requester_name',
+    ]));
   });
 
   it('every template has at least one example row after the header', () => {

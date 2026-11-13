@@ -276,12 +276,12 @@ function ItemHistoryView() {
         position: 'relative', marginBottom: 16, maxWidth: 480,
       }}>
         <label style={FILTER_LABEL_STYLE}>
-          SKU {itemSearching && <span style={{ textTransform: 'none', fontWeight: 400 }}>(buscando...)</span>}
+          Código {itemSearching && <span style={{ textTransform: 'none', fontWeight: 400 }}>(buscando...)</span>}
         </label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             className="form-input"
-            placeholder="Digite o SKU ou nome do material (mín. 2 caracteres)"
+            placeholder="Digite o código ou a descrição do material (mín. 2 caracteres)"
             value={itemSearch}
             onChange={(e) => { setItemSearch(e.target.value); if (item) setItem(null); }}
             autoComplete="off"
@@ -316,7 +316,7 @@ function ItemHistoryView() {
 
       {!item && (
         <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Digite um SKU ou nome de material acima para ver todos os eventos de auditoria que o envolveram (recebimentos, separações, embalagens, expedições, ajustes, transferências).
+          Digite um código ou descrição de material acima para ver todos os eventos de auditoria que o envolveram (recebimentos, separações, embalagens, expedições, ajustes, transferências).
         </p>
       )}
 
@@ -599,7 +599,7 @@ function AuditDetailModal({ entry, onClose }) {
           </KV>
         )}
         {entry.warehouse_code && (
-          <KV label="Armazém">
+          <KV label="Local">
             <span className="mono" style={{ fontSize: 12 }}>{entry.warehouse_code}</span>
           </KV>
         )}

@@ -69,7 +69,7 @@ describe('unauthenticated bootstrap', () => {
 
     const urls = fetchSpy.mock.calls.map(([u]) => (typeof u === 'string' ? u : u.url));
     expect(urls.some((u) => u.includes('/api/auth/me'))).toBe(true);
-    expect(urls.some((u) => u.includes('/api/admin/warehouses'))).toBe(false);
+    expect(urls.some((u) => u.includes('/api/sea/locais'))).toBe(false);
   });
 
   it('redirects to login when accessing protected route without a session', async () => {
@@ -233,7 +233,7 @@ describe('WarehouseProvider', () => {
     });
 
     const urls = fetchSpy.mock.calls.map(([u]) => (typeof u === 'string' ? u : u.url));
-    expect(urls.some((u) => u.includes('/api/admin/warehouses'))).toBe(false);
+    expect(urls.some((u) => u.includes('/api/sea/locais'))).toBe(false);
   });
 
   it('fetches warehouses after bootstrap returns an ADMIN user', async () => {
@@ -245,7 +245,7 @@ describe('WarehouseProvider', () => {
           json: async () => ({ user_id: 1, username: 'admin', role: 'ADMIN' }),
         });
       }
-      if (url.includes('/api/admin/warehouses')) {
+      if (url.includes('/api/sea/locais')) {
         return Promise.resolve({
           status: 200, ok: true,
           json: async () => ({ warehouses: [{ id: 1, warehouse_code: 'WH1', warehouse_name: 'Main' }] }),
@@ -267,14 +267,14 @@ describe('WarehouseProvider', () => {
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/admin/warehouses',
+        '/api/sea/locais',
         expect.objectContaining({ credentials: 'include' }),
       );
     });
 
     // Ensure no Authorization header was attached
     const warehouseCall = fetchSpy.mock.calls.find(
-      ([u]) => (typeof u === 'string' ? u : u.url) === '/api/admin/warehouses',
+      ([u]) => (typeof u === 'string' ? u : u.url) === '/api/sea/locais',
     );
     expect(warehouseCall[1].headers.Authorization).toBeUndefined();
   });

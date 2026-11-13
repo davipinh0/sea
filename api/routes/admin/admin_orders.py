@@ -105,6 +105,16 @@ from utils.validation import validate_body
 
 # ── Purchase Orders ───────────────────────────────────────────────────────────
 
+_UNRECEIVE_MESSAGES = {
+    "not_found": "Recebimento não encontrado (pode já ter sido estornado).",
+    "insufficient_available": (
+        "Não é possível estornar: o material deste recebimento não está mais disponível "
+        "no local onde foi recebido (foi armazenado em outro local, reservado ou retirado)."
+    ),
+    "not_a_po_receipt": "Este recebimento não pertence a uma ordem e não pode ser estornado aqui.",
+}
+
+
 @admin_bp.route("/purchase-orders", methods=["GET"])
 @require_auth
 @require_admin_or_page_permission("purchase-orders")
@@ -130,6 +140,10 @@ def list_purchase_orders():
     if warehouse_id:
         where_clauses.append("warehouse_id = :wid")
         params["wid"] = warehouse_id
+    order_type = request.args.get("order_type")
+    if order_type:
+        where_clauses.append("order_type = :order_type")
+        params["order_type"] = order_type
     if search:
         where_clauses.append("(po_number ILIKE :q OR vendor_name ILIKE :q)")
         params["q"] = f"%{search}%"
@@ -143,7 +157,7 @@ def list_purchase_orders():
     rows = g.db.execute(
         text(f"""
             SELECT po_id, po_number, po_barcode, vendor_name, status, expected_date,
-                   warehouse_id, notes, created_at, received_at, created_by
+                   warehouse_id, notes, created_at, received_at, created_by, order_type
             FROM purchase_orders {where_sql} ORDER BY po_id DESC LIMIT :limit OFFSET :offset
         """),
         params,
@@ -157,7 +171,7 @@ def list_purchase_orders():
              "warehouse_id": r.warehouse_id, "notes": r.notes,
              "created_at": r.created_at.isoformat() if r.created_at else None,
              "received_at": r.received_at.isoformat() if r.received_at else None,
-             "created_by": r.created_by}
+             "created_by": r.created_by, "order_type": r.order_type}
             for r in rows
         ],
         "total": total, "page": page, "per_page": per_page, "pages": pages,
@@ -170,7 +184,7 @@ def list_purchase_orders():
 @with_db
 def get_purchase_order(po_id):
     po = g.db.execute(
-        text("SELECT po_id, po_number, po_barcode, vendor_name, vendor_id, status, expected_date, warehouse_id, notes, created_at, received_at, created_by FROM purchase_orders WHERE po_id = :pid"),
+        text("SELECT po_id, po_number, po_barcode, vendor_name, vendor_id, status, expected_date, warehouse_id, notes, created_at, received_at, created_by, order_type FROM purchase_orders WHERE po_id = :pid"),
         {"pid": po_id},
     ).fetchone()
     if not po:
@@ -193,6 +207,8 @@ def get_purchase_order(po_id):
             "expected_date": po.expected_date.isoformat() if po.expected_date else None,
             "warehouse_id": po.warehouse_id, "notes": po.notes,
             "created_at": po.created_at.isoformat() if po.created_at else None,
+            "received_at": po.received_at.isoformat() if po.received_at else None,
+            "created_by": po.created_by, "order_type": po.order_type,
         },
         "lines": [
             {"po_line_id": l.po_line_id, "line_number": l.line_number, "item_id": l.item_id,
@@ -224,8 +240,8 @@ def create_purchase_order(validated):
 
     result = g.db.execute(
         text("""
-            INSERT INTO purchase_orders (po_number, po_barcode, vendor_name, expected_date, warehouse_id, notes, created_by, status, external_id)
-            VALUES (:pn, :pb, :vendor, :exp_date, :wid, :notes, :created_by, :status, :ext_id)
+            INSERT INTO purchase_orders (po_number, po_barcode, vendor_name, expected_date, warehouse_id, notes, created_by, status, order_type, external_id)
+            VALUES (:pn, :pb, :vendor, :exp_date, :wid, :notes, :created_by, :status, :order_type, :ext_id)
             RETURNING po_id
         """),
         {
@@ -233,6 +249,7 @@ def create_purchase_order(validated):
             "vendor": data.get("vendor_name"), "exp_date": data.get("expected_date"),
             "wid": data["warehouse_id"], "notes": data.get("notes"),
             "created_by": g.current_user["username"], "status": PO_OPEN,
+            "order_type": data.get("order_type"),
             "ext_id": str(uuid.uuid4()),
         },
     )
@@ -308,7 +325,7 @@ def update_purchase_order(po_id, validated):
     po = g.db.execute(
         text(
             "SELECT po_id, po_number, po_barcode, vendor_name, expected_date, "
-            "notes, external_id, status, warehouse_id "
+            "notes, external_id, status, warehouse_id, order_type "
             "FROM purchase_orders WHERE po_id = :pid"
         ),
         {"pid": po_id},
@@ -329,7 +346,7 @@ def update_purchase_order(po_id, validated):
                 "error": "O PC precisa estar FECHADO antes de ser ARQUIVADO",
             }), 400
 
-    HEADER_FIELDS = {"po_number", "po_barcode", "vendor_name", "expected_date", "notes"}
+    HEADER_FIELDS = {"po_number", "po_barcode", "vendor_name", "expected_date", "notes", "order_type"}
     header_data = {k: v for k, v in data.items() if k in HEADER_FIELDS}
     # Header edits are blocked when the PO is locked (CLOSED or
     # ARCHIVED). The status field itself is still editable so an admin
@@ -396,12 +413,12 @@ def update_purchase_order(po_id, validated):
     g.db.commit()
 
     row = g.db.execute(
-        text("SELECT po_id, po_number, po_barcode, vendor_name, status, expected_date, warehouse_id, notes, created_at FROM purchase_orders WHERE po_id = :pid"),
+        text("SELECT po_id, po_number, po_barcode, vendor_name, status, expected_date, warehouse_id, notes, created_at, order_type FROM purchase_orders WHERE po_id = :pid"),
         {"pid": po_id},
     ).fetchone()
     return jsonify({
         "po_id": row.po_id, "po_number": row.po_number, "po_barcode": row.po_barcode,
-        "vendor_name": row.vendor_name, "status": row.status,
+        "vendor_name": row.vendor_name, "status": row.status, "order_type": row.order_type,
         "expected_date": row.expected_date.isoformat() if row.expected_date else None,
         "warehouse_id": row.warehouse_id, "notes": row.notes,
         "created_at": row.created_at.isoformat() if row.created_at else None,
@@ -843,8 +860,12 @@ def unreceive_receipt(receipt_id):
             status_code = 409
         else:
             status_code = 422
+        # SEA: the operator sees the reason in Portuguese; the original
+        # message stays in ``detail`` for diagnosis.
         return jsonify({
-            "error": str(exc),
+            "error": _UNRECEIVE_MESSAGES.get(exc.kind, "Não foi possível estornar o recebimento."),
+            "user_facing": True,
+            "detail": str(exc),
             "kind": exc.kind,
             **exc.context,
         }), status_code

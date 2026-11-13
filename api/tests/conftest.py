@@ -34,6 +34,11 @@ if _REAL_DATABASE_URL and _TEST_DATABASE_URL == _REAL_DATABASE_URL:
 # the var.
 os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
 
+# SEA: the stack points notifications at a mail server (SEA_SMTP_HOST).
+# Tests never send mail or queue Celery tasks; the ones that exercise
+# e-mail set the variable themselves.
+os.environ.pop("SEA_SMTP_HOST", None)
+
 # v1.7.0: route the session app fixture's mapping-loader at an empty
 # isolated dir so operator-created mapping docs in the working
 # directory's db/mappings/ (e.g., gate_test.yaml from the pre-merge
@@ -127,6 +132,16 @@ ALL_TABLES = [
     "transfer_order_approvals",
     "transfer_order_lines",
     "transfer_orders",
+    # SEA (mig 085): SAP base mirror.
+    "sap_reservation_items",
+    "sap_reservations",
+    "sap_materials",
+    "sap_orders",
+    # SEA (mig 084): operational notifications.
+    "sea_notifications",
+    # SEA (mig 082): terminal withdrawals.
+    "withdrawal_lines",
+    "withdrawals",
     "bin_transfers",
     "item_receipts",
     "sales_order_lines",

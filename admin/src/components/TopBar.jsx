@@ -4,29 +4,26 @@ import { useAuth } from '../auth.jsx';
 import { useWarehouse } from '../warehouse.jsx';
 import { api } from '../api.js';
 import SeaLogo from './SeaLogo.jsx';
+import Notificacoes from './Notificacoes.jsx';
 
 const SEARCH_DEBOUNCE_MS = 250;
 
 const RESULT_TYPE_LABEL = {
   item: 'Material',
   bin: 'Endereço',
-  po: 'PC',
-  so: 'PV',
-  customer: 'Cliente',
+  po: 'Ordem',
 };
 
+// Search results open the SEA tab that owns the entity. Sales orders and
+// customers are not part of SEA, so those result types are dropped.
+const SEA_RESULT_TYPES = new Set(['item', 'bin', 'po']);
+
 function resultRoute(r) {
-  // Selection routes the operator to the list page filtered by the
-  // result's primary label. Item / bin / PO / SO map directly to
-  // their list page; customer maps to the sales-orders list since
-  // there is no customers detail view.
   const q = encodeURIComponent(r.label);
   switch (r.type) {
-    case 'item': return `/items?q=${q}`;
-    case 'bin': return `/bins?q=${q}`;
-    case 'po': return `/purchase-orders?q=${q}`;
-    case 'so': return `/sales-orders?q=${q}`;
-    case 'customer': return `/sales-orders?q=${q}`;
+    case 'item': return `/estoque/materiais?q=${q}`;
+    case 'bin': return `/estoque/enderecos?q=${q}`;
+    case 'po': return `/expedicao/ots?q=${q}`;
     default: return '/';
   }
 }
@@ -52,7 +49,7 @@ export default function TopBar({ forced = false }) {
     // tell at a glance whether a deploy landed. /api/admin/system-info is
     // admin-gated, so no fingerprinting concern. Silent on failure -- the
     // version label is informational, not load-bearing.
-    if (forced || !user) return;
+    if (forced || user?.role !== 'ADMIN') return;
     let cancelled = false;
     (async () => {
       try {
@@ -61,7 +58,7 @@ export default function TopBar({ forced = false }) {
           const data = await res.json();
           setServerVersion(data?.version || null);
         }
-      } catch (_) { /* ignore */ }
+      } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
   }, [forced, user]);
@@ -102,7 +99,7 @@ export default function TopBar({ forced = false }) {
       const res = await api.get(`/admin/search?${params}`);
       if (res?.ok) {
         const data = await res.json();
-        setSearchResults(data.results || []);
+        setSearchResults((data.results || []).filter((r) => SEA_RESULT_TYPES.has(r.type)));
         setSearchHighlight(-1);
       } else {
         setSearchResults([]);
@@ -147,6 +144,7 @@ export default function TopBar({ forced = false }) {
   }
 
   const whCode = warehouse?.warehouse_code || warehouse?.code || '...';
+  const whName = warehouse?.warehouse_name || warehouse?.name || '';
 
   return (
     <div className="topbar">
@@ -174,7 +172,7 @@ export default function TopBar({ forced = false }) {
           className="topbar-wh-picker"
           onClick={() => setShowWhPicker(!showWhPicker)}
         >
-          <span>/</span> {whCode}
+          <span>/</span> {whName ? `${whCode} - ${whName}` : whCode}
           <svg width="10" height="10" viewBox="0 0 10 10" style={{ marginLeft: 4, opacity: 0.5 }}>
             <path d="M2 4 L5 7 L8 4" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
           </svg>
@@ -237,6 +235,7 @@ export default function TopBar({ forced = false }) {
           </div>
         )}
       </div>}
+      {!forced && <Notificacoes />}
       <div className="topbar-user" ref={menuRef} style={{ position: 'relative' }}>
         <div className="topbar-avatar" onClick={() => setShowMenu(!showMenu)} title={user?.full_name || user?.username}>
           {initials}

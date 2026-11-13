@@ -48,7 +48,7 @@ export default function ChangePasswordScreen({ navigation }) {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError('As novas senhas não coincidem.');
       return;
     }
 
@@ -68,7 +68,7 @@ export default function ChangePasswordScreen({ navigation }) {
       const resp = err?.response?.data;
       const msg =
         (resp && resp.error) ||
-        'Could not change password. Please try again.';
+        'Não foi possível alterar a senha. Tente novamente.';
       setError(msg);
       setSubmitting(false);
     }
@@ -86,17 +86,17 @@ export default function ChangePasswordScreen({ navigation }) {
         {forced && (
           <View style={styles.banner} accessibilityRole="alert">
             <Text style={styles.bannerText}>
-              <Text style={styles.bannerBold}>First-time setup: </Text>
-              please choose a new admin password before continuing.
+              <Text style={styles.bannerBold}>Primeiro acesso: </Text>
+              escolha uma nova senha de administrador antes de continuar.
             </Text>
           </View>
         )}
 
-        <Text style={styles.title}>Change Password</Text>
+        <Text style={styles.title}>Alterar senha</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.label}>Current password</Text>
+        <Text style={styles.label}>Senha atual</Text>
         <TextInput
           style={styles.input}
           value={currentPassword}
@@ -107,7 +107,7 @@ export default function ChangePasswordScreen({ navigation }) {
           autoFocus
         />
 
-        <Text style={styles.label}>New password</Text>
+        <Text style={styles.label}>Nova senha</Text>
         <TextInput
           style={styles.input}
           value={newPassword}
@@ -117,10 +117,10 @@ export default function ChangePasswordScreen({ navigation }) {
           autoCorrect={false}
         />
         <Text style={styles.hint}>
-          At least 8 characters, one letter and one digit. Cannot be "admin".
+          Mínimo de 8 caracteres, com uma letra e um dígito. Não pode ser "admin".
         </Text>
 
-        <Text style={styles.label}>Confirm new password</Text>
+        <Text style={styles.label}>Confirmar nova senha</Text>
         <TextInput
           style={styles.input}
           value={confirmPassword}
@@ -136,7 +136,7 @@ export default function ChangePasswordScreen({ navigation }) {
           disabled={submitting}
         >
           <Text style={styles.buttonText}>
-            {submitting ? 'Saving...' : 'Change password'}
+            {submitting ? 'Salvando...' : 'Alterar senha'}
           </Text>
         </TouchableOpacity>
 
@@ -146,7 +146,7 @@ export default function ChangePasswordScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             disabled={submitting}
           >
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
+            <Text style={styles.secondaryButtonText}>Cancelar</Text>
           </TouchableOpacity>
         )}
 
@@ -156,7 +156,7 @@ export default function ChangePasswordScreen({ navigation }) {
             onPress={logout}
             disabled={submitting}
           >
-            <Text style={styles.secondaryButtonText}>Log out</Text>
+            <Text style={styles.secondaryButtonText}>Sair</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

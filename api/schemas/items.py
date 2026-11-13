@@ -1,7 +1,7 @@
 """Item request schemas."""
 
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,11 @@ class CreateItemRequest(BaseModel):
     category: Optional[str] = Field(None, max_length=128)
     weight_lbs: Optional[Decimal] = Field(None, ge=0, le=99999)
     default_bin_id: Optional[int] = Field(None, gt=0)
+    # SEA SP12 rules: size class and compatibility group (NULL = none).
+    size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
+    compat_group: Optional[str] = Field(None, max_length=50)
+    # SEA: unit of measure of the material (PC, KG, PAR ...).
+    uom: Optional[str] = Field(None, max_length=10)
 
 
 class UpdateItemRequest(BaseModel):
@@ -29,6 +34,11 @@ class UpdateItemRequest(BaseModel):
     reorder_point: Optional[int] = Field(None, ge=0)
     reorder_qty: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
+    # SEA SP12 rules: size class and compatibility group (NULL = none).
+    size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
+    compat_group: Optional[str] = Field(None, max_length=50)
+    # SEA: unit of measure of the material (PC, KG, PAR ...).
+    uom: Optional[str] = Field(None, max_length=10)
 
 
 class CreatePreferredBinRequest(BaseModel):

@@ -167,15 +167,22 @@ def record_unreceive(
     # or shipped since the receipt, the warehouse total is below the
     # receipt qty and we refuse -- the operator must adjust inventory
     # first, then unreceive.
+    # SEA: a lot-tagged receipt (e.g. an OT, whose lot is the OT number)
+    # only reverses stock of that same lot, so un-receiving one OT never
+    # consumes another OT's units of the same material. Receipts without
+    # a lot keep the original warehouse-pool behaviour.
+    lot_clause = " AND lot_number = :lot" if receipt.lot_number else ""
+    lot_params = {"lot": receipt.lot_number} if receipt.lot_number else {}
+
     warehouse_available = db.execute(
         text(
             "SELECT COALESCE("
             "  SUM(GREATEST(0, quantity_on_hand - quantity_allocated)), 0"
             ") AS avail "
             "  FROM inventory "
-            " WHERE item_id = :iid AND warehouse_id = :wid"
+            " WHERE item_id = :iid AND warehouse_id = :wid" + lot_clause
         ),
-        {"iid": receipt.item_id, "wid": receipt.warehouse_id},
+        {"iid": receipt.item_id, "wid": receipt.warehouse_id, **lot_params},
     ).scalar()
     if warehouse_available < qty_to_reverse:
         raise UnreceiveError(
@@ -204,12 +211,14 @@ def record_unreceive(
             "       GREATEST(0, quantity_on_hand - quantity_allocated) AS avail "
             "  FROM inventory "
             " WHERE item_id = :iid AND bin_id = :bid AND warehouse_id = :wid "
+            + lot_clause +
             " FOR UPDATE"
         ),
         {
             "iid": receipt.item_id,
             "bid": receipt.bin_id,
             "wid": receipt.warehouse_id,
+            **lot_params,
         },
     ).fetchone()
     if orig is not None and orig.avail > 0:
@@ -235,6 +244,7 @@ def record_unreceive(
                 " WHERE item_id = :iid AND warehouse_id = :wid "
                 "   AND bin_id <> :origbid "
                 "   AND quantity_on_hand - quantity_allocated > 0 "
+                + lot_clause +
                 " ORDER BY (quantity_on_hand - quantity_allocated) DESC, bin_id ASC "
                 " FOR UPDATE"
             ),
@@ -242,6 +252,7 @@ def record_unreceive(
                 "iid": receipt.item_id,
                 "wid": receipt.warehouse_id,
                 "origbid": receipt.bin_id,
+                **lot_params,
             },
         ).fetchall()
         for inv in other_invs:

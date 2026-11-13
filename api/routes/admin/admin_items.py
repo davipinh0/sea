@@ -81,7 +81,7 @@ def list_items():
     params["offset"] = (page - 1) * per_page
     rows = g.db.execute(
         text(f"""
-            SELECT i.item_id, i.sku, i.item_name, i.upc, i.mpn, i.category, i.weight_lbs,
+            SELECT i.item_id, i.sku, i.item_name, i.upc, i.mpn, i.category, i.size_class, i.compat_group, i.weight_lbs,
                    i.default_bin_id, i.is_active, i.created_at,
                    b.bin_code AS default_bin_code
             FROM items i
@@ -110,7 +110,7 @@ def list_items():
         "items": [
             {"item_id": r.item_id, "sku": r.sku, "item_name": r.item_name, "upc": r.upc,
              "mpn": r.mpn,
-             "category": r.category, "weight_lbs": float(r.weight_lbs) if r.weight_lbs else None,
+             "category": r.category, "size_class": r.size_class, "compat_group": r.compat_group, "weight_lbs": float(r.weight_lbs) if r.weight_lbs else None,
              "default_bin_id": r.default_bin_id, "default_bin_code": r.default_bin_code,
              "is_active": r.is_active,
              "created_at": r.created_at.isoformat() if r.created_at else None}
@@ -126,7 +126,7 @@ def list_items():
 @with_db
 def get_item(item_id):
     item = g.db.execute(
-        text("SELECT item_id, sku, item_name, description, upc, mpn, barcode_aliases, category, weight_lbs, length_in, width_in, height_in, default_bin_id, reorder_point, reorder_qty, is_lot_tracked, is_serial_tracked, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
+        text("SELECT item_id, sku, item_name, description, upc, mpn, barcode_aliases, category, size_class, compat_group, weight_lbs, length_in, width_in, height_in, default_bin_id, reorder_point, reorder_qty, is_lot_tracked, is_serial_tracked, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
         {"iid": item_id},
     ).fetchone()
     if not item:
@@ -155,7 +155,7 @@ def get_item(item_id):
         "item": {
             "item_id": item.item_id, "sku": item.sku, "item_name": item.item_name,
             "description": item.description, "upc": item.upc, "mpn": item.mpn, "barcode_aliases": item.barcode_aliases,
-            "category": item.category, "weight_lbs": float(item.weight_lbs) if item.weight_lbs else None,
+            "category": item.category, "size_class": item.size_class, "compat_group": item.compat_group, "weight_lbs": float(item.weight_lbs) if item.weight_lbs else None,
             "length_in": float(item.length_in) if item.length_in else None,
             "width_in": float(item.width_in) if item.width_in else None,
             "height_in": float(item.height_in) if item.height_in else None,
@@ -202,13 +202,14 @@ def create_item(validated):
 
     result = g.db.execute(
         text("""
-            INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, external_id)
-            VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :ext_id)
-            RETURNING item_id, sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, is_active, created_at
+            INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, uom, external_id)
+            VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :uom, :ext_id)
+            RETURNING item_id, sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, is_active, created_at, size_class, compat_group
         """),
         {
             "sku": data["sku"], "name": data["item_name"], "desc": data.get("description"),
-            "upc": data.get("upc"), "mpn": data.get("mpn"), "cat": data.get("category"),
+            "upc": data.get("upc"), "mpn": data.get("mpn"), "cat": data.get("category"), "size": data.get("size_class"), "compat": data.get("compat_group"),
+            "uom": (data.get("uom") or "").strip().upper() or None,
             "weight": float(data["weight_lbs"]) if data.get("weight_lbs") is not None else None,
             "bin": data.get("default_bin_id"),
             "ext_id": str(uuid.uuid4()),
@@ -219,6 +220,7 @@ def create_item(validated):
     return jsonify({
         "item_id": row.item_id, "sku": row.sku, "item_name": row.item_name,
         "description": row.description, "upc": row.upc, "mpn": row.mpn, "category": row.category,
+        "size_class": row.size_class, "compat_group": row.compat_group,
         "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
         "default_bin_id": row.default_bin_id, "is_active": row.is_active,
         "created_at": row.created_at.isoformat() if row.created_at else None,
@@ -237,7 +239,7 @@ def update_item(item_id, validated):
     if not existing:
         return jsonify({"error": "Material não encontrado"}), 404
 
-    ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active"}
+    ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active", "size_class", "compat_group", "uom"}
     fields, params = [], {"iid": item_id}
     for col in ALLOWED_FIELDS:
         if col in data:
@@ -252,12 +254,12 @@ def update_item(item_id, validated):
     g.db.commit()
 
     row = g.db.execute(
-        text("SELECT item_id, sku, item_name, upc, mpn, category, weight_lbs, default_bin_id, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
+        text("SELECT item_id, sku, item_name, upc, mpn, category, size_class, compat_group, weight_lbs, default_bin_id, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
         {"iid": item_id},
     ).fetchone()
     return jsonify({
         "item_id": row.item_id, "sku": row.sku, "item_name": row.item_name, "upc": row.upc,
-        "mpn": row.mpn, "category": row.category, "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
+        "mpn": row.mpn, "category": row.category, "size_class": row.size_class, "compat_group": row.compat_group, "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
         "default_bin_id": row.default_bin_id, "is_active": row.is_active,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
@@ -543,8 +545,9 @@ def _import_item(db, row: ItemImportRow):
 
     weight = row.resolved_weight()
     result = db.execute(
-        text("INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, external_id) VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :ext_id) RETURNING item_id"),
+        text("INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, external_id) VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :ext_id) RETURNING item_id"),
         {"sku": sku, "name": name, "desc": row.description,
+         "size": row.size_class, "compat": (row.compat_group or "").strip() or None,
          "upc": row.upc, "mpn": row.mpn, "cat": row.category,
          "weight": float(weight) if weight is not None else None,
          "bin": default_bin_id, "ext_id": str(uuid.uuid4())},
@@ -598,8 +601,8 @@ def _import_bin(db, row: BinImportRow, raw_rec: dict):
 
     db.execute(
         text("""
-            INSERT INTO bins (zone_id, warehouse_id, bin_code, bin_barcode, bin_type, aisle, row_num, level_num, pick_sequence, putaway_sequence, description, external_id)
-            VALUES (:zid, :wid, :code, :barcode, :type, :aisle, :row, :level, :pick_seq, :put_seq, :desc, :ext_id)
+            INSERT INTO bins (zone_id, warehouse_id, bin_code, bin_barcode, bin_type, aisle, row_num, level_num, pick_sequence, putaway_sequence, description, capacity_units, size_class, external_id)
+            VALUES (:zid, :wid, :code, :barcode, :type, :aisle, :row, :level, :pick_seq, :put_seq, :desc, :cap, :size, :ext_id)
         """),
         {
             "zid": zone_id, "wid": warehouse_id, "code": bin_code,
@@ -607,6 +610,7 @@ def _import_bin(db, row: BinImportRow, raw_rec: dict):
             "aisle": row.aisle, "row": row.row_num, "level": row.level_num,
             "pick_seq": row.pick_sequence or 0, "put_seq": row.putaway_sequence or 0,
             "desc": row.description,
+            "cap": row.capacity_units, "size": row.size_class,
             "ext_id": str(uuid.uuid4()),
         },
     )
@@ -629,12 +633,12 @@ def _import_purchase_order(db, row: PurchaseOrderImportRow, default_warehouse_id
     if not po_row:
         result = db.execute(
             text("""
-                INSERT INTO purchase_orders (po_number, po_barcode, vendor_name, expected_date, warehouse_id, status, external_id)
-                VALUES (:pn, :pn, :vendor, :exp_date, :wid, 'OPEN', :ext_id)
+                INSERT INTO purchase_orders (po_number, po_barcode, vendor_name, expected_date, warehouse_id, status, order_type, external_id)
+                VALUES (:pn, :pn, :vendor, :exp_date, :wid, 'OPEN', :order_type, :ext_id)
                 RETURNING po_id
             """),
             {"pn": row.po_number, "vendor": row.vendor, "exp_date": row.expected_date or None,
-             "wid": warehouse_id, "ext_id": str(uuid.uuid4())},
+             "wid": warehouse_id, "order_type": row.order_type, "ext_id": str(uuid.uuid4())},
         )
         po_id = result.fetchone()[0]
     else:

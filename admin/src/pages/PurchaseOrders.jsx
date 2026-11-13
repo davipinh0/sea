@@ -6,8 +6,13 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import { statusLabel } from '../utils/statusLabel.js';
+import { useWarehouse } from '../warehouse.jsx';
+import NovaOtModal from '../components/NovaOtModal.jsx';
+import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
+import { useAuth } from '../auth.jsx';
+import { readError } from '../utils/sea.js';
 
-const STATUS_OPTIONS = ['Todos', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
+const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 const ALL_PO_STATUSES = ['OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 // ARCHIVED is reachable only from CLOSED in the backend state
 // machine. Surface that rule in the dropdown so an operator never
@@ -46,6 +51,26 @@ export default function PurchaseOrders() {
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('All');
+  const { warehouseId } = useWarehouse();
+  const [creating, setCreating] = useState(false);
+  const [historyOf, setHistoryOf] = useState(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const [deleting, setDeleting] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+
+  async function confirmDelete() {
+    const order = deleting;
+    setDeleting(null);
+    setDeleteError('');
+    const res = await api.delete(`/sea/ots/${order.po_id}`);
+    if (!res) return;
+    if (!res.ok) {
+      setDeleteError(await readError(res, 'Não foi possível excluir a ordem.'));
+      return;
+    }
+    loadOrders();
+  }
   // ARCHIVED POs are hidden by default to keep the active list clean.
   // The Show Archived toggle flips include_archived on the backend
   // call so an operator can audit completed orders when needed.
@@ -147,6 +172,7 @@ export default function PurchaseOrders() {
     setEditForm({
       po_number: full.po_number || '',
       vendor_name: full.vendor_name || '',
+      order_type: full.order_type || '',
       expected_date: full.expected_date ? full.expected_date.slice(0, 10) : '',
       notes: full.notes || '',
       status: full.status,
@@ -178,6 +204,7 @@ export default function PurchaseOrders() {
     if (headerEditable) {
       body.po_number = editForm.po_number;
       body.vendor_name = editForm.vendor_name || null;
+      if (editForm.order_type) body.order_type = editForm.order_type;
       body.expected_date = editForm.expected_date || null;
       body.notes = editForm.notes || null;
     }
@@ -259,7 +286,7 @@ export default function PurchaseOrders() {
     const sku = newLineSku.trim();
     const qty = parseInt(newLineQty, 10);
     if (!sku) {
-      setNewLineError('Informe um SKU');
+      setNewLineError('Informe o código do material');
       return;
     }
     if (isNaN(qty) || qty <= 0) {
@@ -278,7 +305,7 @@ export default function PurchaseOrders() {
         item = await resolveSku(sku);
       }
       if (!item) {
-        setNewLineError(`SKU desconhecido: ${sku}`);
+        setNewLineError(`Código de material desconhecido: ${sku}`);
         return;
       }
       const res = await api.post(
@@ -316,7 +343,7 @@ export default function PurchaseOrders() {
       const s = String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const headers = ['SKU', 'Nome do material', 'Pedido', 'Recebido', 'Divergência'];
+    const headers = ['Código', 'Descrição', 'Previsto', 'Recebido', 'Divergência'];
     const lines = [headers.join(',')];
     for (const l of poLines) {
       const ordered = l.quantity_ordered || 0;
@@ -342,19 +369,28 @@ export default function PurchaseOrders() {
   }
 
   const columns = [
-    { key: 'po_number', label: 'Número do PC', mono: true },
-    { key: 'vendor_name', label: 'Fornecedor' },
+    { key: 'po_number', label: 'Ordem', mono: true },
+    { key: 'order_type', label: 'Tipo', render: (r) => <OtTypeTag type={r.order_type} />, csvValue: (r) => r.order_type || '' },
+    { key: 'vendor_name', label: 'Origem' },
     { key: 'expected_date', label: 'Data prevista', mono: true, render: (r) => r.expected_date ? new Date(r.expected_date).toLocaleDateString() : '-' },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} /> },
     { key: 'created_at', label: 'Criado', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : '-' },
     { key: 'actions', label: '', render: (r) => (
-      <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
+        {isAdmin && r.order_type && (
+          <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleting(r); }} aria-label={`Excluir ordem ${r.po_number}`} title="Excluir">&#128465;</button>
+        )}
+      </div>
     )},
   ];
 
   return (
     <div>
-      <PageHeader title="Pedidos de compra" />
+      <PageHeader title="Ordens">
+        <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>Nova ordem</button>
+      </PageHeader>
+      {deleteError && <div className="form-error" role="alert" style={{ marginBottom: 12 }}>{deleteError}</div>}
 
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Status:</label>
@@ -364,7 +400,7 @@ export default function PurchaseOrders() {
         <input
           className="form-input"
           style={{ maxWidth: 320 }}
-          placeholder="Buscar por número do PC ou fornecedor"
+          placeholder="Buscar por número da ordem ou origem"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
@@ -388,12 +424,12 @@ export default function PurchaseOrders() {
         pagination={pagination}
         onPageChange={handlePageChange}
         onRowClick={viewPO}
-        emptyMessage="Nenhum pedido de compra encontrado"
+        emptyMessage="Nenhuma ordem encontrada"
       />
 
       {selectedPO && (
         <Modal
-          title={`PC ${selectedPO.po_number}`}
+          title={`Ordem ${selectedPO.po_number}`}
           onClose={() => { setSelectedPO(null); setPOLines([]); }}
           footer={
             <>
@@ -404,9 +440,9 @@ export default function PurchaseOrders() {
           size="wide"
         >
           <section className="section">
-            <div className="section-title">Resumo do PC</div>
+            <div className="section-title">Resumo da ordem</div>
             <div className="detail-grid detail-grid-2col" style={{ marginBottom: 0 }}>
-              <span className="detail-label">Fornecedor</span><span>{selectedPO.vendor_name || '-'}</span>
+              <span className="detail-label">Origem</span><span>{selectedPO.vendor_name || '-'}</span>
               <span className="detail-label">Status</span><span><StatusTag status={selectedPO.status} /></span>
               <span className="detail-label">Data prevista</span><span className="mono">{selectedPO.expected_date ? new Date(selectedPO.expected_date).toLocaleDateString() : '-'}</span>
               <span className="detail-label">Observações</span><span>{selectedPO.notes || '-'}</span>
@@ -414,12 +450,12 @@ export default function PurchaseOrders() {
           </section>
 
           <section className="section" style={{ marginBottom: 0 }}>
-            <div className="section-title">Linhas do pedido</div>
+            <div className="section-title">Materiais da ordem</div>
             {poLines.length > 0 ? (
               <table className="lines-table">
                 <thead>
                   <tr>
-                    <th>SKU</th>
+                    <th>Código</th>
                     <th>UPC</th>
                     <th>MPN</th>
                     <th>Nome do material</th>
@@ -454,7 +490,7 @@ export default function PurchaseOrders() {
 
       {editing && (
         <Modal
-          title={`Editar PC ${editing.po_number}`}
+          title={`Editar ordem ${editing.po_number}`}
           onClose={closeEdit}
           footer={
             <>
@@ -486,7 +522,7 @@ export default function PurchaseOrders() {
             <div className="section-title">Cabeçalho</div>
             <div className="form-row">
               <div className="form-group">
-                <label>Número do PC</label>
+                <label>Número da ordem</label>
                 <input
                   className="form-input"
                   value={editForm.po_number}
@@ -495,13 +531,26 @@ export default function PurchaseOrders() {
                 />
               </div>
               <div className="form-group">
-                <label>Fornecedor</label>
+                <label>Origem</label>
                 <input
                   className="form-input"
                   value={editForm.vendor_name}
                   disabled={EDIT_LOCKED_STATUSES.has(editing.status)}
                   onChange={(e) => setEditForm({ ...editForm, vendor_name: e.target.value })}
                 />
+              </div>
+              <div className="form-group">
+                <label>Tipo</label>
+                <select
+                  className="form-select"
+                  value={editForm.order_type}
+                  disabled={EDIT_LOCKED_STATUSES.has(editing.status)}
+                  onChange={(e) => setEditForm({ ...editForm, order_type: e.target.value })}
+                >
+                  <option value="" disabled>Escolha…</option>
+                  <option value="PM11">PM11</option>
+                  <option value="PM12">PM12</option>
+                </select>
               </div>
             </div>
             <div className="form-row">
@@ -540,18 +589,18 @@ export default function PurchaseOrders() {
             </div>
             {EDIT_LOCKED_STATUSES.has(editing.status) && (
               <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                A edição do cabeçalho e das linhas está bloqueada enquanto o PC está {editing.status}. Mude o status de {editing.status} pelo menu para voltar a editar.
+                A edição do cabeçalho e das linhas está bloqueada enquanto a ordem está {editing.status}. Mude o status de {editing.status} pelo menu para voltar a editar.
               </p>
             )}
           </section>
 
           <section className="section">
-            <div className="section-title">Linhas do pedido</div>
+            <div className="section-title">Materiais da ordem</div>
             {editLines.length > 0 ? (
               <table className="lines-table">
                 <thead>
                   <tr>
-                    <th>SKU</th>
+                    <th>Código</th>
                     <th>Nome do material</th>
                     <th style={{ textAlign: 'right' }}>Pedido</th>
                     <th style={{ textAlign: 'right' }}>Recebido</th>
@@ -590,7 +639,7 @@ export default function PurchaseOrders() {
                             onClick={() => removeLine(l)}
                             disabled={!removable}
                             title={!removable
-                              ? (lineLocked ? 'Bloqueado enquanto o PC está ' + editing.status : 'A linha tem unidades recebidas; estorne os recebimentos primeiro')
+                              ? (lineLocked ? 'Bloqueado enquanto a ordem está ' + editing.status : 'A linha tem unidades recebidas; estorne os recebimentos primeiro')
                               : 'Remover linha'}
                             aria-label="Remover linha"
                           >&#10005;</button>
@@ -612,10 +661,10 @@ export default function PurchaseOrders() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: '0 0 240px' }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>SKU</label>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>Código</label>
                     <input
                       className="form-input mono"
-                      placeholder="Digite o SKU para buscar"
+                      placeholder="Digite o código do material"
                       list="po-edit-sku-suggestions"
                       value={newLineSku}
                       onChange={(e) => setNewLineSku(e.target.value)}
@@ -669,6 +718,27 @@ export default function PurchaseOrders() {
               </div>
             )}
           </section>
+        </Modal>
+      )}
+      {creating && (
+        <NovaOtModal
+          warehouseId={warehouseId}
+          onClose={() => setCreating(false)}
+          onCreated={(code) => { setCreating(false); loadOrders(); setHistoryOf(code); }}
+        />
+      )}
+      {historyOf && <OtDetailModal code={historyOf} onClose={() => setHistoryOf(null)} />}
+      {deleting && (
+        <Modal
+          title={`Excluir ordem ${deleting.po_number}`}
+          onClose={() => setDeleting(null)}
+          footer={<>
+            <button className="btn" onClick={() => setDeleting(null)}>Cancelar</button>
+            <button className="btn btn-danger" onClick={confirmDelete}>Excluir</button>
+          </>}
+        >
+          <p style={{ fontSize: 14, marginBottom: 8 }}>Tem certeza? Esta ação não pode ser desfeita.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>A ordem será excluída com seus recebimentos, o estoque que veio dela, as movimentações e as retiradas. Os materiais continuam no cadastro.</p>
         </Modal>
       )}
     </div>

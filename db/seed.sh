@@ -67,6 +67,12 @@ UPDATE_PW
   echo "Full seed complete."
 fi
 
+# SEA: fictional SP12 data (warehouse, addresses, materials, OTs, badges).
+if [ -f /seed-data/seed-sea.sql ]; then
+  echo "Loading SEA fictional data (seed-sea.sql)..."
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /seed-data/seed-sea.sql
+fi
+
 echo ""
 if [ "$MUST_CHANGE" = "true" ]; then
   echo "================================================="

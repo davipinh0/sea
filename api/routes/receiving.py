@@ -16,6 +16,7 @@ from constants import (
 from middleware.auth_middleware import require_auth, warehouse_scope_clause
 from middleware.db import with_db
 from schemas.receiving import CancelReceivingRequest, ReceiveItemsRequest
+from services import notification_service, sea_service
 from services.audit_service import write_audit_log
 from services.events_service import emit_event, get_user_external_id, resolve_source_external_id
 from services.inventory_service import (
@@ -45,7 +46,7 @@ def lookup_po(barcode):
             f"""
             SELECT po_id, po_number, po_barcode, vendor_name, vendor_id,
                    status, expected_date, warehouse_id, notes, created_at,
-                   received_at, created_by
+                   received_at, created_by, order_type
             FROM purchase_orders
             WHERE (po_barcode = :barcode OR po_number = :barcode)
               {scope_clause}
@@ -89,6 +90,7 @@ def lookup_po(barcode):
             "warehouse_id": po.warehouse_id,
             "notes": po.notes,
             "created_at": po.created_at.isoformat() if po.created_at else None,
+            "order_type": po.order_type,
         },
         "lines": [
             {
@@ -127,7 +129,8 @@ def receive_items(validated):
     po = g.db.execute(
         text(
             f"""
-            SELECT po_id, status, warehouse_id, external_id FROM purchase_orders
+            SELECT po_id, po_number, status, warehouse_id, external_id, order_type
+            FROM purchase_orders
             WHERE po_id = :po_id {scope_clause}
             FOR UPDATE
             """
@@ -185,6 +188,11 @@ def receive_items(validated):
         quantity = item_entry.quantity
         bin_id = item_entry.bin_id
         lot_number = item_entry.lot_number
+        # SEA: stock received from an OT (PM11/PM12) is tagged with the OT
+        # number as its lot, so every unit stays traceable to its OT
+        # through put-away, stock queries and withdrawals.
+        if po.order_type:
+            lot_number = po.po_number
         serial_number = item_entry.serial_number
         notes = item_entry.notes
 
@@ -415,7 +423,11 @@ def receive_items(validated):
         )
         po_status = PO_PARTIAL
 
+    # SEA: announce the receipt (panel + e-mail). No-op for non-SEA POs.
+    sea_service.notify_receipt(g.db, po, receipt_ids, username)
+
     g.db.commit()
+    notification_service.dispatch(g.db)
 
     # Drain backorder.fulfillable notifications collected by
     # release_satisfiable_backorders. Fire-and-forget Teams cards
@@ -489,6 +501,45 @@ def cancel_receiving(validated):
             "mismatched_receipt_ids": [r.receipt_id for r in mismatched],
         }), 400
 
+    # SEA: lot-tagged receipts (an OT's lot is the OT number) may only be
+    # reversed while that lot's free stock (on_hand - allocated) in the
+    # receiving bin still covers them. Otherwise the goods were already
+    # stored, reserved for a withdrawal or delivered, and clamping on_hand
+    # would silently corrupt stock. Checked for the whole call, under row
+    # locks, before any mutation.
+    lot_rows = g.db.execute(
+        text(
+            f"""
+            SELECT item_id, bin_id, warehouse_id, lot_number,
+                   SUM(quantity_received) AS qty
+              FROM item_receipts
+             WHERE receipt_id = ANY(:rids) AND lot_number IS NOT NULL
+               {scope_clause}
+             GROUP BY item_id, bin_id, warehouse_id, lot_number
+            """
+        ),
+        {"rids": receipt_ids, **scope_params},
+    ).fetchall()
+    for lr in sorted(lot_rows, key=lambda r: (r.item_id, r.bin_id, r.lot_number)):
+        inv = g.db.execute(
+            text("""
+                SELECT quantity_on_hand - quantity_allocated AS free
+                  FROM inventory
+                 WHERE item_id = :iid AND bin_id = :bid AND warehouse_id = :wid
+                   AND lot_number = :lot
+                 FOR UPDATE
+            """),
+            {"iid": lr.item_id, "bid": lr.bin_id, "wid": lr.warehouse_id, "lot": lr.lot_number},
+        ).fetchone()
+        if inv is None or inv.free < lr.qty:
+            return jsonify({
+                "error": (
+                    f"Não é possível cancelar o recebimento do lote {lr.lot_number}: "
+                    "o material já foi armazenado, reservado ou retirado."
+                ),
+                "user_facing": True,
+            }), 409
+
     # V-025: derive audit warehouse_id from the receipt rows themselves,
     # never from the attacker-controlled request body. Track per-
     # warehouse reversals so each audit row has a trustworthy
@@ -502,7 +553,7 @@ def cancel_receiving(validated):
             text(
                 f"""
                 SELECT receipt_id, po_id, po_line_id, item_id, quantity_received,
-                       bin_id, warehouse_id
+                       bin_id, warehouse_id, lot_number
                 FROM item_receipts
                 WHERE receipt_id = :rid {scope_clause}
                 """
@@ -520,8 +571,10 @@ def cancel_receiving(validated):
             text("""
                 UPDATE inventory SET quantity_on_hand = GREATEST(0, quantity_on_hand - :qty)
                 WHERE item_id = :iid AND bin_id = :bid AND warehouse_id = :wid
+                  AND lot_number IS NOT DISTINCT FROM :lot
             """),
-            {"qty": receipt.quantity_received, "iid": receipt.item_id, "bid": receipt.bin_id, "wid": receipt.warehouse_id},
+            {"qty": receipt.quantity_received, "iid": receipt.item_id, "bid": receipt.bin_id,
+             "wid": receipt.warehouse_id, "lot": receipt.lot_number},
         )
 
         # 2. Reverse PO line quantity

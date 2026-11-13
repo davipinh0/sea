@@ -7,7 +7,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-sentry}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentry}
       POSTGRES_DB: ${POSTGRES_DB:-sentry}
-      SKIP_SEED: ${SKIP_SEED:-false}
+      # SEA: fresh installs skip the Sentry fly-fishing demo; seed.sh
+      # always loads the fictional SEA data (db/seed-sea.sql).
+      SKIP_SEED: ${SKIP_SEED:-true}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -20,6 +22,7 @@ services:
       - ./db/create-test-db.sql:/docker-entrypoint-initdb.d/00-create-test-db.sql
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - ./db/seed-apartment-lab.sql:/seed-data/seed-apartment-lab.sql
+      - ./db/seed-sea.sql:/seed-data/seed-sea.sql
       - ./db/seed.sh:/docker-entrypoint-initdb.d/02-seed.sh
       # Schema also loaded into sentry_test so the conftest's
       # TRUNCATE has tables to wipe. Runs after the schema lands in
@@ -80,6 +83,20 @@ services:
       # actually keeps dispatching from peer workers. Same authenticated
       # URL shape as CELERY_BROKER_URL above.
       REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env -- see .env.example}@redis:6379/0
+      # SEA: e-mail das notificações (retirada, recebimento, armazenagem).
+      # Padrão: servidor local "mailpit" (abaixo), que guarda os e-mails em
+      # http://localhost:8025 sem entregá-los fora. Para entregar de verdade,
+      # defina SEA_SMTP_* no .env com o servidor da empresa ou do provedor.
+      SEA_SMTP_HOST: ${SEA_SMTP_HOST:-mailpit}
+      SEA_SMTP_PORT: ${SEA_SMTP_PORT:-1025}
+      SEA_SMTP_USER: ${SEA_SMTP_USER:-}
+      SEA_SMTP_PASSWORD: ${SEA_SMTP_PASSWORD:-}
+      SEA_SMTP_FROM: ${SEA_SMTP_FROM:-sea@sea.local}
+      SEA_SMTP_SECURITY: ${SEA_SMTP_SECURITY:-none}
+      # SEA: identificação do funcionário (local = usuários do SEA).
+      SEA_IDENTITY_PROVIDER: ${SEA_IDENTITY_PROVIDER:-local}
+      # SEA: onde o recebimento procura a OT (base = base do SAP no SEA).
+      SEA_OT_SOURCE: ${SEA_OT_SOURCE:-base}
     ports:
       # V-040: bind to loopback by default so a misconfigured public-cloud
       # host does not expose the API to the internet. Deployments that
@@ -111,6 +128,9 @@ services:
       retries: 3
 
   snapshot-keeper:
+    # SEA: integration worker, off by default. Start with
+    #   docker compose --profile integracoes up -d
+    profiles: ["integracoes"]
     # v1.5.0 #132: holds REPEATABLE READ transactions that export a
     # pg_snapshot_id via pg_export_snapshot(). The API tier imports
     # the same snapshot on short-lived connections to page through
@@ -152,6 +172,9 @@ services:
       start_period: 15s
 
   webhook-dispatcher:
+    # SEA: integration worker, off by default. Start with
+    #   docker compose --profile integracoes up -d
+    profiles: ["integracoes"]
     # v1.6.0 #173 (D1): outbound webhook dispatcher daemon. Mirrors the
     # snapshot-keeper shape (single Python process, heartbeat file,
     # SIGTERM-aware loop). D1 boots the skeleton with kill switch and
@@ -227,6 +250,9 @@ services:
       start_period: 15s
 
   connector-publisher:
+    # SEA: integration worker, off by default. Start with
+    #   docker compose --profile integracoes up -d
+    profiles: ["integracoes"]
     # v1.30.0 (Pipe C): channel-availability publisher daemon. Mirrors the
     # webhook-dispatcher / snapshot-keeper shape (single Python process,
     # heartbeat file, SIGTERM-aware loop). Each cycle reconciles per-channel
@@ -287,6 +313,8 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       PYTHONPATH: /app
       CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env -- see .env.example}@redis:6379/0
@@ -294,9 +322,31 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sentry}:${POSTGRES_PASSWORD:-sentry}@db:5432/${POSTGRES_DB:-sentry}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env -- see .env.example}
       SENTRY_ENCRYPTION_KEY: ${SENTRY_ENCRYPTION_KEY:?Set SENTRY_ENCRYPTION_KEY in .env -- see .env.example}
+      # SEA: e-mail das notificações (retirada, recebimento, armazenagem).
+      # Padrão: servidor local "mailpit" (abaixo), que guarda os e-mails em
+      # http://localhost:8025 sem entregá-los fora. Para entregar de verdade,
+      # defina SEA_SMTP_* no .env com o servidor da empresa ou do provedor.
+      SEA_SMTP_HOST: ${SEA_SMTP_HOST:-mailpit}
+      SEA_SMTP_PORT: ${SEA_SMTP_PORT:-1025}
+      SEA_SMTP_USER: ${SEA_SMTP_USER:-}
+      SEA_SMTP_PASSWORD: ${SEA_SMTP_PASSWORD:-}
+      SEA_SMTP_FROM: ${SEA_SMTP_FROM:-sea@sea.local}
+      SEA_SMTP_SECURITY: ${SEA_SMTP_SECURITY:-none}
     volumes:
       - ./api:/app
       - ./db:/db
+
+  mailpit:
+    # SEA: servidor de e-mail local. Recebe os e-mails das notificações e
+    # os mostra em http://localhost:8025. Não entrega para fora: serve
+    # para o protótipo funcionar sem depender de um provedor.
+    image: axllent/mailpit:v1.21
+    container_name: sea-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 500
+    ports:
+      - "127.0.0.1:8025:8025"
 
   admin:
     build: ./admin

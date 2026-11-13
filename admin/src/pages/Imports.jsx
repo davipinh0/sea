@@ -12,27 +12,32 @@ import PageHeader from '../components/PageHeader.jsx';
 // in api/schemas/csv_import.py is the only way to close that loop.
 // Exported for alignment tests in admin/src/test/imports.test.jsx.
 export const CSV_TEMPLATES = {
-  items: `sku,name,description,category,upc,default_bin,weight,quantity
-WIDGET-001,Blue Widget,Standard blue widget,Widgets,012345678901,A-01-01-01,0.50,100
-WIDGET-002,Red Widget,Standard red widget,Widgets,012345678902,A-01-01-02,0.50,50
-GADGET-001,Mini Gadget,Compact gadget device,Gadgets,012345678903,B-02-01-01,0.25,200`,
-  'purchase-orders': `po_number,warehouse_id,vendor,sku,quantity,expected_date
-PO-1001,1,Acme Supply Co,WIDGET-001,100,2026-05-01
-PO-1001,1,Acme Supply Co,WIDGET-002,50,2026-05-01
-PO-1002,1,Global Parts Inc,GADGET-001,200,2026-05-15`,
-  'sales-orders': `so_number,warehouse_id,customer,customer_phone,customer_address,sku,quantity
-SO-5001,1,John Smith,555-0101,123 Main St,WIDGET-001,2
-SO-5001,1,John Smith,555-0101,123 Main St,GADGET-001,1
-SO-5002,1,Jane Doe,555-0102,456 Oak Ave,WIDGET-002,3`,
-  bins: `bin_code,bin_barcode,zone,warehouse_id,aisle,bin_type,pick_sequence,putaway_sequence,description
-C-01-01-01,C-01-01-01,STORAGE,1,C,Pickable,100,100,Shelf C Row 1 Level 1
-C-01-02-01,C-01-02-01,STORAGE,1,C,Pickable,101,101,Shelf C Row 2 Level 1
-D-01-01-01,D-01-01-01,PICKING,1,D,Pickable,200,200,Pick zone D`,
-  'inventory-adjustments': `sku,warehouse,bin,qty,memo
-WIDGET-001,WH-01,PICK-01,5,Found stock during cycle count
-WIDGET-002,WH-01,PICK-02,-3,Damaged in handling
-GADGET-001,WH-01,BULK-01,10,Vendor credit`,
+  items: `sku,name,description,category,upc,default_bin,weight,quantity,size_class,compat_group
+MAT-600601,Parafuso allen M6x20 (cx 100),Fictício,Fixadores,,,,,PEQUENO,FIXADORES
+MAT-600602,Correia em V A-50,Fictício,Transmissão,,,,,,TRANSMISSAO
+MAT-600603,Filtro de ar industrial,Fictício,Filtros,,,,,GRANDE,FILTROS`,
+  'purchase-orders': `po_number,order_type,warehouse_id,vendor,sku,quantity,expected_date
+OT-7100001,PM11,1,SAP (simulado),MAT-600601,20,2026-12-01
+OT-7100001,PM11,1,SAP (simulado),MAT-600602,5,2026-12-01
+OT-7100002,PM12,1,SAP (simulado),MAT-600603,2,2026-12-05`,
+  bins: `bin_code,bin_barcode,zone,warehouse_id,aisle,level_num,bin_type,pick_sequence,putaway_sequence,capacity_units,size_class,description
+D0,D0,PRAT,1,D,0,Pickable,40,40,,,Prateleira D nível 0
+D1,D1,PRAT,1,D,1,Pickable,41,41,,,Prateleira D nível 1
+D3,D3,PRAT,1,D,3,Pickable,43,43,,PEQUENO,Prateleira D nível 3 (peças pequenas)`,
+  // Base do SAP (dados fictícios). Ordem de carga: ordens, materiais, OTs.
+  'sap-ordens': `order_number,order_type,description
+2005113840,PM12,Manutenção corretiva (fictício)
+2005113841,PM11,Manutenção preventiva (fictício)`,
+  'sap-materiais': `material_code,description,uom
+74165325,Arame de solda (fictício),KG
+74165326,Luva de proteção (fictício),PAR`,
+  'sap-reservas': `ot_number,reservation_number,requester_name,needed_date,order_number,material_code,quantity,uom
+1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113840,74165325,54,KG
+1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113841,74165326,10,PAR`,
 };
+
+// Imports that load the SAP base go to their own endpoint.
+const SAP_IMPORTS = { 'sap-ordens': 'ordens', 'sap-materiais': 'materiais', 'sap-reservas': 'reservas' };
 
 function downloadTemplate(type) {
   const csv = CSV_TEMPLATES[type];
@@ -47,11 +52,12 @@ function downloadTemplate(type) {
 }
 
 const IMPORT_TYPES = [
-  { value: 'items', label: 'Materiais', desc: 'Import products with SKU, UPC, weight, and initial quantity' },
-  { value: 'bins', label: 'Endereços', desc: 'Import bin locations with zone, aisle, and type' },
-  { value: 'purchase-orders', label: 'Pedidos de compra', desc: 'Import POs with vendor and line items' },
-  { value: 'sales-orders', label: 'Pedidos de venda', desc: 'Import SOs with customer and line items' },
-  { value: 'inventory-adjustments', label: 'Ajustes de estoque', desc: 'Bulk adjust on-hand quantities (auto-approved). Signed qty: positive adds, negative subtracts. Memo lands on the adjustment record.' },
+  { value: 'items', label: 'Materiais', desc: 'Código, descrição, categoria, classe de tamanho (PEQUENO/GRANDE) e grupo de compatibilidade.' },
+  { value: 'bins', label: 'Endereços', desc: 'Endereços do SP12 com zona, prateleira, nível, capacidade (opcional) e classe de tamanho.' },
+  { value: 'sap-ordens', label: 'Base SAP: ordens', desc: 'Ordens do SAP: número e tipo (PM11 ou PM12). Uma ordem já existente é atualizada.' },
+  { value: 'sap-materiais', label: 'Base SAP: materiais', desc: 'Materiais do SAP: código, descrição e unidade (PC, KG, PAR). Um material já existente é atualizado.' },
+  { value: 'sap-reservas', label: 'Base SAP: OTs / reservas', desc: 'OTs / reservas abertas no SAP. Uma linha por material, com a ordem a que pertence, a quantidade e a unidade; linhas com o mesmo ot_number formam uma OT. As ordens e os materiais precisam estar na base antes.' },
+  { value: 'purchase-orders', label: 'Ordens', desc: 'Ordens PM11/PM12 com seus materiais e quantidades previstas. Uma linha por material; linhas com o mesmo número formam uma ordem. warehouse_id é o número do local (veja em Sistema > Configurações).' },
 ];
 
 export default function Imports() {
@@ -83,7 +89,8 @@ export default function Imports() {
         });
       }
 
-      const res = await api.post(`/admin/import/${importType}`, { records: rows });
+      const url = SAP_IMPORTS[importType] ? `/sea/sap/importar/${SAP_IMPORTS[importType]}` : `/admin/import/${importType}`;
+      const res = await api.post(url, { records: rows });
       if (res?.ok) {
         const data = await res.json();
         setImportResult(data);

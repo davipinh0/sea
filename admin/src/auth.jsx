@@ -56,8 +56,14 @@ export function AuthProvider({ children }) {
     // Per-page permissions decide what they can actually do; the
     // sidebar hides ungranted pages and the api gate returns 403 for
     // direct URL hits. Any user with valid credentials proceeds.
-    setUser(data.user);
-    return data.user;
+    //
+    // The login response does not carry the page grants; /auth/me does.
+    // Without them a USER would see an almost empty menu until the page
+    // was reloaded.
+    const me = await api.get('/auth/me');
+    const full = me && me.ok ? await me.json() : data.user;
+    setUser(full);
+    return full;
   }
 
   async function logout() {

@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { useWarehouse } from '../warehouse.jsx';
+import { useAuth } from '../auth.jsx';
+import { readError } from '../utils/sea.js';
+import { OtTypeTag } from '../components/sea.jsx';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
+
+// Units offered for a material. A unit read from a label that is not in
+// this list is kept as it is.
+const UNITS = ['PC', 'KG', 'PAR'];
 
 const FILTER_OPTIONS = [
   { label: 'Ativo', value: 'active' },
@@ -12,6 +20,7 @@ const FILTER_OPTIONS = [
 ];
 
 export default function Items() {
+  const { warehouseId } = useWarehouse();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -36,19 +45,21 @@ export default function Items() {
     const controller = new AbortController();
     const timer = setTimeout(() => loadItems(controller.signal), search ? 250 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [page, search, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, search, filter, warehouseId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // signal is supplied by the debounced effect so a superseded query
   // aborts mid-flight. The mutation handlers (save/delete/archive) call
   // loadItems() with no signal and refetch unconditionally.
   async function loadItems(signal) {
-    const params = new URLSearchParams({ page, per_page: 50 });
+    if (!warehouseId) return;
+    // One row per material of each order of the selected location.
+    const params = new URLSearchParams({ page, per_page: 50, warehouse_id: warehouseId });
     if (search) params.set('q', search);
     if (filter === 'active') params.set('active', 'true');
     else if (filter === 'archived') params.set('active', 'false');
     let res;
     try {
-      res = await api.get(`/admin/items?${params}`, { signal });
+      res = await api.get(`/sea/materiais?${params}`, { signal });
     } catch (err) {
       if (err?.name === 'AbortError') return; // superseded by a newer query
       throw err;
@@ -87,7 +98,9 @@ export default function Items() {
 
   function openEdit(item) {
     setEditId(item.id || item.item_id);
-    setForm({ ...item, id: item.id || item.item_id });
+    // ``uom`` on a row may be the unit of the order line; the form edits
+    // the unit of the material itself.
+    setForm({ ...item, id: item.id || item.item_id, uom: item.item_uom ?? item.uom ?? '' });
     setError('');
     setShowModal(true);
   }
@@ -100,6 +113,10 @@ export default function Items() {
       upc: form.upc || null,
       mpn: form.mpn || null,
       category: form.category || null,
+      // SEA SP12 rules: size class and compatibility group (blank = none).
+      size_class: form.size_class || null,
+      compat_group: (form.compat_group || '').trim() || null,
+      uom: (form.uom || '').trim().toUpperCase() || null,
       weight_lbs: (form.weight_lbs || form.weight) ? Number(form.weight_lbs || form.weight) : null,
       default_bin_id: form.default_bin_id ? Number(form.default_bin_id) : null,
     };
@@ -117,6 +134,9 @@ export default function Items() {
   }
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [listError, setListError] = useState('');
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   async function deleteItem(id) {
     setShowDeleteConfirm(id);
@@ -125,14 +145,16 @@ export default function Items() {
   async function confirmDeleteItem() {
     const id = showDeleteConfirm;
     setShowDeleteConfirm(null);
-    const res = await api.delete(`/admin/items/${id}`);
-    if (res?.ok) {
+    setListError('');
+    const res = await api.delete(`/sea/materiais/${id}`);
+    if (!res) return;
+    if (res.ok) {
       setDetail(null);
       setShowModal(false);
       loadItems();
     } else {
-      const data = await res?.json();
-      setError(data?.error || 'Falha ao excluir material');
+      // Shown on the page: the form (and its error line) is closed here.
+      setListError(await readError(res, 'Não foi possível excluir o material.'));
     }
   }
 
@@ -148,18 +170,20 @@ export default function Items() {
   }
 
   const columns = [
-    { key: 'sku', label: 'SKU', mono: true },
-    { key: 'item_name', label: 'Nome do material' },
-    { key: 'upc', label: 'UPC', mono: true, render: (r) => r.upc || '-' },
-    { key: 'mpn', label: 'MPN', mono: true, render: (r) => r.mpn || '-' },
-    { key: 'default_bin_code', label: 'Endereço padrão', mono: true, render: (r) => r.default_bin_code || '\u2013' },
+    { key: 'order', label: 'Ordem', mono: true, render: (r) => r.order || '-' },
+    { key: 'order_type', label: 'Tipo Ordem', render: (r) => (r.order_type ? <OtTypeTag type={r.order_type} /> : '-') },
+    { key: 'sku', label: 'Código', mono: true },
+    { key: 'item_name', label: 'Descrição' },
+    { key: 'quantity', label: 'Quantidade', render: (r) => r.quantity ?? '-' },
+    { key: 'uom', label: 'Unidade', render: (r) => r.uom || '-' },
     { key: 'category', label: 'Categoria', render: (r) => r.category || '-' },
-    { key: 'weight_lbs', label: 'Peso', render: (r) => r.weight_lbs ? `${r.weight_lbs} lb` : '-' },
+    { key: 'size_class', label: 'Tamanho', render: (r) => r.size_class || '-' },
+    { key: 'weight_lbs', label: 'Peso', render: (r) => r.weight_lbs ? `${r.weight_lbs} kg` : '-' },
     { key: 'is_active', label: 'Ativo', render: (r) => r.is_active ? 'Sim' : 'Não' },
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
         <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
-        <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteItem(r.id || r.item_id); }} aria-label="Excluir" title="Excluir">&#128465;</button>
+        {isAdmin && <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteItem(r.id || r.item_id); }} aria-label="Excluir" title="Excluir">&#128465;</button>}
       </div>
     )},
   ];
@@ -175,8 +199,9 @@ export default function Items() {
       <PageHeader title="Materiais">
         <button className="btn btn-primary" onClick={openCreate}>Novo material</button>
       </PageHeader>
+      {listError && <div className="form-error" role="alert" style={{ marginBottom: 12 }}>{listError}</div>}
       <div className="filter-bar">
-        <input className="form-input" placeholder="Buscar por SKU, nome, UPC ou MPN..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <input className="form-input" placeholder="Buscar por código, descrição ou ordem..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         <select
           className="form-select"
           value={filter}
@@ -188,18 +213,20 @@ export default function Items() {
           ))}
         </select>
       </div>
-      <DataTable rowKey="item_id" columns={columns} data={items} pagination={pagination} onPageChange={setPage} onRowClick={viewItem} />
+      <DataTable rowKey="row_id" columns={columns} data={items} pagination={pagination} onPageChange={setPage} onRowClick={viewItem} />
 
       {detail && !showModal && (
         <Modal title={detail.item_name || detail.sku} onClose={() => setDetail(null)}
           footer={<button className="btn" onClick={() => setDetail(null)}>Fechar</button>}
         >
           <div className="detail-grid">
-            <span className="detail-label">SKU</span><span className="mono">{detail.sku}</span>
+            <span className="detail-label">Código</span><span className="mono">{detail.sku}</span>
             <span className="detail-label">UPC</span><span className="mono">{detail.upc || '-'}</span>
             <span className="detail-label">MPN</span><span className="mono">{detail.mpn || '-'}</span>
             <span className="detail-label">Categoria</span><span>{detail.category || '-'}</span>
-            <span className="detail-label">Peso</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} lb` : '-'}</span>
+            <span className="detail-label">Tamanho</span><span>{detail.size_class || '-'}</span>
+            <span className="detail-label">Grupo de compatibilidade</span><span>{detail.compat_group || '-'}</span>
+            <span className="detail-label">Peso</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} kg` : '-'}</span>
             <span className="detail-label">Ativo</span><span>{detail.is_active ? 'Sim' : 'Não'}</span>
           </div>
           {detail.preferred_bins && detail.preferred_bins.length > 0 && (
@@ -242,7 +269,7 @@ export default function Items() {
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
           <div className="form-row">
             <div className="form-group">
-              <label>SKU</label>
+              <label>Código</label>
               <input className="form-input" value={form.sku || ''} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
             </div>
             <div className="form-group">
@@ -255,7 +282,7 @@ export default function Items() {
             <input className="form-input" value={form.mpn || ''} onChange={(e) => setForm({ ...form, mpn: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Nome do material</label>
+            <label>Descrição</label>
             <input className="form-input" value={form.item_name || ''} onChange={(e) => setForm({ ...form, item_name: e.target.value })} />
           </div>
           <div className="form-row">
@@ -264,10 +291,33 @@ export default function Items() {
               <input className="form-input" value={form.category || ''} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             </div>
             <div className="form-group">
-              <label>Peso (lb)</label>
+              <label>Peso (kg)</label>
               <input className="form-input" type="number" step="0.01" value={form.weight_lbs ?? form.weight ?? ''} onChange={(e) => setForm({ ...form, weight_lbs: e.target.value, weight: e.target.value })} />
             </div>
           </div>
+          <div className="form-group">
+            <label htmlFor="item-uom">Unidade</label>
+            <select id="item-uom" className="form-select" value={form.uom || ''} onChange={(e) => setForm({ ...form, uom: e.target.value })}>
+              <option value="">Não definida</option>
+              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+              {form.uom && !UNITS.includes(form.uom) && <option value={form.uom}>{form.uom}</option>}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="item-size">Classe de tamanho (SP12)</label>
+              <select id="item-size" className="form-select" value={form.size_class || ''} onChange={(e) => setForm({ ...form, size_class: e.target.value })}>
+                <option value="">Não definida</option>
+                <option value="PEQUENO">Pequeno (ex.: parafusos)</option>
+                <option value="GRANDE">Grande</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="item-compat">Grupo de compatibilidade</label>
+              <input id="item-compat" className="form-input" placeholder="ex.: FIXADORES" value={form.compat_group || ''} onChange={(e) => setForm({ ...form, compat_group: e.target.value })} />
+            </div>
+          </div>
+          <p className="settings-note">Materiais do mesmo grupo podem dividir um endereço. Em branco: só divide endereço com ele mesmo.</p>
         </Modal>
       )}
 
@@ -281,7 +331,7 @@ export default function Items() {
           }
         >
           <p style={{ fontSize: 14, marginBottom: 8 }}>Tem certeza? Esta ação não pode ser desfeita.</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O material e todos os dados associados serão excluídos permanentemente.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O material será excluído do cadastro, de todas as ordens em que aparece, do estoque e das movimentações. Uma ordem que ficar sem nenhum material também será excluída.</p>
         </Modal>
       )}
     </div>

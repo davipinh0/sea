@@ -118,6 +118,9 @@ def move_inventory(db, item_id, from_bin_id, to_bin_id, warehouse_id, quantity, 
     Decrements source (retaining the row at 0 when the bin empties),
     upserts destination via add_inventory's ON CONFLICT path.
 
+    ``warehouse_id`` is the warehouse of the destination bin (the source
+    row is found by its bin).
+
     Returns (new_source_qty, new_dest_qty).
     Raises ValueError if insufficient inventory in source bin.
     """
@@ -126,7 +129,7 @@ def move_inventory(db, item_id, from_bin_id, to_bin_id, warehouse_id, quantity, 
     source_inv = db.execute(
         text(
             """
-            SELECT inventory_id, quantity_on_hand
+            SELECT inventory_id, quantity_on_hand, quantity_allocated
             FROM inventory
             WHERE item_id = :item_id AND bin_id = :bin_id
               AND lot_number IS NOT DISTINCT FROM :lot_number
@@ -139,6 +142,23 @@ def move_inventory(db, item_id, from_bin_id, to_bin_id, warehouse_id, quantity, 
     if not source_inv or source_inv.quantity_on_hand < quantity:
         available = source_inv.quantity_on_hand if source_inv else 0
         raise ValueError(f"Insufficient inventory in source bin. Available: {available}")
+
+    # SEA: stock of an OT lot reserved for a withdrawal stays in its bin
+    # (the withdrawal line points at this inventory row). Only the free
+    # part of an OT lot may move.
+    if lot_number is not None and source_inv.quantity_allocated:
+        is_ot_lot = db.execute(
+            text(
+                "SELECT 1 FROM purchase_orders "
+                "WHERE po_number = :lot AND order_type IS NOT NULL"
+            ),
+            {"lot": lot_number},
+        ).first()
+        free = source_inv.quantity_on_hand - source_inv.quantity_allocated
+        if is_ot_lot and free < quantity:
+            raise ValueError(
+                f"Insufficient inventory in source bin. Available: {max(free, 0)}"
+            )
 
     # Decrement source
     new_source_qty = source_inv.quantity_on_hand - quantity

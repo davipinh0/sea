@@ -53,7 +53,7 @@ export default function PutAwayScreen({ navigation }) {
           // Load all items from this staging bin
           const items = binResp.data.items || [];
           if (items.length === 0) {
-            showError('No items in this staging bin');
+            showError('Nenhum material nesta área de recebimento');
             return;
           }
           const newEntries = items
@@ -69,7 +69,7 @@ export default function PutAwayScreen({ navigation }) {
               lot_number: it.lot_number || null,
             }));
           if (newEntries.length === 0) {
-            showError('All items from this bin already loaded');
+            showError('Todos os materiais deste endereço já foram carregados');
             return;
           }
           setQueue((prev) => [...prev, ...newEntries]);
@@ -84,7 +84,7 @@ export default function PutAwayScreen({ navigation }) {
     try {
       const itemResp = await client.get(`/api/lookup/item/${encodeURIComponent(barcode)}`);
       if (!itemResp.data?.item) {
-        showError('Item not found');
+        showError('Material não encontrado');
         return;
       }
 
@@ -95,13 +95,13 @@ export default function PutAwayScreen({ navigation }) {
       );
 
       if (!stagingLoc) {
-        showError('Item not in a staging bin');
+        showError('O material não está em uma área de recebimento');
         return;
       }
 
       // Duplicate check
       if (queue.find((q) => q.item_id === scannedItem.item_id && q.from_bin_id === stagingLoc.bin_id)) {
-        showError('Already added');
+        showError('Já adicionado');
         return;
       }
 
@@ -116,7 +116,7 @@ export default function PutAwayScreen({ navigation }) {
         lot_number: stagingLoc.lot_number || null,
       }]);
     } catch {
-      showError('Item not found');
+      showError('Material não encontrado');
     }
   };
 
@@ -137,7 +137,22 @@ export default function PutAwayScreen({ navigation }) {
     setPutQty(String(entry.quantity));
     setProcessPhase('scan_bin');
 
-    // Get preferred bin suggestion
+    // SEA: stock received from an OT carries the OT number as lot; ask the
+    // SP12 rules engine for the address (size class, capacity,
+    // compatibility). Other stock keeps the preferred-bin
+    // suggestion from Sentry.
+    if (entry.lot_number) {
+      try {
+        const params = `item_id=${entry.item_id}&bin_id=${entry.from_bin_id}&lot=${encodeURIComponent(entry.lot_number)}`;
+        const seaResp = await client.get(`/api/sea/armazenagem/sugestao?${params}`);
+        if (seaResp.data?.bin_code) {
+          setPreferredBin({ bin_id: seaResp.data.bin_id, bin_code: seaResp.data.bin_code, zone_name: 'Regras SP12' });
+          return;
+        }
+      } catch {
+        // Fall back to the preferred-bin suggestion below.
+      }
+    }
     try {
       const suggestResp = await client.get(`/api/putaway/suggest/${entry.item_id}`);
       setPreferredBin(suggestResp.data.preferred_bin || suggestResp.data.suggested_bin || null);
@@ -155,7 +170,7 @@ export default function PutAwayScreen({ navigation }) {
         await selectItem(match);
         return;
       }
-      showError('Scan an item from the list');
+      showError('Leia um material da lista');
       return;
     }
     // Active item selected  -  this scan is a bin
@@ -166,13 +181,13 @@ export default function PutAwayScreen({ navigation }) {
     try {
       const binResp = await client.get(`/api/lookup/bin/${encodeURIComponent(barcode)}`);
       if (!binResp.data?.bin) {
-        showError('Bin not found');
+        showError('Endereço não encontrado');
         return;
       }
       setScannedBin(binResp.data.bin);
       setProcessPhase('enter_qty');
     } catch {
-      showError('Bin not found');
+      showError('Endereço não encontrado');
     }
   };
 
@@ -220,7 +235,7 @@ export default function PutAwayScreen({ navigation }) {
         setShowPreferredPrompt(true);
       }
     } catch (err) {
-      showError(err.response?.data?.error || 'Put-away failed');
+      showError(err.response?.data?.error || 'Falha na armazenagem');
     }
   };
 
@@ -244,7 +259,7 @@ export default function PutAwayScreen({ navigation }) {
       // bin. Surface the reason instead of swallowing it, so the
       // operator knows the bin was NOT set as preferred (and why)
       // rather than assuming it stuck.
-      showError(err.response?.data?.error || 'Could not set that bin as preferred');
+      showError(err.response?.data?.error || 'Não foi possível definir esse endereço como preferencial');
     }
     setShowPreferredPrompt(false);
     setPromptData(null);
@@ -260,7 +275,7 @@ export default function PutAwayScreen({ navigation }) {
   return (
     <View style={screenStyles.screen}>
       <ScreenHeader
-        title="PUT-AWAY"
+        title="ARMAZENAGEM"
         onBack={() => {
           if (phase === 'process' && activeItem) {
             // Back from item detail to queue list
@@ -279,7 +294,7 @@ export default function PutAwayScreen({ navigation }) {
             </View>
           ) : phase === 'process' ? (
             <Text style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.textMuted }}>
-              {queue.length} left
+              {queue.length} restante(s)
             </Text>
           ) : history.length > 0 ? (
             <View style={styles.badge}>
@@ -294,7 +309,7 @@ export default function PutAwayScreen({ navigation }) {
         <>
           <View style={screenStyles.content}>
             <View style={{ padding: 16, paddingBottom: 0 }}>
-              <ScanInput placeholder="SCAN ITEM OR STAGING BIN" onScan={handleScanItem} disabled={scanDisabled} />
+              <ScanInput placeholder="LEIA O MATERIAL OU A ÁREA DE RECEBIMENTO" onScan={handleScanItem} disabled={scanDisabled} />
             </View>
 
             <View style={{ flex: 1, paddingHorizontal: 16 }}>
@@ -306,7 +321,7 @@ export default function PutAwayScreen({ navigation }) {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.queueSku}>{entry.sku}</Text>
                       <Text style={styles.queueDetail}>
-                        {entry.item_name} {'\u00b7'} QTY: {entry.quantity} {'\u00b7'} from {entry.from_bin_code}
+                        {entry.item_name} {'\u00b7'} QTD.: {entry.quantity} {'\u00b7'} de {entry.from_bin_code}
                       </Text>
                     </View>
                     <TouchableOpacity style={listStyles.removeBtn} onPress={() => removeFromQueue(index)}>
@@ -323,7 +338,7 @@ export default function PutAwayScreen({ navigation }) {
                 onPress={handleLoadAll}
                 disabled={queue.length === 0}
               >
-                <Text style={buttonStyles.buttonPrimaryText}>LOAD ALL ITEMS</Text>
+                <Text style={buttonStyles.buttonPrimaryText}>CARREGAR TODOS OS MATERIAIS</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -337,7 +352,7 @@ export default function PutAwayScreen({ navigation }) {
           {activeItem ? (
             <ScrollView ref={scrollRef} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
               <ScanInput
-                placeholder="SCAN DESTINATION BIN"
+                placeholder="LEIA O ENDEREÇO DE DESTINO"
                 onScan={handleProcessScan}
                 disabled={scanDisabled}
                 suppressRefocus={qtyFocused}
@@ -346,12 +361,12 @@ export default function PutAwayScreen({ navigation }) {
               <View style={styles.itemCard}>
                 <Text style={styles.itemName}>{activeItem.item_name}</Text>
                 <Text style={styles.sku}>{activeItem.sku}</Text>
-                <Text style={styles.fromBin}>FROM: {activeItem.from_bin_code} {'\u00b7'} QTY: {activeItem.quantity}</Text>
+                <Text style={styles.fromBin}>DE: {activeItem.from_bin_code} {'\u00b7'} QTD.: {activeItem.quantity}</Text>
               </View>
 
               {preferredBin ? (
                 <View style={styles.suggestCard}>
-                  <Text style={styles.suggestLabel}>SUGGESTED BIN</Text>
+                  <Text style={styles.suggestLabel}>ENDEREÇO SUGERIDO</Text>
                   <Text style={styles.suggestBinCode}>{preferredBin.bin_code}</Text>
                   {preferredBin.zone_name && (
                     <Text style={styles.suggestZone}>{preferredBin.zone_name}</Text>
@@ -359,17 +374,17 @@ export default function PutAwayScreen({ navigation }) {
                 </View>
               ) : processPhase === 'scan_bin' ? (
                 <View style={styles.noPreferredCard}>
-                  <Text style={styles.noPreferredText}>No preferred bin set.</Text>
-                  <Text style={styles.noPreferredSub}>Scan any bin to put away.</Text>
+                  <Text style={styles.noPreferredText}>Nenhum endereço preferencial definido.</Text>
+                  <Text style={styles.noPreferredSub}>Leia qualquer endereço para armazenar.</Text>
                 </View>
               ) : null}
 
               {processPhase === 'enter_qty' && scannedBin && (
                 <View style={styles.confirmCard}>
-                  <Text style={styles.confirmLabel}>DESTINATION</Text>
+                  <Text style={styles.confirmLabel}>DESTINO</Text>
                   <Text style={styles.confirmBinCode}>{scannedBin.bin_code}</Text>
                   <View style={styles.qtyRow}>
-                    <Text style={styles.qtyLabel}>QUANTITY</Text>
+                    <Text style={styles.qtyLabel}>QUANTIDADE</Text>
                     <TextInput
                       style={listStyles.qtyInput}
                       value={putQty}
@@ -381,13 +396,13 @@ export default function PutAwayScreen({ navigation }) {
                     />
                   </View>
                   <TouchableOpacity style={buttonStyles.buttonPrimary} onPress={handleConfirmPutAway}>
-                    <Text style={buttonStyles.buttonPrimaryText}>CONFIRM PUT-AWAY</Text>
+                    <Text style={buttonStyles.buttonPrimaryText}>CONFIRMAR ARMAZENAGEM</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[buttonStyles.buttonSecondary, { marginTop: 8 }]}
                     onPress={() => { setScannedBin(null); setProcessPhase('scan_bin'); }}
                   >
-                    <Text style={buttonStyles.buttonSecondaryText}>SCAN DIFFERENT BIN</Text>
+                    <Text style={buttonStyles.buttonSecondaryText}>LER OUTRO ENDEREÇO</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -396,7 +411,7 @@ export default function PutAwayScreen({ navigation }) {
                 style={[buttonStyles.buttonSecondary, { marginTop: 4 }]}
                 onPress={() => { setActiveItem(null); setPreferredBin(null); setScannedBin(null); setProcessPhase('scan_bin'); }}
               >
-                <Text style={buttonStyles.buttonSecondaryText}>BACK TO LIST</Text>
+                <Text style={buttonStyles.buttonSecondaryText}>VOLTAR PARA A LISTA</Text>
               </TouchableOpacity>
             </ScrollView>
           ) : (
@@ -404,7 +419,7 @@ export default function PutAwayScreen({ navigation }) {
             <View style={screenStyles.content}>
               <View style={{ padding: 16, paddingBottom: 0 }}>
                 <ScanInput
-                  placeholder="SCAN ITEM"
+                  placeholder="LEIA O MATERIAL"
                   onScan={handleProcessScan}
                   disabled={scanDisabled}
                 />
@@ -423,7 +438,7 @@ export default function PutAwayScreen({ navigation }) {
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.queueSku, entry.fullyPutAway && { color: colors.success }]}>{entry.sku}</Text>
                         <Text style={styles.queueDetail}>
-                          {entry.item_name} {'\u00b7'} QTY: {entry.fullyPutAway ? 0 : entry.quantity} {'\u00b7'} from {entry.from_bin_code}
+                          {entry.item_name} {'\u00b7'} QTD.: {entry.fullyPutAway ? 0 : entry.quantity} {'\u00b7'} de {entry.from_bin_code}
                         </Text>
                       </View>
                       {entry.fullyPutAway && (
@@ -447,7 +462,7 @@ export default function PutAwayScreen({ navigation }) {
                   disabled={!allDone}
                 >
                   <Text style={buttonStyles.buttonPrimaryText}>
-                    {allDone ? 'FINISH' : `${remaining.length} REMAINING`}
+                    {allDone ? 'FINISH' : `${remaining.length} RESTANTE(S)`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -463,13 +478,13 @@ export default function PutAwayScreen({ navigation }) {
           contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 32, paddingTop: 40, paddingBottom: 32 }}
         >
           <Text style={doneStyles.check}>{'\u2713'}</Text>
-          <Text style={doneStyles.title}>Put-Away Complete</Text>
+          <Text style={doneStyles.title}>Armazenagem concluída</Text>
           <Text style={[doneStyles.detail, { marginBottom: 16 }]}>
-            {history.length} item{history.length !== 1 ? 's' : ''} put away
+            {history.length} material{history.length !== 1 ? 's' : ''} armazenado(s)
           </Text>
 
           {history.length > 0 && (
-            <Text style={styles.sessionHistoryLabel}>SESSION HISTORY</Text>
+            <Text style={styles.sessionHistoryLabel}>HISTÓRICO DA SESSÃO</Text>
           )}
 
           {history.map((h, i) => (
@@ -484,10 +499,10 @@ export default function PutAwayScreen({ navigation }) {
           ))}
 
           <TouchableOpacity style={[buttonStyles.buttonPrimary, { marginTop: 24, width: '100%' }]} onPress={() => { setPhase('load'); setQueue([]); }}>
-            <Text style={buttonStyles.buttonPrimaryText}>PUT AWAY MORE</Text>
+            <Text style={buttonStyles.buttonPrimaryText}>ARMAZENAR MAIS</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[buttonStyles.buttonSecondary, { marginTop: 8, width: '100%' }]} onPress={() => navigation.goBack()}>
-            <Text style={buttonStyles.buttonSecondaryText}>DONE</Text>
+            <Text style={buttonStyles.buttonSecondaryText}>CONCLUIR</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -498,22 +513,22 @@ export default function PutAwayScreen({ navigation }) {
           <View style={modalStyles.card}>
             {promptData?.type === 'set_new' ? (
               <>
-                <Text style={styles.modalTitle}>Set preferred bin for</Text>
+                <Text style={styles.modalTitle}>Definir endereço preferencial de</Text>
                 <Text style={styles.modalItemName}>{promptData.item.item_name}</Text>
                 <Text style={styles.modalSku}>{promptData.item.sku}</Text>
                 <View style={modalStyles.divider} />
                 <Text style={modalStyles.body}>
-                  Set {promptData.newBin.bin_code} as preferred bin?
+                  Definir {promptData.newBin.bin_code} como endereço preferencial?
                 </Text>
               </>
             ) : (
               <>
-                <Text style={styles.modalTitle}>Set preferred bin for</Text>
+                <Text style={styles.modalTitle}>Definir endereço preferencial de</Text>
                 <Text style={styles.modalItemName}>{promptData?.item?.item_name}</Text>
                 <Text style={styles.modalSku}>{promptData?.item?.sku}</Text>
                 <View style={modalStyles.divider} />
                 <Text style={modalStyles.body}>
-                  Change preferred bin from {promptData?.oldBin?.bin_code} to {promptData?.newBin?.bin_code}?
+                  Alterar endereço preferencial de {promptData?.oldBin?.bin_code} até {promptData?.newBin?.bin_code}?
                 </Text>
               </>
             )}

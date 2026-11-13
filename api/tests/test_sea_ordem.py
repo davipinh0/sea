@@ -83,21 +83,53 @@ class TestOrderLookup:
         body = client.get("/api/sea/ordens/2000000903", headers=auth_headers)
         assert body.status_code == 200 and body.get_json()["stock"] == []
 
-    def test_stock_of_a_location_the_user_does_not_work_in_is_not_offered(
+    def test_material_stored_in_a_location_the_employee_does_not_work_in(
         self, client, auth_headers, sp12, second_location
     ):
+        """Regression: an employee whose locations do not include the one
+        that holds the material (e.g. the Contêiner de Solda) saw nothing
+        at the terminal. They request it all the same; separating stays
+        with the users of that location."""
         conn = sp12["conn"]
         po_id = _register(client, auth_headers, "OT-ORD-4", [
             {"material_code": "ORD-F", "description": "Peça F", "quantity": 4,
              "service_order_number": "2000000904"}])
         (item,) = _receive_all(client, auth_headers, conn, po_id)
         assert _putaway(client, auth_headers, item, sp12["c0"], 4, "OT-ORD-4").status_code == 200
-        outsider = _user(client, conn, "sea.ordem.1", ["retirada"], [second_location])
-        body = client.get("/api/sea/ordens/2000000904", headers=outsider).get_json()
-        assert body["stock"] == []
-        insider = _user(client, conn, "sea.ordem.2", ["retirada"], [WAREHOUSE])
-        body = client.get("/api/sea/ordens/2000000904", headers=insider).get_json()
-        assert [s["available"] for s in body["stock"]] == [4]
+
+        employee = _user(client, conn, "sea.ordem.1", ["retirada"], [second_location])
+        (row,) = client.get("/api/sea/ordens/2000000904", headers=employee).get_json()["stock"]
+        assert row["available"] == 4 and row["warehouse_id"] == WAREHOUSE
+
+        resp = _request(client, employee, row["inventory_id"], 2, ot=row["ot"])
+        assert resp.status_code == 201, resp.get_json()
+        wid = resp.get_json()["withdrawal"]["withdrawal_id"]
+        # The request went to the location that holds the material.
+        assert resp.get_json()["withdrawal"]["warehouse_id"] == WAREHOUSE
+        assert client.get(f"/api/sea/retiradas/{wid}", headers=employee).status_code == 200
+
+        # The employee does not separate: that is for the location's users.
+        assert client.post(f"/api/sea/retiradas/{wid}/separar", headers=employee,
+                           json={}).status_code == 404
+        for action in ("separar", "pronta"):
+            assert client.post(f"/api/sea/retiradas/{wid}/{action}", headers=auth_headers,
+                               json={}).status_code == 200
+        done = client.post(f"/api/sea/retiradas/{wid}/entregar", headers=employee, json={})
+        assert done.status_code == 200, done.get_json()
+        assert conn.execute(
+            text("SELECT quantity_on_hand FROM inventory WHERE inventory_id = :i"),
+            {"i": row["inventory_id"]},
+        ).scalar() == 2
+
+        # Someone else from another location still cannot see or touch it.
+        stranger = _user(client, conn, "sea.ordem.2", ["retirada"], [second_location])
+        assert client.get(f"/api/sea/retiradas/{wid}", headers=stranger).status_code == 404
+        again = _request(client, employee, row["inventory_id"], 1, ot=row["ot"])
+        other_wid = again.get_json()["withdrawal"]["withdrawal_id"]
+        assert client.post(f"/api/sea/retiradas/{other_wid}/cancelar", headers=stranger,
+                           json={"reason": "x"}).status_code == 404
+        assert client.post(f"/api/sea/retiradas/{other_wid}/cancelar", headers=employee,
+                           json={"reason": "desisti"}).status_code == 200
 
     def test_notifications_carry_the_location(self, client, auth_headers, sp12):
         _register(client, auth_headers, "OT-ORD-5", [

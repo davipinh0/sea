@@ -1269,8 +1269,9 @@ def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=No
 
 def order_stock(db, order_number, warehouse_ids=None):
     """Materials of a PM order that can be withdrawn now: what is stored
-    (not in a receiving area) with unreserved quantity, in the locations
-    the user may use (``warehouse_ids``; None = all).
+    (not in a receiving area) with unreserved quantity. ``warehouse_ids``
+    limits the locations; the withdrawal terminal passes none, because the
+    material is offered wherever it is stored.
 
     The order of a material is the one registered on it; an OT registered
     without an order number answers by its own number. Returns None when

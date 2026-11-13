@@ -174,6 +174,11 @@ Limites conhecidos do protótipo:
   se move (o que está reservado para retirada fica); valem as regras de armazenagem e, para
   material com peso por caixa, caixas inteiras (`POST /api/sea/transferencias`).
 
+* **Terminal e locais**: no terminal a ordem traz o material de **qualquer local** (SP12,
+  Contêiner de Solda), mesmo que o funcionário não trabalhe nele. A solicitação vai para a fila
+  do local que guarda o material; separar é dos usuários daquele local, e confirmar ou cancelar
+  é de quem solicitou.
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):

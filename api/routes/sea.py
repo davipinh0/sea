@@ -608,9 +608,12 @@ def get_ot(code):
 @require_any_page(*OT_PAGE_KEYS)
 @with_db
 def get_ordem(number):
-    """Withdrawal terminal: the materials of a PM order available now."""
+    """Withdrawal terminal: the materials of a PM order available now,
+    wherever they are stored. The employee who withdraws does not work in
+    a location: the request goes to the stock keeper of the location that
+    holds the material."""
     number = number.strip()
-    found = sea.order_stock(g.db, number, _user_warehouse_ids()) if number else None
+    found = sea.order_stock(g.db, number) if number else None
     if found is None:
         return _user_error(f"Ordem {number} não encontrada.", 404)
     return jsonify(found)
@@ -1102,10 +1105,10 @@ def list_retiradas():
 def get_retirada(withdrawal_id):
     """One withdrawal, whatever its status (the terminal follows its own
     request with this)."""
-    scope_clause, scope_params = warehouse_scope_clause("warehouse_id")
+    scope_clause, scope_params = _withdrawal_scope(withdrawal_id)
     wh = g.db.execute(
-        text(f"SELECT warehouse_id FROM withdrawals WHERE withdrawal_id = :id {scope_clause}"),
-        {"id": withdrawal_id, **scope_params},
+        text(f"SELECT w.warehouse_id FROM withdrawals w WHERE w.withdrawal_id = :id {scope_clause}"),
+        {"id": withdrawal_id, **(scope_params or {})},
     ).scalar()
     if wh is None:
         return _user_error("Retirada não encontrada", 404)
@@ -1118,8 +1121,9 @@ def get_retirada(withdrawal_id):
 @validate_body(CreateWithdrawalRequest)
 @with_db
 def create_retirada(validated):
-    scope_clause, scope_params = warehouse_scope_clause("warehouse_id")
-    ot = sea.find_ot(g.db, validated.ot.strip(), scope_clause, scope_params)
+    # Not limited to the requester's locations (see get_ordem): the
+    # withdrawal belongs to the location where the material is stored.
+    ot = sea.find_ot(g.db, validated.ot.strip())
     if ot is None:
         return _user_error(f"OT {validated.ot} não encontrada", 404)
     try:
@@ -1138,8 +1142,22 @@ def create_retirada(validated):
     }), 201
 
 
-def _transition(withdrawal_id, fn, *args, message):
-    scope = warehouse_scope_clause("w.warehouse_id")
+def _withdrawal_scope(withdrawal_id):
+    """Who may act on a withdrawal: its requester, wherever the material
+    is, and otherwise the users of the location that holds it."""
+    requested_by = g.db.execute(
+        text("SELECT requested_by FROM withdrawals WHERE withdrawal_id = :id"),
+        {"id": withdrawal_id},
+    ).scalar()
+    if requested_by is not None and requested_by == g.current_user["username"]:
+        return "", None
+    return warehouse_scope_clause("w.warehouse_id")
+
+
+def _transition(withdrawal_id, fn, *args, message, own=False):
+    # ``own``: steps the requester takes on their own request (confirm,
+    # cancel). Separating is always the work of the location's users.
+    scope = _withdrawal_scope(withdrawal_id) if own else warehouse_scope_clause("w.warehouse_id")
     try:
         result = fn(g.db, withdrawal_id, *args, scope=scope)
     except sea.SeaError as exc:
@@ -1181,7 +1199,7 @@ def pronta(withdrawal_id):
 def entregar(withdrawal_id):
     """The logged-in employee confirms they received what they requested."""
     resp, _ = _transition(withdrawal_id, sea.deliver, g.current_user["user_id"],
-                          message="Entrega confirmada e baixa realizada")
+                          message="Entrega confirmada e baixa realizada", own=True)
     return resp
 
 
@@ -1192,5 +1210,5 @@ def entregar(withdrawal_id):
 @with_db
 def cancelar(withdrawal_id, validated):
     resp, _ = _transition(withdrawal_id, sea.cancel, g.current_user["username"],
-                          validated.reason, message="Retirada cancelada")
+                          validated.reason, message="Retirada cancelada", own=True)
     return resp

@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Annotated, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class _LabelModel(BaseModel):
@@ -54,6 +54,14 @@ class OtMaterial(_LabelModel):
     uom: Optional[str] = Field(None, max_length=10)
     lot_number: Optional[str] = Field(None, max_length=50)
     expiry_date: Optional[date] = None
+    # Weight of one box, for a material kept in KG and withdrawn by box.
+    pack_weight_kg: Optional[int] = Field(None, gt=0, le=100000)
+
+    @field_validator("uom")
+    @classmethod
+    def _unit_in_capitals(cls, v):
+        return v.upper() if isinstance(v, str) else v
+
     # The order this material belongs to, when it differs from the header's.
     service_order_type: Optional[Literal["PM11", "PM12"]] = None
     service_order_number: Optional[str] = Field(None, max_length=40)

@@ -180,3 +180,55 @@ class TestBoxWeight:
         assert (rows[0]["quantity"], rows[0]["uom"], rows[0]["pack_weight_kg"]) == (150, "KG", 15)
         bad = client.put(f"/api/admin/items/{item}", headers=auth_headers, json={"pack_weight_kg": 0})
         assert bad.status_code == 400
+
+
+class TestBoxWeightOnTheLabel:
+    def _one(self, conn, sku):
+        return conn.execute(
+            text("SELECT uom, pack_weight_kg FROM items WHERE sku = :s"), {"s": sku}
+        ).fetchone()
+
+    def test_label_registration_completes_the_material(self, client, auth_headers, sp12):
+        conn = sp12["conn"]
+        _register(client, auth_headers, "OT-ETQ-1", [
+            {"material_code": "ARAME-ETQ", "description": "Arame", "quantity": 36, "uom": "kg",
+             "pack_weight_kg": 18}])
+        assert tuple(self._one(conn, "ARAME-ETQ")) == ("KG", 18)
+
+        # A later label fills an empty box weight and never overwrites one.
+        _register(client, auth_headers, "OT-ETQ-2", [
+            {"material_code": "ARAME-ETQ2", "description": "Arame 2", "quantity": 30, "uom": "KG"}])
+        assert self._one(conn, "ARAME-ETQ2").pack_weight_kg is None
+        resp = client.post(
+            "/api/sea/recebimentos", headers=auth_headers,
+            json={"warehouse_id": WAREHOUSE,
+                  "header": {"ot_code": "OT-ETQ-3", "service_order_type": "PM11"},
+                  "materials": [
+                      {"material_code": "ARAME-ETQ2", "quantity": 15, "uom": "KG",
+                       "pack_weight_kg": 15},
+                      {"material_code": "ARAME-ETQ", "quantity": 20, "uom": "KG",
+                       "pack_weight_kg": 20},
+                  ]},
+        )
+        assert resp.status_code == 201, resp.get_json()
+        assert self._one(conn, "ARAME-ETQ2").pack_weight_kg == 15
+        assert self._one(conn, "ARAME-ETQ").pack_weight_kg == 18
+        (diverged,) = resp.get_json()["divergences"]
+        assert (diverged["field"], diverged["registered"], diverged["received"]) == (
+            "pack_weight_kg", "18", "20")
+
+    def test_box_weight_is_ignored_for_other_units_and_must_be_positive(
+        self, client, auth_headers, sp12
+    ):
+        _register(client, auth_headers, "OT-ETQ-4", [
+            {"material_code": "PECA-ETQ", "description": "Peça", "quantity": 3, "uom": "PC",
+             "pack_weight_kg": 9}])
+        assert self._one(sp12["conn"], "PECA-ETQ").pack_weight_kg is None
+        bad = client.post(
+            "/api/sea/recebimentos", headers=auth_headers,
+            json={"warehouse_id": WAREHOUSE,
+                  "header": {"ot_code": "OT-ETQ-5", "service_order_type": "PM11"},
+                  "materials": [{"material_code": "X-ETQ", "description": "X", "quantity": 1,
+                                 "uom": "KG", "pack_weight_kg": 0}]},
+        )
+        assert bad.status_code == 400

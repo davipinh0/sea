@@ -474,6 +474,31 @@ describe('Recebimento por etiqueta', () => {
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/recebimentos/base', { warehouse_id: 7, ot_code: '1000000101' }));
   });
 
+  it('asks the KG per box as soon as the unit is KG, and sends it with the material', async () => {
+    mockUnknownOt();
+    apiPost.mockImplementation(() => ok({ ot: '1003329915', created: true, divergences: [] }));
+    await openNewReceipt();
+    expect(screen.queryByLabelText('KG por caixa')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Unidade'), { target: { value: 'kg' } });
+    fireEvent.change(await screen.findByLabelText('KG por caixa'), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText('Ordem de serviço (tipo)'), { target: { value: 'PM11' } });
+    fireEvent.change(screen.getByLabelText('Código do material'), { target: { value: '74165325' } });
+    fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '36' } });
+    fireEvent.click(screen.getByText('Confirmar cadastro'));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/recebimentos', expect.anything()));
+    const sent = apiPost.mock.calls.find(([path]) => path === '/sea/recebimentos')[1].materials[0];
+    expect(sent).toMatchObject({ material_code: '74165325', quantity: 36, pack_weight_kg: 18 });
+  });
+
+  it('does not ask the KG per box for other units', async () => {
+    mockUnknownOt();
+    await openNewReceipt();
+    fireEvent.change(screen.getByLabelText('Unidade'), { target: { value: 'KG' } });
+    expect(await screen.findByLabelText('KG por caixa')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Unidade'), { target: { value: 'PC' } });
+    expect(screen.queryByLabelText('KG por caixa')).toBeNull();
+  });
+
   it('the label form has no receiver field (the SEA fills it in)', async () => {
     mockUnknownOt();
     await openNewReceipt();
@@ -501,7 +526,8 @@ describe('Recebimento por etiqueta', () => {
     expect(body.warehouse_id).toBe(7);
     expect(body.source).toBe('ETIQUETA');
     expect(body.header).toMatchObject({ ot_code: '1003329915', reservation_number: '0285365145 /02', service_order_type: 'PM12', unload_location: null });
-    expect(body.materials).toEqual([{ material_code: '74165325', description: 'ARAME', quantity: 54, uom: 'KG', lot_number: '0000245045', expiry_date: null }]);
+    // The label is in KG: the box weight is asked and, left blank, sent as pending.
+    expect(body.materials).toEqual([{ material_code: '74165325', description: 'ARAME', quantity: 54, uom: 'KG', pack_weight_kg: null, lot_number: '0000245045', expiry_date: null }]);
     expect(body.unrecognized).toEqual(['Centro de custo 4411']);
   });
 

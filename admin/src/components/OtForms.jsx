@@ -46,6 +46,16 @@ function FieldGrid({ fields, values, onChange, idPrefix, flagPending, disabled =
 
 const MATERIAL_FORM = OT_MATERIAL_FIELDS.map((f) => (f.key === 'expiry_date' ? { ...f, optional: true } : f));
 
+// A material in KG is kept in kilos and withdrawn by box: once the unit
+// is KG the form asks how many KG a box holds, right after the unit.
+const PACK_FIELD = { key: 'pack_weight_kg', label: 'KG por caixa', type: 'number', optional: true };
+const isKg = (values) => (values.uom || '').trim().toUpperCase() === 'KG';
+function materialFields(values) {
+  if (!isKg(values)) return MATERIAL_FORM;
+  const at = MATERIAL_FORM.findIndex((f) => f.key === 'uom') + 1;
+  return [...MATERIAL_FORM.slice(0, at), PACK_FIELD, ...MATERIAL_FORM.slice(at)];
+}
+
 // New receipt (OT not registered yet) or one more material for an
 // existing OT. ``existingOt`` is the OT detail when adding a material.
 export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSaved }) {
@@ -87,7 +97,11 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
   async function save() {
     setError('');
     const code = ot.trim();
-    const m = fieldsToPayload(MATERIAL_FORM, material);
+    const m = fieldsToPayload(materialFields(material), material);
+    if (m.pack_weight_kg != null && (!Number.isInteger(m.pack_weight_kg) || m.pack_weight_kg <= 0)) {
+      setError('Informe os KG por caixa como número inteiro maior que zero, ou deixe em branco.');
+      return;
+    }
     if (!code) { setError('Informe o código da OT.'); return; }
     if (!warehouseId) { setError('Selecione um local na barra superior.'); return; }
     if (!existingOt && !header.service_order_type) { setError('Informe o tipo da ordem de serviço (PM11 ou PM12).'); return; }
@@ -172,7 +186,12 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
       )}
 
       <div className="section-title" style={{ marginTop: 16 }}>Material</div>
-      <FieldGrid fields={MATERIAL_FORM} values={material} onChange={setMaterial} idPrefix="etq-m" flagPending={!!reading} />
+      <FieldGrid fields={materialFields(material)} values={material} onChange={setMaterial} idPrefix="etq-m" flagPending={!!reading} />
+      {isKg(material) && (
+        <p className="settings-note">
+          KG por caixa completa o cadastro do material: o estoque fica em quilos e a retirada é feita por caixa. Em branco, a retirada é por quilo.
+        </p>
+      )}
       {error && <div className="form-error" role="alert" style={{ marginTop: 12 }}>{error}</div>}
     </Modal>
   );

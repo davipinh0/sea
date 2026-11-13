@@ -164,7 +164,8 @@ Limites conhecidos do protótipo:
 * **Unidade e peso por caixa** (migração `087`): com unidade PC ou PAR, retirar 1 baixa 1 unidade.
   Um material em KG pode ter o **peso por caixa** no cadastro (Estoque > Materiais): o estoque
   continua em quilos e a retirada é feita por caixa inteira. Ex.: 36 KG em caixas de 18 KG são
-  2 caixas; retirar 1 caixa baixa 18 KG. No terminal o seletor anda pelo peso da caixa
+  2 caixas; retirar 1 caixa baixa 18 KG. No recebimento pela etiqueta, ao informar a unidade KG o
+  formulário pergunta os **KG por caixa** e completa o cadastro do material. No terminal o seletor anda pelo peso da caixa
   (0 > 18 KG > 36 KG). A API recusa quantidade que não seja de caixas inteiras.
 
 * **Transferência entre endereços**: em Estoque > Materiais, ao abrir um material, "Localizações

@@ -203,6 +203,7 @@ OT_FIELD_LABELS = {
     "service_order_type": "tipo da ordem de serviço",
     "service_order_number": "número da ordem de serviço",
     "description": "descrição",
+    "pack_weight_kg": "KG por caixa",
 }
 OT_MATERIAL_COLUMNS = {
     "quantity": "quantity_ordered",
@@ -385,8 +386,11 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
                 status=409, duplicate=True, material_code=sku,
             )
         item = db.execute(
-            text("SELECT item_id, item_name, uom FROM items WHERE sku = :sku"), {"sku": sku}
+            text("SELECT item_id, item_name, uom, pack_weight_kg FROM items WHERE sku = :sku"),
+            {"sku": sku},
         ).fetchone()
+        # The box weight completes the material; it only applies to KG.
+        pack = pack_weight(m.get("uom"), m.get("pack_weight_kg"))
         if item is None:
             if not m.get("description"):
                 raise SeaError(
@@ -396,11 +400,11 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
             item_id = db.execute(
                 text(
                     """
-                    INSERT INTO items (sku, item_name, uom, external_id)
-                    VALUES (:sku, :name, :uom, :ext) RETURNING item_id
+                    INSERT INTO items (sku, item_name, uom, pack_weight_kg, external_id)
+                    VALUES (:sku, :name, :uom, :pack, :ext) RETURNING item_id
                     """
                 ),
-                {"sku": sku, "name": m["description"], "uom": m.get("uom"),
+                {"sku": sku, "name": m["description"], "uom": m.get("uom"), "pack": pack,
                  "ext": str(uuid.uuid4())},
             ).scalar()
         else:
@@ -414,6 +418,17 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
             if item.uom is None and m.get("uom"):
                 db.execute(text("UPDATE items SET uom = :u WHERE item_id = :id"),
                            {"u": m["uom"], "id": item_id})
+            # Like the description: an empty box weight is filled in, a
+            # different one is kept and reported for review.
+            if pack and item.pack_weight_kg is None:
+                db.execute(text("UPDATE items SET pack_weight_kg = :p WHERE item_id = :id"),
+                           {"p": pack, "id": item_id})
+            elif pack and item.pack_weight_kg != pack:
+                divergences.append({
+                    "field": "pack_weight_kg", "label": OT_FIELD_LABELS["pack_weight_kg"],
+                    "material_code": sku, "registered": str(item.pack_weight_kg),
+                    "received": str(pack),
+                })
         db.execute(
             text(
                 """

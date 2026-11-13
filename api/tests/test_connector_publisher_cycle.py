@@ -9,10 +9,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -72,7 +72,7 @@ def _reserve(item_id, bin_id, allocated):
 def _make_publisher(monkeypatch, sent):
     # Bypass SSRF (fake sink hostname) and fake the sink POST so _cycle exercises
     # the real recompute + publish path without touching the network.
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
     monkeypatch.setattr(
         publish_module, "_default_http_post",
         lambda url, payload, **kw: (sent.append(payload) or (200, "ok")),

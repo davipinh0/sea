@@ -23,10 +23,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -193,8 +193,8 @@ class TestAuthAndHeader:
     def test_missing_token_returns_401(self, client):
         resp = client.get("/api/v1/dockd/orders/SO-X")
         assert resp.status_code == 401
-        assert resp.headers.get("X-Sentry-Canonical-Model") == "DRAFT-v1" or \
-               resp.headers.get("X-Sentry-Canonical-Model") is None
+        assert resp.headers.get("X-SEA-Canonical-Model") == "DRAFT-v1" or \
+               resp.headers.get("X-SEA-Canonical-Model") is None
         # 401 from the decorator pre-dispatcher path doesn't carry the
         # DRAFT header (decorator returns before the route's _draft_response
         # wrapper runs). The header lives on route-side responses.
@@ -213,7 +213,7 @@ class TestAuthAndHeader:
             headers={"X-WMS-Token": dockd_token["plaintext"]},
         )
         assert resp.status_code == 200
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_404_response_carries_draft_header(self, client, dockd_token):
         resp = client.get(
@@ -221,7 +221,7 @@ class TestAuthAndHeader:
             headers={"X-WMS-Token": dockd_token["plaintext"]},
         )
         assert resp.status_code == 404
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_422_response_carries_draft_header(self, client, dockd_token):
         resp = client.get(
@@ -229,7 +229,7 @@ class TestAuthAndHeader:
             headers={"X-WMS-Token": dockd_token["plaintext"]},
         )
         assert resp.status_code == 422
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
         body = resp.get_json()
         assert body["error_kind"] == "invalid_so_number"
 

@@ -44,7 +44,7 @@
 -- v1.30.0 upgrade; the operator supplies the password via a psql
 -- variable.
 --
---   psql -v sentry_publisher_password=<strong-password> \
+--   psql -v sea_publisher_password=<strong-password> \
 --        -U <db-superuser> -d <database> \
 --        -f db/role-publisher.sql
 --
@@ -55,7 +55,7 @@
 -- guarded by WHERE clauses so exactly one fires per run.)
 --
 -- Then set PUBLISHER_DATABASE_URL in .env to
---   postgresql://sentry_publisher:<strong-password>@db:5432/<database>
+--   postgresql://sea_publisher:<strong-password>@db:5432/<database>
 -- and restart the connector-publisher container.
 --
 -- Idempotent: safe to re-run. Both \gexec branches are predicated on
@@ -70,32 +70,32 @@
 \set ON_ERROR_STOP on
 
 -- Branch 1: CREATE ROLE on first run.
-SELECT format('CREATE ROLE sentry_publisher LOGIN PASSWORD %L',
-              :'sentry_publisher_password')
- WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_publisher')
+SELECT format('CREATE ROLE sea_publisher LOGIN PASSWORD %L',
+              :'sea_publisher_password')
+ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_publisher')
 \gexec
 
 -- Branch 2: ALTER ROLE on subsequent runs (also rotates the password
 -- if the operator supplies a new value).
-SELECT format('ALTER ROLE sentry_publisher WITH LOGIN PASSWORD %L',
-              :'sentry_publisher_password')
- WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_publisher')
+SELECT format('ALTER ROLE sea_publisher WITH LOGIN PASSWORD %L',
+              :'sea_publisher_password')
+ WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_publisher')
 \gexec
 
 -- GRANT CONNECT needs a literal database name; derive it from
 -- current_database() so the script works regardless of POSTGRES_DB.
-SELECT format('GRANT CONNECT ON DATABASE %I TO sentry_publisher',
+SELECT format('GRANT CONNECT ON DATABASE %I TO sea_publisher',
               current_database())
 \gexec
 
-GRANT USAGE ON SCHEMA public TO sentry_publisher;
+GRANT USAGE ON SCHEMA public TO sea_publisher;
 
-GRANT SELECT                 ON integration_events       TO sentry_publisher;
-GRANT SELECT                 ON inventory                TO sentry_publisher;
-GRANT SELECT                 ON items                    TO sentry_publisher;
-GRANT SELECT                 ON bins                     TO sentry_publisher;
-GRANT SELECT                 ON warehouses               TO sentry_publisher;
-GRANT SELECT, UPDATE         ON channels                 TO sentry_publisher;
-GRANT SELECT, INSERT, UPDATE ON channel_availability     TO sentry_publisher;
-GRANT SELECT, UPDATE         ON channel_recompute_state  TO sentry_publisher;
-GRANT USAGE                  ON SEQUENCE channel_availability_version_seq TO sentry_publisher;
+GRANT SELECT                 ON integration_events       TO sea_publisher;
+GRANT SELECT                 ON inventory                TO sea_publisher;
+GRANT SELECT                 ON items                    TO sea_publisher;
+GRANT SELECT                 ON bins                     TO sea_publisher;
+GRANT SELECT                 ON warehouses               TO sea_publisher;
+GRANT SELECT, UPDATE         ON channels                 TO sea_publisher;
+GRANT SELECT, INSERT, UPDATE ON channel_availability     TO sea_publisher;
+GRANT SELECT, UPDATE         ON channel_recompute_state  TO sea_publisher;
+GRANT USAGE                  ON SEQUENCE channel_availability_version_seq TO sea_publisher;

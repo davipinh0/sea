@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/receipt.completed/1.json",
+  "$id": "https://sea.example/events/receipt.completed/1.json",
   "title": "receipt.completed v1",
   "description": "One PO receipt has been closed. Emitted by api/routes/receiving.py at the close path. Aggregate: item_receipts.",
   "type": "object",

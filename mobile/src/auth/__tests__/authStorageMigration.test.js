@@ -138,18 +138,18 @@ describe('migrateAsyncStorageToSecureStore', () => {
   it('leaves non-auth AsyncStorage keys untouched', async () => {
     const asyncStore = makeAsyncStore({
       jwt_token: 'x',
-      sentry_api_url: 'http://example',
-      sentry_last_username: 'admin',
-      sentry_scan_mode: 'single',
+      sea_api_url: 'http://example',
+      sea_last_username: 'admin',
+      sea_scan_mode: 'single',
     });
     const secureStore = makeSecureStore();
 
     await migrateAsyncStorageToSecureStore(AUTH_KEYS, asyncStore, secureStore);
 
     expect(asyncStore._snapshot()).toEqual({
-      sentry_api_url: 'http://example',
-      sentry_last_username: 'admin',
-      sentry_scan_mode: 'single',
+      sea_api_url: 'http://example',
+      sea_last_username: 'admin',
+      sea_scan_mode: 'single',
     });
     expect(secureStore._snapshot()).toEqual({ jwt_token: 'x' });
   });
@@ -206,16 +206,16 @@ describe('clearAllAuthFromStores (V-104)', () => {
   it('does not touch non-auth AsyncStorage keys', async () => {
     const asyncStore = makeAsyncStore({
       jwt_token: 'stale',
-      sentry_api_url: 'http://example',
-      sentry_scan_mode: 'single',
+      sea_api_url: 'http://example',
+      sea_scan_mode: 'single',
     });
     const secureStore = makeSecureStore();
 
     await clearAllAuthFromStores(AUTH_KEYS, asyncStore, secureStore);
 
     expect(asyncStore._snapshot()).toEqual({
-      sentry_api_url: 'http://example',
-      sentry_scan_mode: 'single',
+      sea_api_url: 'http://example',
+      sea_scan_mode: 'single',
     });
   });
 

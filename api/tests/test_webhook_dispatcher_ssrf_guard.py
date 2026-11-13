@@ -4,10 +4,10 @@ import os
 import socket
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -19,13 +19,13 @@ from services.webhook_dispatcher import ssrf_guard
 @pytest.fixture(autouse=True)
 def _clear_internal_opt_out(monkeypatch):
     """Sibling test modules (notably test_webhook_dispatcher_http_client)
-    set ``SENTRY_ALLOW_INTERNAL_WEBHOOKS=true`` at import time so their
+    set ``SEA_ALLOW_INTERNAL_WEBHOOKS=true`` at import time so their
     127.0.0.1 fixtures are reachable. Process-global env state leaks
     across modules; this autouse fixture restores the default reject
     posture for every SSRF-guard test. Tests that need the opt-out
     re-set it explicitly via monkeypatch.setenv."""
-    monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
-    monkeypatch.delenv("SENTRY_ALLOW_HTTP_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_HTTP_WEBHOOKS", raising=False)
 
 
 # ---------------------------------------------------------------------
@@ -144,7 +144,7 @@ def test_assert_url_safe_url_with_no_host_rejects():
 
 
 def test_internal_webhooks_opt_out_bypasses_check(monkeypatch):
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
     addrs = ssrf_guard.assert_url_safe(
         "https://internal.example.com/hook",
         resolved_addresses=["10.0.0.1"],
@@ -155,7 +155,7 @@ def test_internal_webhooks_opt_out_bypasses_check(monkeypatch):
 def test_internal_webhooks_opt_out_must_be_literal_true(monkeypatch):
     """Conservative bool parsing: only 'true' bypasses; '1' / 'yes'
     do not, so a typo cannot silently engage the bypass."""
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "1")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "1")
     with pytest.raises(ssrf_guard.SsrfRejected):
         ssrf_guard.assert_url_safe(
             "https://internal.example.com/hook",
@@ -164,11 +164,11 @@ def test_internal_webhooks_opt_out_must_be_literal_true(monkeypatch):
 
 
 def test_http_webhooks_opt_out_does_not_bypass_ssrf(monkeypatch):
-    """SENTRY_ALLOW_HTTP_WEBHOOKS only relaxes the admin-time
+    """SEA_ALLOW_HTTP_WEBHOOKS only relaxes the admin-time
     scheme check; it must not affect the dispatch-time SSRF
     guard."""
-    monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
-    monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+    monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
+    monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
     with pytest.raises(ssrf_guard.SsrfRejected):
         ssrf_guard.assert_url_safe(
             "http://internal.example.com/hook",
@@ -192,7 +192,7 @@ def test_resolve_url_addresses_ip_literal_passes_through():
 def test_resolve_url_addresses_unresolvable_raises():
     with pytest.raises(ssrf_guard.SsrfRejected):
         ssrf_guard.resolve_url_addresses(
-            "https://this-host-does-not-exist-sentrywms.invalid/hook"
+            "https://this-host-does-not-exist-sea.invalid/hook"
         )
 
 
@@ -208,7 +208,7 @@ def test_http_client_send_rejects_private_url(monkeypatch):
     error_kind='ssrf_rejected'."""
     from services.webhook_dispatcher.http_client import HttpClient
 
-    monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
 
     def fake_resolve(url):
         return ["127.0.0.1"]
@@ -239,7 +239,7 @@ def test_http_client_send_passes_public_url(monkeypatch):
     'ssrf_rejected'."""
     from services.webhook_dispatcher.http_client import HttpClient
 
-    monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
 
     def fake_resolve(url):
         return ["8.8.8.8"]
@@ -249,7 +249,7 @@ def test_http_client_send_passes_public_url(monkeypatch):
     client = HttpClient(timeout_s=0.5)
     body = b'{"event_id":1}'
     response = client.send(
-        url="https://does-not-exist-sentrywms.invalid/hook",
+        url="https://does-not-exist-sea.invalid/hook",
         body=body,
         signature="sha256=deadbeef",
         timestamp=1700000000,

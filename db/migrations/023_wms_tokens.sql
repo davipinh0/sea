@@ -7,8 +7,8 @@
 -- plaintext = rotate. Same pattern as GitHub PATs, Stripe keys,
 -- AWS access keys.
 --
--- token_hash = SHA256(SENTRY_TOKEN_PEPPER || plaintext).hexdigest()
--- per Decision Q. SENTRY_TOKEN_PEPPER is an env-only secret; the app
+-- token_hash = SHA256(SEA_TOKEN_PEPPER || plaintext).hexdigest()
+-- per Decision Q. SEA_TOKEN_PEPPER is an env-only secret; the app
 -- fails to boot without it (see #128 decorator). Rotating the pepper
 -- is an emergency-only control that invalidates every token at once.
 --

@@ -110,7 +110,7 @@ CANCEL_REASONS = (
 # operators reason about, and to anchor manually-entered dates.
 # Deployment-configurable; defaults to UTC. Single-zone assumption;
 # switch to per-row warehouses.timezone if that ever changes.
-COMPANY_TIMEZONE = os.environ.get("SENTRY_COMPANY_TIMEZONE", "UTC")
+COMPANY_TIMEZONE = os.environ.get("SEA_COMPANY_TIMEZONE", "UTC")
 
 
 # Pick Batch statuses

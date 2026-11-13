@@ -22,10 +22,10 @@ import time
 import uuid
 from pathlib import Path
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -189,11 +189,11 @@ class TestKeeperUnitBehaviour:
         not bring the keeper's perms with it."""
         monkeypatch.setenv(
             "SNAPSHOT_KEEPER_DATABASE_URL",
-            "postgresql://sentry_keeper:test-pw@db:5432/sentry",
+            "postgresql://sea_keeper:test-pw@db:5432/sea",
         )
         keeper = SnapshotKeeper(heartbeat_file="/tmp/keeper-env-probe")
         assert keeper.database_url == (
-            "postgresql://sentry_keeper:test-pw@db:5432/sentry"
+            "postgresql://sea_keeper:test-pw@db:5432/sea"
         )
 
     def test_falls_back_to_database_url_when_keeper_url_unset(

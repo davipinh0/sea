@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/pack.confirmed/1.json",
+  "$id": "https://sea.example/events/pack.confirmed/1.json",
   "title": "pack.confirmed v1",
   "description": "A sales order has been packed. Emitted by api/routes/packing.py::complete_packing. Aggregate: sales_order. SEA ships single-package today; packages[] carries a synthesized entry keyed {sales_order_external_id}-pkg-1. Multi-package support is v1.5.x+.",
   "type": "object",

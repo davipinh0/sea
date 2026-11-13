@@ -1,7 +1,7 @@
 """v1.7.0 R6: source_payload retention beat task tests.
 
 Covers:
-- get_inbound_retention_days() reads SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS
+- get_inbound_retention_days() reads SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS
   with the 7-day floor enforced (worker-side last-line of defense).
 - _cleanup_inbound_source_payload_impl NULLs source_payload on rows
   past the cutoff, preserves canonical_payload, and writes one
@@ -16,10 +16,10 @@ import uuid
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -94,7 +94,7 @@ def seeded():
 class TestGetInboundRetentionDays:
     def test_default_when_unset(self, monkeypatch):
         monkeypatch.delenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", raising=False
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", raising=False
         )
         assert get_inbound_retention_days() == (
             INBOUND_SOURCE_PAYLOAD_RETENTION_DEFAULT_DAYS
@@ -102,7 +102,7 @@ class TestGetInboundRetentionDays:
 
     def test_explicit_value_passes(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "30",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "30",
         )
         assert get_inbound_retention_days() == 30
 
@@ -111,7 +111,7 @@ class TestGetInboundRetentionDays:
         # worker-side function still clamps so a runtime tweak cannot
         # punch through.
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "1",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "1",
         )
         assert get_inbound_retention_days() == (
             INBOUND_SOURCE_PAYLOAD_RETENTION_FLOOR_DAYS
@@ -119,7 +119,7 @@ class TestGetInboundRetentionDays:
 
     def test_garbage_value_falls_back_to_default(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "garbage",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "garbage",
         )
         assert get_inbound_retention_days() == (
             INBOUND_SOURCE_PAYLOAD_RETENTION_DEFAULT_DAYS

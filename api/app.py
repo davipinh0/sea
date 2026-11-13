@@ -77,10 +77,10 @@ def create_app():
     # X-Forwarded-For and poison every rate-limit bucket, audit-log
     # user_id attribution, and any downstream IP-based allowlist.
     # Refuse boot unless the operator explicitly opts in via
-    # SENTRY_ALLOW_OPEN_BIND=1 (documented escape hatch for deployments
+    # SEA_ALLOW_OPEN_BIND=1 (documented escape hatch for deployments
     # that do the network-level protection themselves).
     api_bind_host = os.getenv("API_BIND_HOST", "").strip()
-    allow_open_bind = os.getenv("SENTRY_ALLOW_OPEN_BIND", "").lower() in (
+    allow_open_bind = os.getenv("SEA_ALLOW_OPEN_BIND", "").lower() in (
         "true", "1", "yes"
     )
     if proxy_fix_active and api_bind_host == "0.0.0.0":
@@ -91,13 +91,13 @@ def create_app():
             "API_BIND_HOST=127.0.0.1 and put a reverse proxy in front, "
             "or set TRUST_PROXY=false if the api is directly reachable. "
             "If this combination is intentional (network-level "
-            "protection applied elsewhere), set SENTRY_ALLOW_OPEN_BIND=1 "
+            "protection applied elsewhere), set SEA_ALLOW_OPEN_BIND=1 "
             "to acknowledge the risk and continue. See V-206 in "
             "docs/deployment.md."
         )
         if not allow_open_bind:
             raise RuntimeError(message)
-        logger.critical("ACK via SENTRY_ALLOW_OPEN_BIND=1: %s", message)
+        logger.critical("ACK via SEA_ALLOW_OPEN_BIND=1: %s", message)
 
     if proxy_fix_active:
         # One proxy hop is the standard nginx / Caddy / Traefik / ALB
@@ -155,7 +155,7 @@ def create_app():
         raise RuntimeError("JWT_SECRET environment variable is required")
     app.config["JWT_SECRET"] = jwt_secret
 
-    # v1.5.0 #128: SENTRY_TOKEN_PEPPER is concatenated with every
+    # v1.5.0 #128: SEA_TOKEN_PEPPER is concatenated with every
     # inbound X-WMS-Token plaintext before the SHA-256 hash step
     # (Decision Q). Boot fails without it rather than silently falling
     # back to an empty pepper; a token hash computed with an empty
@@ -169,13 +169,13 @@ def create_app():
     # check, the request-time hasher, and the admin issuance hasher
     # all apply the same rule.
     from middleware.auth_middleware import validate_pepper_config
-    validate_pepper_config(os.getenv("SENTRY_TOKEN_PEPPER"))
+    validate_pepper_config(os.getenv("SEA_TOKEN_PEPPER"))
 
     # #238: pre-#238, validate_or_die() ran ONLY in the dispatcher
     # container (WebhookDispatcher.run). The api container reads
     # the same dispatcher env vars (DISPATCHER_MAX_PENDING_HARD_CAP,
     # DISPATCHER_MAX_DLQ_HARD_CAP, DISPATCHER_REPLAY_BATCH_HARD_CAP,
-    # SENTRY_PUBSUB_HMAC_KEY, etc.) for admin-endpoint enforcement
+    # SEA_PUBSUB_HMAC_KEY, etc.) for admin-endpoint enforcement
     # and for the cross-worker pubsub publisher, but a typo'd or
     # out-of-range value never tripped a boot guard here. The two
     # containers could disagree silently on the cap; the api would
@@ -187,47 +187,47 @@ def create_app():
     from services.webhook_dispatcher import env_validator as _dispatcher_env
     _dispatcher_env.validate_or_die()
 
-    # v1.7.0 R6: SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS guards the
+    # v1.7.0 R6: SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS guards the
     # source_payload retention beat task. A typo'd or zero value would
     # silently wipe forensic context; refuse to boot below the 7-day
     # hard floor (V-201 shape). Default 90 days when unset.
-    _retention_raw = os.getenv("SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS")
+    _retention_raw = os.getenv("SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS")
     if _retention_raw is not None and _retention_raw.strip() != "":
         try:
             _retention_days = int(_retention_raw)
         except ValueError:
             raise RuntimeError(
-                f"SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS={_retention_raw!r} "
+                f"SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS={_retention_raw!r} "
                 f"is not an integer. Unset for the default (90), or set to a "
                 f"value >= 7."
             )
         if _retention_days < 7:
             raise RuntimeError(
-                f"SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS={_retention_days} "
+                f"SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS={_retention_days} "
                 f"is below the 7-day hard floor. A typo'd or zero value would "
                 f"wipe forensic context; refusing to boot. Set to >= 7 or "
                 f"unset for the 90-day default."
             )
 
-    # v1.7.0 #273: SENTRY_INBOUND_MAX_BODY_KB declares the per-request
+    # v1.7.0 #273: SEA_INBOUND_MAX_BODY_KB declares the per-request
     # body-size cap on inbound POSTs. Pre-#273 get_max_body_kb() silently
     # clamped to [16, 4096] and fell back to 256 on parse failure -- a
     # typo'd value (e.g. 42096 vs 4096) silently degraded with no visible
     # signal. Match the retention-days guard shape: refuse to boot on
     # parse failure or out-of-range values.
-    _max_body_raw = os.getenv("SENTRY_INBOUND_MAX_BODY_KB")
+    _max_body_raw = os.getenv("SEA_INBOUND_MAX_BODY_KB")
     if _max_body_raw is not None and _max_body_raw.strip() != "":
         try:
             _max_body_kb = int(_max_body_raw)
         except ValueError:
             raise RuntimeError(
-                f"SENTRY_INBOUND_MAX_BODY_KB={_max_body_raw!r} is not an "
+                f"SEA_INBOUND_MAX_BODY_KB={_max_body_raw!r} is not an "
                 f"integer. Unset for the default (256), or set to a value "
                 f"in [16, 4096]."
             )
         if _max_body_kb < 16 or _max_body_kb > 4096:
             raise RuntimeError(
-                f"SENTRY_INBOUND_MAX_BODY_KB={_max_body_kb} is outside the "
+                f"SEA_INBOUND_MAX_BODY_KB={_max_body_kb} is outside the "
                 f"[16, 4096] range. A typo'd value would silently degrade "
                 f"the body-size cap; refusing to boot. Set to a value in "
                 f"[16, 4096] or unset for the 256 KB default."
@@ -236,19 +236,19 @@ def create_app():
     # v1.9.0 dockd: separate body-size cap. Dockd POST bodies are tiny
     # (a few hundred bytes) so the default is a tighter 64 KB clamped
     # to [16, 1024]. Same fail-loud-on-typo posture as inbound.
-    _dockd_max_body_raw = os.getenv("SENTRY_DOCKD_MAX_BODY_KB")
+    _dockd_max_body_raw = os.getenv("SEA_DOCKD_MAX_BODY_KB")
     if _dockd_max_body_raw is not None and _dockd_max_body_raw.strip() != "":
         try:
             _dockd_max_body_kb = int(_dockd_max_body_raw)
         except ValueError:
             raise RuntimeError(
-                f"SENTRY_DOCKD_MAX_BODY_KB={_dockd_max_body_raw!r} is not "
+                f"SEA_DOCKD_MAX_BODY_KB={_dockd_max_body_raw!r} is not "
                 f"an integer. Unset for the default (64), or set to a "
                 f"value in [16, 1024]."
             )
         if _dockd_max_body_kb < 16 or _dockd_max_body_kb > 1024:
             raise RuntimeError(
-                f"SENTRY_DOCKD_MAX_BODY_KB={_dockd_max_body_kb} is outside "
+                f"SEA_DOCKD_MAX_BODY_KB={_dockd_max_body_kb} is outside "
                 f"the [16, 1024] range. A typo'd value would silently "
                 f"degrade the body-size cap; refusing to boot. Set to a "
                 f"value in [16, 1024] or unset for the 64 KB default."
@@ -259,19 +259,19 @@ def create_app():
     # bigger than a dockd ship but smaller than an inbound canonical
     # upsert. Default 256 KB clamped to [16, 4096]. Same fail-loud-on-
     # typo posture as inbound and dockd.
-    _pos_max_body_raw = os.getenv("SENTRY_POS_MAX_BODY_KB")
+    _pos_max_body_raw = os.getenv("SEA_POS_MAX_BODY_KB")
     if _pos_max_body_raw is not None and _pos_max_body_raw.strip() != "":
         try:
             _pos_max_body_kb = int(_pos_max_body_raw)
         except ValueError:
             raise RuntimeError(
-                f"SENTRY_POS_MAX_BODY_KB={_pos_max_body_raw!r} is not "
+                f"SEA_POS_MAX_BODY_KB={_pos_max_body_raw!r} is not "
                 f"an integer. Unset for the default (256), or set to a "
                 f"value in [16, 4096]."
             )
         if _pos_max_body_kb < 16 or _pos_max_body_kb > 4096:
             raise RuntimeError(
-                f"SENTRY_POS_MAX_BODY_KB={_pos_max_body_kb} is outside "
+                f"SEA_POS_MAX_BODY_KB={_pos_max_body_kb} is outside "
                 f"the [16, 4096] range. A typo'd value would silently "
                 f"degrade the body-size cap; refusing to boot. Set to a "
                 f"value in [16, 4096] or unset for the 256 KB default."
@@ -283,8 +283,8 @@ def create_app():
     # QueryCanceled (-> 503 lock_contention) rather than blocking the
     # handler. Both in milliseconds, bounded [100, 30000].
     for _name, _default in (
-        ("SENTRY_POS_LOCK_TIMEOUT_MS", 2000),
-        ("SENTRY_POS_STATEMENT_TIMEOUT_MS", 4000),
+        ("SEA_POS_LOCK_TIMEOUT_MS", 2000),
+        ("SEA_POS_STATEMENT_TIMEOUT_MS", 4000),
     ):
         _raw = os.getenv(_name)
         if _raw is None or _raw.strip() == "":
@@ -306,7 +306,7 @@ def create_app():
             )
 
     # v1.7.0 Pipe B: load every mapping document under
-    # SENTRY_INBOUND_MAPPINGS_DIR (default /db/mappings) at boot. Cross-checks
+    # SEA_INBOUND_MAPPINGS_DIR (default /db/mappings) at boot. Cross-checks
     # against inbound_source_systems_allowlist; an allowlisted source_system
     # without a doc, or a doc without an allowlist row, refuses boot. One
     # MAPPING_DOCUMENT_LOAD audit_log row per loaded doc establishes "which
@@ -320,14 +320,14 @@ def create_app():
     # repo-root db/mappings/.gitkeep breadcrumb had their docs silently
     # ignored.
     from services.mapping_loader import boot_load as _mapping_boot_load
-    mappings_dir = os.getenv("SENTRY_INBOUND_MAPPINGS_DIR", "/db/mappings")
+    mappings_dir = os.getenv("SEA_INBOUND_MAPPINGS_DIR", "/db/mappings")
     if not os.path.isdir(mappings_dir):
         # Fresh checkouts may not have the dir; create empty rather than
         # die so an operator running with no inbound source_systems can
         # still boot. The cross-check inside boot_load() covers the
         # allowlist-vs-docs mismatch case loudly.
         os.makedirs(mappings_dir, exist_ok=True)
-    app.config["SENTRY_INBOUND_MAPPINGS_DIR"] = mappings_dir
+    app.config["SEA_INBOUND_MAPPINGS_DIR"] = mappings_dir
     app.config["MAPPING_REGISTRY"] = _mapping_boot_load(database_url, mappings_dir)
 
     # CORS - restrict to known origins, configurable via env var
@@ -516,7 +516,7 @@ def create_app():
         # the response MUST NOT include state that helps an attacker
         # shape their approach. proxy_fix_active moved to the
         # authenticated /api/admin/system-info endpoint below.
-        return {"status": "ok", "service": "sentry-wms"}
+        return {"status": "ok", "service": "sea"}
 
     # v1.5.1 V-215: admin-only surface for operator-useful state
     # that was previously on /api/health. Registered on the app

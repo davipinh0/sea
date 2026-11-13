@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatDateOnly } from '../utils/date.js';
 
-// sentry-wms#52: a date-only string must format to the same calendar day in
+// sea#52: a date-only string must format to the same calendar day in
 // any timezone. The helper avoids `new Date()` entirely, so this holds even
 // under a negative-offset TZ (e.g. run with TZ='America/Denver').
 describe('formatDateOnly', () => {

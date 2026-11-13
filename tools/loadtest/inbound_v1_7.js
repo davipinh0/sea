@@ -12,12 +12,12 @@
 //
 // Usage:
 //   k6 run \
-//     -e SENTRY_BASE_URL=http://localhost:5000 \
-//     -e SENTRY_WMS_TOKEN=<plaintext> \
-//     -e SENTRY_SOURCE_SYSTEM=acme-erp \
+//     -e SEA_BASE_URL=http://localhost:5000 \
+//     -e SEA_WMS_TOKEN=<plaintext> \
+//     -e SEA_SOURCE_SYSTEM=acme-erp \
 //     tools/loadtest/inbound_v1_7.js
 //
-// Defaults to the local docker stack; override SENTRY_BASE_URL for
+// Defaults to the local docker stack; override SEA_BASE_URL for
 // staging. The script aborts with a clear message if the token env
 // var is missing rather than silently 401'ing every request.
 
@@ -25,15 +25,15 @@ import http from "k6/http";
 import { check, fail, group } from "k6";
 import { randomString, randomIntBetween } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
-const BASE_URL = __ENV.SENTRY_BASE_URL || "http://localhost:5000";
-const TOKEN = __ENV.SENTRY_WMS_TOKEN || "";
-const SOURCE_SYSTEM = __ENV.SENTRY_SOURCE_SYSTEM || "acme-erp";
+const BASE_URL = __ENV.SEA_BASE_URL || "http://localhost:5000";
+const TOKEN = __ENV.SEA_WMS_TOKEN || "";
+const SOURCE_SYSTEM = __ENV.SEA_SOURCE_SYSTEM || "acme-erp";
 
 if (!TOKEN) {
   fail(
-    "SENTRY_WMS_TOKEN env var is required. Issue a token via the admin " +
+    "SEA_WMS_TOKEN env var is required. Issue a token via the admin " +
     "panel with inbound_resources covering the five resources and " +
-    "source_system matching SENTRY_SOURCE_SYSTEM."
+    "source_system matching SEA_SOURCE_SYSTEM."
   );
 }
 
@@ -107,8 +107,8 @@ function postInbound(resource, body) {
   check(res, {
     [`${resource} status is 200/201/409`]: (r) =>
       r.status === 200 || r.status === 201 || r.status === 409,
-    [`${resource} carries X-Sentry-Canonical-Model header`]: (r) =>
-      r.headers["X-Sentry-Canonical-Model"] === "DRAFT-v1",
+    [`${resource} carries X-SEA-Canonical-Model header`]: (r) =>
+      r.headers["X-SEA-Canonical-Model"] === "DRAFT-v1",
   });
   return res;
 }

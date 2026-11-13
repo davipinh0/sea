@@ -27,10 +27,10 @@ import sys
 import uuid
 import json
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -212,7 +212,7 @@ class TestHappyPath:
         assert body["fulfillment_id"] is not None
         assert body["audit_log_id"] is not None
         assert body["shipped_at"].endswith("Z")
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_so_status_flipped_to_shipped(self, client, dockd_token):
         so_id, so_number = _seed_shippable(status="PICKED")
@@ -520,19 +520,19 @@ class TestDraftHeader:
         _ensure_user()
         resp = _post_ship(client, dockd_token["plaintext"], "NEVER", _ship_body())
         assert resp.status_code == 404
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_422_carries_draft_header(self, client, dockd_token):
         body = _ship_body()
         del body["tracking"]
         resp = _post_ship(client, dockd_token["plaintext"], "SO-X", body)
         assert resp.status_code == 422
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
 
 class TestBodyCap:
     def test_oversize_content_length_returns_413(self, client, dockd_token, monkeypatch):
-        monkeypatch.setenv("SENTRY_DOCKD_MAX_BODY_KB", "16")
+        monkeypatch.setenv("SEA_DOCKD_MAX_BODY_KB", "16")
         # Build a payload guaranteed to exceed 16 KB once Pydantic
         # parses it. Tracking up to 100 chars; pad ship_method via
         # comments? extra='forbid' so no padding fields. Easiest: send

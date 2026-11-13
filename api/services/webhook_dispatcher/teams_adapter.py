@@ -32,7 +32,7 @@ import requests
 from .ssrf_guard import SsrfRejected, assert_url_safe
 
 
-_SENTRY_ADMIN_BASE_DEFAULT = "/sales-orders"
+_SEA_ADMIN_BASE_DEFAULT = "/sales-orders"
 _THEME_OPENED      = "FF8C00"   # warm orange: attention needed
 _THEME_FULFILLABLE = "2E7D32"   # green: ready to ship
 _THEME_CANCELLED   = "9E9E9E"   # gray: terminal / informational
@@ -61,17 +61,17 @@ class SendOutcome:
     error_detail: Optional[str] = None
 
 
-def _sentry_link(base_url: str, so_number: str) -> str:
+def _sea_link(base_url: str, so_number: str) -> str:
     """Compose the deep-link the card's action button hands to the
     operator. ``base_url`` is the absolute base
-    (e.g. ``https://sentry.example.com``); on a stack that runs the
+    (e.g. ``https://sea.example.com``); on a stack that runs the
     admin behind a relative path, callers can pass an empty string
     and the focus query-param alone will resolve against the page
     that opens the link."""
     suffix = f"?focus={so_number}"
     if not base_url:
-        return f"{_SENTRY_ADMIN_BASE_DEFAULT}{suffix}"
-    return f"{base_url.rstrip('/')}{_SENTRY_ADMIN_BASE_DEFAULT}{suffix}"
+        return f"{_SEA_ADMIN_BASE_DEFAULT}{suffix}"
+    return f"{base_url.rstrip('/')}{_SEA_ADMIN_BASE_DEFAULT}{suffix}"
 
 
 def _items_summary(items: list) -> str:
@@ -97,16 +97,16 @@ def _items_summary(items: list) -> str:
     return "\n".join(rendered)
 
 
-def build_adaptive_card(event_type: str, payload: Dict[str, Any], *, sentry_base_url: str = "") -> Dict[str, Any]:
+def build_adaptive_card(event_type: str, payload: Dict[str, Any], *, sea_base_url: str = "") -> Dict[str, Any]:
     """Return the Teams MessageCard dict for one of the backorder.*
     events. Raises :class:`ValueError` for an unknown event_type so a
     caller bug fails loud rather than sending an empty card."""
     if event_type == "backorder.opened":
-        return _build_opened_card(payload, sentry_base_url)
+        return _build_opened_card(payload, sea_base_url)
     if event_type == "backorder.fulfillable":
-        return _build_fulfillable_card(payload, sentry_base_url)
+        return _build_fulfillable_card(payload, sea_base_url)
     if event_type == "backorder.cancelled":
-        return _build_cancelled_card(payload, sentry_base_url)
+        return _build_cancelled_card(payload, sea_base_url)
     raise ValueError(f"teams_adapter: unsupported event_type {event_type!r}")
 
 
@@ -134,7 +134,7 @@ def _build_opened_card(payload: Dict[str, Any], base_url: str) -> Dict[str, Any]
     parent_number = payload.get("parent_so_number", "")
     customer      = payload.get("customer_name") or "(unknown customer)"
     items         = payload.get("items", [])
-    link          = _sentry_link(base_url, bo_number)
+    link          = _sea_link(base_url, bo_number)
 
     title = f"Item shorted on {parent_number}"
     body = (
@@ -158,7 +158,7 @@ def _build_fulfillable_card(payload: Dict[str, Any], base_url: str) -> Dict[str,
     customer      = payload.get("customer_name") or "(unknown customer)"
     items         = payload.get("items", [])
     days          = payload.get("days_waiting", 0)
-    link          = _sentry_link(base_url, bo_number)
+    link          = _sea_link(base_url, bo_number)
 
     title = f"Backorder ready to ship: {bo_number}"
     body = (
@@ -181,7 +181,7 @@ def _build_cancelled_card(payload: Dict[str, Any], base_url: str) -> Dict[str, A
     bo_number     = payload.get("backorder_so_number", "")
     parent_number = payload.get("parent_so_number", "")
     reason        = payload.get("cancellation_reason", "other")
-    link          = _sentry_link(base_url, bo_number)
+    link          = _sea_link(base_url, bo_number)
 
     title = f"Backorder cancelled: {bo_number}"
     body = (

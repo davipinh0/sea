@@ -14,7 +14,7 @@ ended).
 v1.7.0 adds the Pipe B inbound source_payload retention task (R6).
 inbound_<resource>.source_payload is the original consumer-shaped JSON
 the canonical row was derived from. After
-SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS (default 90, hard floor
+SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS (default 90, hard floor
 7 days; V-201 shape) the retention task NULLs out source_payload while
 preserving canonical_payload, dropping the bulk of per-row size while
 keeping the canonical history queryable. One inbound_cleanup_runs row
@@ -247,7 +247,7 @@ _INBOUND_TABLES = (
 
 
 def get_inbound_retention_days() -> int:
-    """Read SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS with the
+    """Read SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS with the
     7-day floor enforced at read time. Boot validation runs separately
     in app.create_app() so misconfigured deployments fail loud at boot;
     this helper is the worker-side last-line that ensures even a
@@ -255,21 +255,21 @@ def get_inbound_retention_days() -> int:
 
     Returns the configured days clamped to [floor, +inf). Invalid /
     unset values fall back to the default (90)."""
-    raw = os.environ.get("SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS")
+    raw = os.environ.get("SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS")
     if raw is None or raw.strip() == "":
         return INBOUND_SOURCE_PAYLOAD_RETENTION_DEFAULT_DAYS
     try:
         days = int(raw)
     except ValueError:
         logger.warning(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS=%r is not an integer; "
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS=%r is not an integer; "
             "falling back to default %d",
             raw, INBOUND_SOURCE_PAYLOAD_RETENTION_DEFAULT_DAYS,
         )
         return INBOUND_SOURCE_PAYLOAD_RETENTION_DEFAULT_DAYS
     if days < INBOUND_SOURCE_PAYLOAD_RETENTION_FLOOR_DAYS:
         logger.error(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS=%d below "
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS=%d below "
             "floor %d; clamping. Boot guard should have caught this.",
             days, INBOUND_SOURCE_PAYLOAD_RETENTION_FLOOR_DAYS,
         )
@@ -375,7 +375,7 @@ def _cleanup_inbound_source_payload_impl(session, retention_days: int) -> dict:
 @celery_app.task
 def cleanup_inbound_source_payload() -> dict:
     """v1.7.0 R6: NULL source_payload on inbound_<resource> rows older
-    than SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS while preserving
+    than SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS while preserving
     canonical_payload. Returns the per-resource summary so operators
     can confirm the task is running.
 

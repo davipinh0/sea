@@ -41,7 +41,7 @@
 --
 --   * delivery_url CHECK is permissive (^https?://) so dev/CI
 --     can use http; production HTTPS-only enforcement lives in
---     the admin endpoint via SENTRY_ALLOW_HTTP_WEBHOOKS opt-out
+--     the admin endpoint via SEA_ALLOW_HTTP_WEBHOOKS opt-out
 --     (separate commit). Putting the strict gate in the column
 --     would block the dev path; putting only an application gate
 --     would leave a bypass.
@@ -59,7 +59,7 @@
 --     is previous (consumer accepts until expires_at).
 --
 --   * secret_ciphertext is BYTEA. Fernet encrypts with the
---     existing v1.3 SENTRY_ENCRYPTION_KEY vault; the dispatcher
+--     existing v1.3 SEA_ENCRYPTION_KEY vault; the dispatcher
 --     decrypts at signing time because computing HMAC requires
 --     plaintext. The plaintext leaves the database exactly twice:
 --     once on create / rotate (returned to admin in the response

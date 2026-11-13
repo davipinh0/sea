@@ -5,14 +5,14 @@ PATCH / DELETE / rotate-secret endpoints follow as separate
 stepping stones. All endpoints require ADMIN role via cookie auth.
 
 The subscription's HMAC plaintext is generated server-side, encrypted
-via Fernet (SENTRY_ENCRYPTION_KEY), and stored at
+via Fernet (SEA_ENCRYPTION_KEY), and stored at
 ``webhook_secrets.secret_ciphertext``. The plaintext is returned in
 the response body exactly once; a lost plaintext means the admin
 calls the rotate endpoint, no recovery path.
 
 URL-reuse gate: an unacknowledged tombstone with the same
 ``delivery_url_at_delete`` as the request's ``delivery_url`` returns
-409 with ``X-Sentry-URL-Reuse-Tombstone`` header listing the
+409 with ``X-SEA-URL-Reuse-Tombstone`` header listing the
 tombstone_id. The admin re-submits with ``acknowledge_url_reuse:
 true`` to bypass; the gate then marks the tombstone acknowledged in
 the same transaction as the create. Mirrors the consumer_groups
@@ -142,7 +142,7 @@ def _http_webhooks_allowed() -> bool:
     """Mirrors the dispatcher's bool_var: only the literal 'true'
     relaxes the HTTPS-only gate. A typo cannot silently engage the
     opt-out."""
-    return os.environ.get("SENTRY_ALLOW_HTTP_WEBHOOKS", "").lower() == "true"
+    return os.environ.get("SEA_ALLOW_HTTP_WEBHOOKS", "").lower() == "true"
 
 
 _EMPTY_FILTER_FIELDS = (
@@ -228,7 +228,7 @@ def _check_url_tombstone(canonical_url: str, acknowledge_url_reuse: bool):
         }
     )
     response.status_code = 409
-    response.headers["X-Sentry-URL-Reuse-Tombstone"] = str(
+    response.headers["X-SEA-URL-Reuse-Tombstone"] = str(
         int(tombstone_row.tombstone_id)
     )
     return response, tombstone_row
@@ -253,7 +253,7 @@ def create_webhook(validated):
                 {
                     "error": "https_required",
                     "detail": (
-                        "delivery_url deve usar https. Defina SENTRY_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
+                        "delivery_url deve usar https. Defina SEA_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
                     ),
                 }
             ),

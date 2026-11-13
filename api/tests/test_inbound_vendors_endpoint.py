@@ -18,10 +18,10 @@ import uuid
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -192,7 +192,7 @@ class TestVendorsEndpoint:
         body = resp.get_json()
         assert body["error_kind"] == "mapping_overrides_not_supported_in_body"
         assert "mapping_overrides" in body["detail"]
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
         # No vendor row created, no inbound_vendors row, no audit row.
         n_vendor = _query(

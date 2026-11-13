@@ -196,12 +196,12 @@ class TestInboundInventorySetRetainsZeroRow:
 
     def test_set_to_zero_retains_row(self, client, monkeypatch):
         # Pin schema validation off for this request: test_events_service
-        # leaks SENTRY_VALIDATE_EVENT_SCHEMAS=true into the session, and
+        # leaks SEA_VALIDATE_EVENT_SCHEMAS=true into the session, and
         # this endpoint's adjustment.applied payload carries
         # applied_by_user_external_id=None (Pipe B has no SEA user)
         # while the schema requires a uuid string -- a pre-existing
         # mismatch unrelated to zero retention.
-        monkeypatch.setenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "false")
+        monkeypatch.setenv("SEA_VALIDATE_EVENT_SCHEMAS", "false")
         ss = f"zerotest-{uuid.uuid4().hex[:8]}"
         plaintext = f"zero-plain-{uuid.uuid4().hex[:8]}"
         self._insert_token(ss, plaintext)

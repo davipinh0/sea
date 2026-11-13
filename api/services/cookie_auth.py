@@ -13,8 +13,8 @@ from flask import request
 
 from services.auth_service import TOKEN_EXPIRY_HOURS
 
-AUTH_COOKIE_NAME = "sentry_auth"
-CSRF_COOKIE_NAME = "sentry_csrf"
+AUTH_COOKIE_NAME = "sea_auth"
+CSRF_COOKIE_NAME = "sea_csrf"
 CSRF_HEADER_NAME = "X-CSRF-Token"
 
 CSRF_PROTECTED_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

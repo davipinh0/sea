@@ -28,10 +28,10 @@ _COMMITTED = _REPO_ROOT / "docs" / "api" / "inbound-openapi.yaml"
 def _run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(_REPO_ROOT / "api")
-    env.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+    env.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
     env.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
     env.setdefault(
-        "SENTRY_ENCRYPTION_KEY",
+        "SEA_ENCRYPTION_KEY",
         "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=",
     )
     return subprocess.run(

@@ -109,7 +109,7 @@ CORPUS = [
     ),
     (
         "kv_password",
-        "psycopg2.OperationalError: connection to host=db user=sentry password=hunter2-very-secret failed",
+        "psycopg2.OperationalError: connection to host=db user=sea password=hunter2-very-secret failed",
         "hunter2-very-secret",
     ),
     (

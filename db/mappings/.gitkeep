@@ -1,5 +1,5 @@
 # This is the directory the running api container reads mapping
-# documents from at boot. SENTRY_INBOUND_MAPPINGS_DIR (default
+# documents from at boot. SEA_INBOUND_MAPPINGS_DIR (default
 # /db/mappings, matching the docker-compose ./db:/db volume mount)
 # resolves here.
 #

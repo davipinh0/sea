@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/backorder.fulfillable/1.json",
+  "$id": "https://sea.example/events/backorder.fulfillable/1.json",
   "title": "backorder.fulfillable v1",
   "description": "All lines on a WAITING_STOCK backorder are now satisfiable; SEA flipped it to OPEN. Emitted by api/routes/receiving.py inside the receipt.completed transaction. Aggregate: sales_order (the BO so_id).",
   "type": "object",

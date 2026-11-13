@@ -32,10 +32,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -603,7 +603,7 @@ class TestLoadSecretForSigning:
 
 
 class TestEncryptionKeyValidation:
-    """V-201 #142 pattern applied to SENTRY_ENCRYPTION_KEY: an
+    """V-201 #142 pattern applied to SEA_ENCRYPTION_KEY: an
     unset / empty / whitespace / placeholder value must refuse
     to load the Fernet cipher with a clear actionable message
     rather than producing a silently-broken cipher that
@@ -615,25 +615,25 @@ class TestEncryptionKeyValidation:
 
     def test_unset_key_raises_with_actionable_message(self, monkeypatch):
         self._reset_cache()
-        monkeypatch.delenv("SENTRY_ENCRYPTION_KEY", raising=False)
-        with pytest.raises(RuntimeError, match="SENTRY_ENCRYPTION_KEY"):
+        monkeypatch.delenv("SEA_ENCRYPTION_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="SEA_ENCRYPTION_KEY"):
             signing._get_fernet()  # noqa: SLF001
 
     def test_empty_key_raises(self, monkeypatch):
         self._reset_cache()
-        monkeypatch.setenv("SENTRY_ENCRYPTION_KEY", "")
-        with pytest.raises(RuntimeError, match="SENTRY_ENCRYPTION_KEY"):
+        monkeypatch.setenv("SEA_ENCRYPTION_KEY", "")
+        with pytest.raises(RuntimeError, match="SEA_ENCRYPTION_KEY"):
             signing._get_fernet()  # noqa: SLF001
 
     def test_whitespace_only_key_raises(self, monkeypatch):
         """An accidentally-quoted-and-stripped value (e.g. an
-        operator who set ``SENTRY_ENCRYPTION_KEY="   "``) must
+        operator who set ``SEA_ENCRYPTION_KEY="   "``) must
         not silently pass into Fernet, where it would surface as
         a cryptography library error rather than an application-
         level configuration error."""
         self._reset_cache()
-        monkeypatch.setenv("SENTRY_ENCRYPTION_KEY", "   ")
-        with pytest.raises(RuntimeError, match="SENTRY_ENCRYPTION_KEY"):
+        monkeypatch.setenv("SEA_ENCRYPTION_KEY", "   ")
+        with pytest.raises(RuntimeError, match="SEA_ENCRYPTION_KEY"):
             signing._get_fernet()  # noqa: SLF001
 
     def test_env_example_placeholder_raises(self, monkeypatch):
@@ -643,7 +643,7 @@ class TestEncryptionKeyValidation:
         decryption later."""
         self._reset_cache()
         monkeypatch.setenv(
-            "SENTRY_ENCRYPTION_KEY", "replace-me-with-fernet-generate-key"
+            "SEA_ENCRYPTION_KEY", "replace-me-with-fernet-generate-key"
         )
         with pytest.raises(RuntimeError, match="placeholder"):
             signing._get_fernet()  # noqa: SLF001
@@ -654,7 +654,7 @@ class TestEncryptionKeyValidation:
         credential_vault._get_fernet."""
         self._reset_cache()
         monkeypatch.setenv(
-            "SENTRY_ENCRYPTION_KEY", os.environ["SENTRY_ENCRYPTION_KEY"]
+            "SEA_ENCRYPTION_KEY", os.environ["SEA_ENCRYPTION_KEY"]
         )
         first = signing._get_fernet()  # noqa: SLF001
         second = signing._get_fernet()  # noqa: SLF001

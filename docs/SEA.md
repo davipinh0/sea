@@ -32,10 +32,10 @@ Para ligá-los: `docker compose --profile integracoes up -d`.
   `db/migrations/084_sea_notificacoes.sql` e `db/seed-sea.sql`. Todos são idempotentes.
 
 ```bash
-docker exec -i sentry-db psql -U sentry -d sentry -v ON_ERROR_STOP=1 < db/migrations/082_sea.sql
-docker exec -i sentry-db psql -U sentry -d sentry -v ON_ERROR_STOP=1 < db/migrations/083_sea_etiqueta.sql
-docker exec -i sentry-db psql -U sentry -d sentry -v ON_ERROR_STOP=1 < db/migrations/084_sea_notificacoes.sql
-docker exec -i sentry-db psql -U sentry -d sentry -v ON_ERROR_STOP=1 < db/seed-sea.sql
+docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/migrations/082_sea.sql
+docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/migrations/083_sea_etiqueta.sql
+docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/migrations/084_sea_notificacoes.sql
+docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/seed-sea.sql
 ```
 
 ### Usuários fictícios
@@ -158,6 +158,9 @@ Limites conhecidos do protótipo:
 * **Cadastro de usuário**: o formulário lista o que falta ou está errado (campos obrigatórios,
   e-mail inválido, senha fraca com o motivo, local e acessos) antes de enviar.
 
+* **Notificações**: clicar em uma notificação abre a tela relacionada; "Limpar notificações"
+  esvazia a lista do próprio usuário (migração `086`; os registros continuam no banco).
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):
@@ -239,7 +242,7 @@ Depois de alterar o `.env`: `docker compose up -d api celery-worker`.
 ```bash
 # API (banco de testes separado)
 docker compose run --rm --no-deps -v "$PWD/api:/app" api sh -c \
-  'export TEST_DATABASE_URL="${DATABASE_URL%/*}/sentry_test"; cd /app && python -m pytest tests/'
+  'export TEST_DATABASE_URL="${DATABASE_URL%/*}/sea_test"; cd /app && python -m pytest tests/'
 # Painel e app (dependências instaladas num volume do Docker)
 docker run --rm -v "$PWD/admin:/app" -v sea_admin_nm:/app/node_modules -w /app node:20-alpine npx vitest run
 docker run --rm -v "$PWD/mobile:/app" -v sea_mobile_nm:/app/node_modules -w /app node:20-alpine npx vitest run

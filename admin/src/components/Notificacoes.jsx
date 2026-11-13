@@ -159,6 +159,18 @@ export default function Notificacoes() {
     navigate(KIND_TARGET[n.kind] || '/');
   }
 
+  // Empty the list for this user (the records stay on the server).
+  async function clearAll() {
+    const res = await api.post('/sea/notificacoes/limpar', {});
+    if (!res?.ok) return;
+    const { cleared_id: clearedId } = await res.json();
+    lastId.current = Math.max(lastId.current ?? 0, clearedId ?? 0);
+    writeSeen(username, lastId.current);
+    setItems([]);
+    setUnread(0);
+    setToast(null);
+  }
+
   return (
     <div className="sea-notif" ref={boxRef}>
       <button type="button" className="sea-notif-bell" onClick={toggle} aria-label={unread ? `Notificações: ${unread} nova(s)` : 'Notificações'} title="Notificações">
@@ -171,6 +183,11 @@ export default function Notificacoes() {
       {open && (
         <div className="sea-notif-list" role="dialog" aria-label="Notificações">
           {items.length === 0 && <div className="sea-notif-empty">Nenhuma notificação.</div>}
+          {items.length > 0 && (
+            <div className="sea-notif-actions">
+              <button type="button" className="btn btn-sm" onClick={clearAll}>Limpar notificações</button>
+            </div>
+          )}
           {items.map((n) => (
             <button type="button" key={n.notification_id} className="sea-notif-item" onClick={() => go(n)}>
               <div className="sea-notif-kind">{KIND_LABEL[n.kind] || n.kind} · {n.warehouse_code}</div>

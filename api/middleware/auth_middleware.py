@@ -25,7 +25,7 @@ from services import token_cache
 # hash, revoked, expired) without putting it on the wire. The HTTP
 # response collapses all four into a single "invalid_token" body
 # to close the enumeration oracle.
-_INVALID_LOGGER = logging.getLogger("sentry_wms.auth.wms_token")
+_INVALID_LOGGER = logging.getLogger("sea.auth.wms_token")
 
 
 # Endpoints a user with must_change_password=true is allowed to call.
@@ -329,25 +329,25 @@ def validate_pepper_config(raw) -> bytes:
     """
     if raw is None or raw == "":
         raise RuntimeError(
-            "SENTRY_TOKEN_PEPPER environment variable is required for "
+            "SEA_TOKEN_PEPPER environment variable is required for "
             "X-WMS-Token auth. Generate with "
             "python -c 'import secrets; print(secrets.token_hex(32))' "
             "(see .env.example)."
         )
     if not raw.strip():
         raise RuntimeError(
-            "SENTRY_TOKEN_PEPPER is whitespace-only. Generate a real "
+            "SEA_TOKEN_PEPPER is whitespace-only. Generate a real "
             "value with python -c 'import secrets; print(secrets.token_hex(32))'."
         )
     if raw == _PEPPER_PLACEHOLDER or raw.strip() == _PEPPER_PLACEHOLDER:
         raise RuntimeError(
-            "SENTRY_TOKEN_PEPPER is set to the .env.example placeholder "
+            "SEA_TOKEN_PEPPER is set to the .env.example placeholder "
             "string. Generate a real value with "
             "python -c 'import secrets; print(secrets.token_hex(32))'."
         )
     if len(raw) < _MIN_PEPPER_CHARS:
         raise RuntimeError(
-            f"SENTRY_TOKEN_PEPPER must be at least {_MIN_PEPPER_CHARS} "
+            f"SEA_TOKEN_PEPPER must be at least {_MIN_PEPPER_CHARS} "
             f"characters (got {len(raw)}). Generate with "
             "python -c 'import secrets; print(secrets.token_hex(32))'."
         )
@@ -355,7 +355,7 @@ def validate_pepper_config(raw) -> bytes:
 
 
 def _load_pepper() -> bytes:
-    """Read SENTRY_TOKEN_PEPPER from the environment or raise.
+    """Read SEA_TOKEN_PEPPER from the environment or raise.
 
     Looked up lazily (first request, not module import) so importing
     this module from unit tests does not require the env var; the
@@ -363,7 +363,7 @@ def _load_pepper() -> bytes:
     for real deployments. v1.5.1 (#142) extends the guard with
     length + placeholder checks.
     """
-    return validate_pepper_config(os.environ.get("SENTRY_TOKEN_PEPPER"))
+    return validate_pepper_config(os.environ.get("SEA_TOKEN_PEPPER"))
 
 
 def _hash_token(raw: str) -> str:

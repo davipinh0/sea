@@ -14,12 +14,12 @@ Per-request shape:
   bridging (V-200 + v1.7 cross_direction_scope_violation), checks the
   resource is in the token's inbound_resources scope.
 - 413 Payload Too Large at request boundary if Content-Length exceeds
-  SENTRY_INBOUND_MAX_BODY_KB (16-4096 KB; default 256).
+  SEA_INBOUND_MAX_BODY_KB (16-4096 KB; default 256).
 - 422 on Pydantic body validation failure (extra='forbid' rejects
   typos at the wire).
 - handle_inbound() in services.inbound_service runs the 10-step flow
   and returns a HandlerResult; the wrapper serialises into Flask
-  responses with the X-Sentry-Canonical-Model: DRAFT-v1 header on
+  responses with the X-SEA-Canonical-Model: DRAFT-v1 header on
   every response (success or failure).
 """
 
@@ -69,7 +69,7 @@ inbound_bp = Blueprint("inbound", __name__)
 def mapping_schema():
     response = make_response(jsonify(build_mapping_schema()))
     response.headers["Cache-Control"] = "public, max-age=300"
-    response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+    response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
     return response
 
 
@@ -81,7 +81,7 @@ def build_mapping_schema() -> dict:
     docs/api/mapping-document-schema.json cannot drift."""
     schema = MappingDocument.model_json_schema()
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    schema["title"] = "SentryWMS Inbound Mapping Document"
+    schema["title"] = "SEA Inbound Mapping Document"
     return schema
 
 
@@ -105,7 +105,7 @@ def _serialise(result) -> "Response":
                 response.headers[k] = v
     else:
         raise RuntimeError(f"unknown handler result: {result!r}")
-    response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+    response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
     return response
 
 
@@ -128,7 +128,7 @@ def _resource_post(resource_key: str):
                 }),
                 413,
             )
-            response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+            response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
             return response
 
         try:
@@ -141,7 +141,7 @@ def _resource_post(resource_key: str):
                 }),
                 422,
             )
-            response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+            response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
             return response
 
         registry = current_app.config.get("MAPPING_REGISTRY")
@@ -163,7 +163,7 @@ def _resource_post(resource_key: str):
                 }),
                 422,
             )
-            response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+            response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
             return response
         except _PsycopgIntegrityError as exc:
             g.db.rollback()
@@ -174,7 +174,7 @@ def _resource_post(resource_key: str):
                 }),
                 422,
             )
-            response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+            response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
             return response
         except Exception:
             g.db.rollback()
@@ -267,7 +267,7 @@ def _inventory_update_post():
             jsonify({"error_kind": "body_too_large", "max_body_kb": get_max_body_kb()}),
             413,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     try:
@@ -277,7 +277,7 @@ def _inventory_update_post():
             jsonify({"error_kind": "validation_error", "details": exc.errors(include_url=False)}),
             422,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     sp = body.source_payload or {}
@@ -288,7 +288,7 @@ def _inventory_update_post():
             jsonify({"error_kind": "missing_source_payload_fields", "missing": missing}),
             422,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     try:
@@ -302,7 +302,7 @@ def _inventory_update_post():
             jsonify({"error_kind": "invalid_payload_types", "message": str(exc)[:200]}),
             422,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     if target_quantity < 0:
@@ -310,7 +310,7 @@ def _inventory_update_post():
             jsonify({"error_kind": "negative_target_quantity", "target_quantity": target_quantity}),
             422,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     # Resolve the source-system SKU to SEA's item_id via
@@ -319,7 +319,7 @@ def _inventory_update_post():
     source_system = g.current_token.get("source_system") if g.current_token else None
     if not source_system:
         response = make_response(jsonify({"error_kind": "token_missing_source_system"}), 401)
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     item_row = g.db.execute(
@@ -342,7 +342,7 @@ def _inventory_update_post():
             }),
             404,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
     item_id = item_row.item_id
 
@@ -360,7 +360,7 @@ def _inventory_update_post():
             }),
             404,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
     bin_id = bin_row.bin_id
 
@@ -390,7 +390,7 @@ def _inventory_update_post():
             }),
             200,
         )
-        response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+        response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
         return response
 
     # Apply ADD or REMOVE for the computed delta.
@@ -513,7 +513,7 @@ def _inventory_update_post():
         }),
         201,
     )
-    response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+    response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
     return response
 
 

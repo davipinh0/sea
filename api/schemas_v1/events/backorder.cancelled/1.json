@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/backorder.cancelled/1.json",
+  "$id": "https://sea.example/events/backorder.cancelled/1.json",
   "title": "backorder.cancelled v1",
   "description": "A backorder SO has been cancelled. Emitted by api/routes/admin/admin_orders.py::cancel_backorder (operator path) and by services/sales_order_service.cancel_sales_order when the parent-cancel cascade walks a child BO. Aggregate: sales_order (the BO so_id).",
   "type": "object",

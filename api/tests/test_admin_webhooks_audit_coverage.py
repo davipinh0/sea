@@ -24,9 +24,9 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 os.environ.setdefault(
-    "SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8="
+    "SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8="
 )
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -38,7 +38,7 @@ from db_test_context import get_raw_connection
 
 @pytest.fixture(autouse=True)
 def _ensure_internal_webhook_opt_out(monkeypatch):
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
     yield
 
 

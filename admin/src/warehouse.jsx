@@ -8,7 +8,7 @@ export function WarehouseProvider({ children }) {
   const { user } = useAuth();
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseId, setWarehouseIdState] = useState(() => {
-    const saved = sessionStorage.getItem('sentry_warehouse_id');
+    const saved = sessionStorage.getItem('sea_warehouse_id');
     return saved ? Number(saved) : null;
   });
 
@@ -24,13 +24,13 @@ export function WarehouseProvider({ children }) {
       setWarehouses(list);
       // Auto-select first warehouse if none selected or saved one no longer exists
       if (list.length > 0) {
-        const saved = sessionStorage.getItem('sentry_warehouse_id');
+        const saved = sessionStorage.getItem('sea_warehouse_id');
         const savedId = saved ? Number(saved) : null;
         const exists = list.some((w) => (w.warehouse_id || w.id) === savedId);
         if (!exists) {
           const firstId = list[0].warehouse_id || list[0].id;
           setWarehouseIdState(firstId);
-          sessionStorage.setItem('sentry_warehouse_id', String(firstId));
+          sessionStorage.setItem('sea_warehouse_id', String(firstId));
         }
       }
     });
@@ -38,7 +38,7 @@ export function WarehouseProvider({ children }) {
 
   function setWarehouseId(id) {
     setWarehouseIdState(id);
-    sessionStorage.setItem('sentry_warehouse_id', String(id));
+    sessionStorage.setItem('sea_warehouse_id', String(id));
   }
 
   const warehouse = warehouses.find((w) => (w.warehouse_id || w.id) === warehouseId) || null;

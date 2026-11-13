@@ -3,7 +3,7 @@ import { getAuthItem } from '../auth/secureStorage';
 
 // Build-time default from .env / eas.json env
 const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
-const API_URL_KEY = 'sentry_api_url';
+const API_URL_KEY = 'sea_api_url';
 
 // Runtime-configurable API URL (cached in memory after first load)
 let _cachedApiUrl = null;

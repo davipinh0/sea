@@ -14,7 +14,7 @@ import uuid
 from db_test_context import get_raw_connection
 
 
-PEPPER = os.environ.get("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+PEPPER = os.environ.get("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 # v1.5.1 V-200 (#140): @require_wms_token now enforces endpoints
 # scope. Polling tests default to the full v1 slug set so auth passes

@@ -60,7 +60,7 @@ class TestCardBuilder:
         assert "Widget A" in card["text"]
         assert "SKU-B" in card["text"]
         assert "Widget B" in card["text"]
-        # One Open-in-Sentry action, linking with focus=<bo>
+        # One Open-in-SEA action, linking with focus=<bo>
         actions = card["potentialAction"]
         assert len(actions) == 1
         uri = actions[0]["targets"][0]["uri"]
@@ -148,11 +148,11 @@ class TestSendToTeams:
 
     def test_ssrf_guard_rejects_private_address(self, monkeypatch):
         # test_webhook_dispatcher_http_client.py:29 sets
-        # SENTRY_ALLOW_INTERNAL_WEBHOOKS=true at module import time
+        # SEA_ALLOW_INTERNAL_WEBHOOKS=true at module import time
         # (permanent leak into the test session env). Force the var
         # off so this assertion exercises the default-secure path
         # regardless of test ordering.
-        monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+        monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
 
         # 169.254.169.254 is the AWS IMDS address; ssrf_guard MUST reject.
         outcome = send_to_teams(

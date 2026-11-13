@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/ship.confirmed/1.json",
+  "$id": "https://sea.example/events/ship.confirmed/1.json",
   "title": "ship.confirmed v1",
   "description": "A sales order has shipped. Emitted by api/routes/shipping.py::fulfill. Aggregate: sales_order. SEA's item_fulfillments.ship_method is renamed to service_level on the wire per plan 1.7.1.",
   "type": "object",

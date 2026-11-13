@@ -19,9 +19,9 @@ if not _TEST_DATABASE_URL:
         "tables at session start; running against the application DB "
         "would destroy operator state. Set TEST_DATABASE_URL to a "
         "dedicated database, e.g. "
-        "postgresql://sentry:sentry@localhost:5432/sentry_test "
+        "postgresql://sea:sea@localhost:5432/sea_test "
         "(see docs/deployment.md). The default docker-compose stack "
-        "creates the sentry_test database in the db init."
+        "creates the sea_test database in the db init."
     )
 if _REAL_DATABASE_URL and _TEST_DATABASE_URL == _REAL_DATABASE_URL:
     raise RuntimeError(
@@ -47,14 +47,14 @@ os.environ.pop("SEA_SMTP_HOST", None)
 # do so directly via app.config["MAPPING_REGISTRY"] = ... in their
 # fixtures.
 import tempfile as _tempfile
-_TEST_MAPPINGS_DIR = _tempfile.mkdtemp(prefix="sentry-test-mappings-")
-os.environ.setdefault("SENTRY_INBOUND_MAPPINGS_DIR", _TEST_MAPPINGS_DIR)
+_TEST_MAPPINGS_DIR = _tempfile.mkdtemp(prefix="sea-test-mappings-")
+os.environ.setdefault("SEA_INBOUND_MAPPINGS_DIR", _TEST_MAPPINGS_DIR)
 
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 os.environ.setdefault(
-    "SENTRY_PUBSUB_HMAC_KEY",
+    "SEA_PUBSUB_HMAC_KEY",
     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 )
 # #238: api container's create_app now runs validate_or_die,

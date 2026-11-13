@@ -19,7 +19,7 @@ verifier here is consumer-shaped and used by the test suite to
 assert wire-compatibility; the production dispatcher only
 exercises :func:`sign_request`.
 
-Plaintext lifecycle (plan §3.2): the SENTRY_ENCRYPTION_KEY
+Plaintext lifecycle (plan §3.2): the SEA_ENCRYPTION_KEY
 master key decrypts ``webhook_secrets.secret_ciphertext`` into a
 local variable inside this module; the plaintext is wrapped in
 ``SecretMaterial`` and never crosses the call stack out as a raw
@@ -63,7 +63,7 @@ _PLACEHOLDER_KEYS = frozenset({
 
 def _get_fernet() -> Fernet:
     """Return the process-wide Fernet cipher. Reads
-    SENTRY_ENCRYPTION_KEY on first call; subsequent calls reuse.
+    SEA_ENCRYPTION_KEY on first call; subsequent calls reuse.
     Operates on raw bytes (BYTEA) rather than strings (which is
     what ``credential_vault`` does).
 
@@ -79,10 +79,10 @@ def _get_fernet() -> Fernet:
     global _fernet_cache
     if _fernet_cache is not None:
         return _fernet_cache
-    key = os.environ.get("SENTRY_ENCRYPTION_KEY")
+    key = os.environ.get("SEA_ENCRYPTION_KEY")
     if not key or not key.strip():
         raise RuntimeError(
-            "SENTRY_ENCRYPTION_KEY environment variable is required for the "
+            "SEA_ENCRYPTION_KEY environment variable is required for the "
             "webhook dispatcher (decrypts webhook_secrets.secret_ciphertext "
             "for HMAC signing). Generate with: python -c \"from "
             "cryptography.fernet import Fernet; print(Fernet.generate_key()"
@@ -90,7 +90,7 @@ def _get_fernet() -> Fernet:
         )
     if key.strip() in _PLACEHOLDER_KEYS:
         raise RuntimeError(
-            "SENTRY_ENCRYPTION_KEY is set to the .env.example placeholder "
+            "SEA_ENCRYPTION_KEY is set to the .env.example placeholder "
             "value; a deployment with this value would Fernet-decrypt with "
             "garbage and HMAC-sign to a value no consumer can reconstruct. "
             "Generate a real key with: python -c \"from cryptography.fernet "
@@ -253,7 +253,7 @@ def load_all_active_secrets(cur, subscription_id: str) -> List[SecretMaterial]:
 def compute_signature(timestamp: int, body: bytes, secret: SecretMaterial) -> str:
     """HMAC-SHA256 over ``f"{timestamp}.".encode("ascii") + body``.
     Returns the hex digest prefixed with ``sha256=`` to match the
-    ``X-Sentry-Signature`` header shape.
+    ``X-SEA-Signature`` header shape.
 
     Plan §3.1 mandates the timestamp prefix to bind the signature
     to a specific moment; the consumer's 5-minute replay-protection

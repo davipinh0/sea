@@ -41,15 +41,15 @@ class TestV001_FernetKeyNotHardcoded:
         # The specific committed value must be gone from HEAD.
         assert "CrFAoVpcrJdjJoxrC4vv8RNL0r965VZ4TKkMcD2Zy4k=" not in compose
         # Strict-fail form must be used.
-        assert "${SENTRY_ENCRYPTION_KEY:?" in compose
+        assert "${SEA_ENCRYPTION_KEY:?" in compose
 
     def test_prod_compose_also_strict(self):
         prod = _read("docker-compose.prod.yml")
-        assert "${SENTRY_ENCRYPTION_KEY:?" in prod
+        assert "${SEA_ENCRYPTION_KEY:?" in prod
 
     def test_env_example_documents_key(self):
         example = _read(".env.example")
-        assert "SENTRY_ENCRYPTION_KEY=" in example
+        assert "SEA_ENCRYPTION_KEY=" in example
 
 
 # ---------------------------------------------------------------------------
@@ -470,5 +470,5 @@ class TestV005_NoKeyMaterialInLogs:
         # The auto-generate + log path is gone; no logger.* call should
         # reference the key variable.
         assert "auto-generated" not in vault
-        assert "os.environ[\"SENTRY_ENCRYPTION_KEY\"] =" not in vault
-        assert "SENTRY_ENCRYPTION_KEY=%s" not in vault
+        assert "os.environ[\"SEA_ENCRYPTION_KEY\"] =" not in vault
+        assert "SEA_ENCRYPTION_KEY=%s" not in vault

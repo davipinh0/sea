@@ -2,7 +2,7 @@
 
 Fruxh's production deployment runs SEA behind an nginx TLS terminator
 on http://127.0.0.1:8080. nginx forwards X-Forwarded-Proto: https,
-X-Forwarded-Host: sentry.fruxh.example, X-Forwarded-For: <client-ip>.
+X-Forwarded-Host: sea.fruxh.example, X-Forwarded-For: <client-ip>.
 Flask's request object, without ProxyFix wrapping app.wsgi_app, reported
 scheme=http and host=127.0.0.1:8080; cookies were issued scoped to the
 internal host, the browser never resubmitted them to the public host,
@@ -22,7 +22,7 @@ import pytest
 
 PROXY_HEADERS = {
     "X-Forwarded-Proto": "https",
-    "X-Forwarded-Host": "sentry.fruxh.example",
+    "X-Forwarded-Host": "sea.fruxh.example",
     "X-Forwarded-For": "203.0.113.7",
 }
 
@@ -102,7 +102,7 @@ class TestProxyFixOptIn:
         probe = unproxied_app._probe_state
         assert probe["is_secure"] is False
         assert probe["scheme"] == "http"
-        assert "sentry.fruxh.example" not in probe["host"]
+        assert "sea.fruxh.example" not in probe["host"]
 
 
 class TestProxyFixEnabled:
@@ -111,7 +111,7 @@ class TestProxyFixEnabled:
         assert resp.status_code == 204
         probe = proxied_app._probe_state
         assert probe["scheme"] == "https"
-        assert probe["host"] == "sentry.fruxh.example"
+        assert probe["host"] == "sea.fruxh.example"
         assert probe["is_secure"] is True
 
 
@@ -124,7 +124,7 @@ class TestCsrfCookieBehindProxy:
         )
         assert resp.status_code == 200
 
-        csrf = _cookie_attrs(resp, "sentry_csrf")
+        csrf = _cookie_attrs(resp, "sea_csrf")
         assert csrf is not None
         assert "secure" in csrf, (
             "CSRF cookie must carry Secure when X-Forwarded-Proto=https "
@@ -132,7 +132,7 @@ class TestCsrfCookieBehindProxy:
         )
         assert csrf.get("samesite", "").lower() == "strict"
 
-        auth = _cookie_attrs(resp, "sentry_auth")
+        auth = _cookie_attrs(resp, "sea_auth")
         assert auth is not None
         assert "secure" in auth
         assert "httponly" in auth
@@ -148,7 +148,7 @@ class TestCsrfCookieBehindProxy:
             headers=PROXY_HEADERS,
         )
         assert login_resp.status_code == 200
-        csrf = _cookie_attrs(login_resp, "sentry_csrf")["_value"]
+        csrf = _cookie_attrs(login_resp, "sea_csrf")["_value"]
         assert csrf
 
         resp = proxied_client.post(
@@ -180,7 +180,7 @@ class TestHealthEndpointDoesNotLeakProxyFixState:
         body = resp.get_json()
         assert "proxy_fix_active" not in body
         assert body.get("status") == "ok"
-        assert body.get("service") == "sentry-wms"
+        assert body.get("service") == "sea"
 
     def test_health_shape_identical_with_and_without_trust_proxy(
         self, unproxied_client, proxied_client

@@ -1,5 +1,5 @@
 -- ============================================================
--- SENTRY WMS - Apartment Test Lab Seed Data
+-- SEA - Apartment Test Lab Seed Data
 -- ============================================================
 -- Matches the 61 printed Zebra barcode labels exactly.
 -- Cross-referenced against HANDOFF-SESSION5-CLEAN-SLATE.md

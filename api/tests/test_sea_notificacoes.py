@@ -364,3 +364,51 @@ class TestStorageInAnotherLocation:
             text("SELECT COUNT(*) FROM inventory WHERE bin_id = :b AND quantity_on_hand > 0"),
             {"b": other_location["shelf"]},
         ).scalar() == 0
+
+
+class TestClearNotifications:
+    def test_clearing_empties_the_list_of_that_user_only(self, client, auth_headers, stored_ot):
+        """stored_ot produced a receipt and a storage notification."""
+        conn = stored_ot["conn"]
+        other = _other_admin(client, conn)
+        before = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"]
+        assert len(before) >= 2
+
+        resp = client.post("/api/sea/notificacoes/limpar", headers=auth_headers, json={})
+        assert resp.status_code == 200
+        assert resp.get_json()["cleared_id"] == before[0]["notification_id"]
+        assert client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"] == []
+        # Another user still has theirs, and the records are kept.
+        theirs = client.get("/api/sea/notificacoes", headers=other).get_json()["notifications"]
+        assert len(theirs) == len(before)
+        assert len(_rows(conn, "RECEBIMENTO")) >= 1
+
+        # What arrives afterwards shows up again.
+        _request(client, auth_headers, stored_ot["inventory_id"], 1)
+        fresh = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"]
+        assert [n["kind"] for n in fresh] == ["RETIRADA_SOLICITADA"]
+
+    def test_clearing_needs_a_session(self, client):
+        assert client.application.test_client().post(
+            "/api/sea/notificacoes/limpar", json={}
+        ).status_code == 401
+
+
+def _other_admin(client, conn):
+    import uuid
+
+    import bcrypt
+
+    conn.execute(
+        text(
+            "INSERT INTO users (username, password_hash, full_name, role, warehouse_id, "
+            "warehouse_ids, external_id) VALUES ('sea.notif.limpar', :pw, 'Outro', 'ADMIN', "
+            ":w, :ws, :ext)"
+        ),
+        {"pw": bcrypt.hashpw(b"Senha123", bcrypt.gensalt()).decode(), "w": WAREHOUSE,
+         "ws": [WAREHOUSE], "ext": str(uuid.uuid4())},
+    )
+    token = client.post(
+        "/api/auth/login", json={"username": "sea.notif.limpar", "password": "Senha123"}
+    ).get_json()["token"]
+    return {"Authorization": f"Bearer {token}"}

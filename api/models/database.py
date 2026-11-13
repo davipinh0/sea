@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry"
+    "DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea"
 )
 
 # pool_pre_ping validates a pooled connection with a lightweight ping before

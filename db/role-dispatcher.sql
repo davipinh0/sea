@@ -47,7 +47,7 @@
 -- deployment after the v1.6.0 upgrade; the operator supplies the
 -- password via a psql variable.
 --
---   psql -v sentry_dispatcher_password=<strong-password> \
+--   psql -v sea_dispatcher_password=<strong-password> \
 --        -U <db-superuser> -d <database> \
 --        -f db/role-dispatcher.sql
 --
@@ -62,7 +62,7 @@
 -- branch.)
 --
 -- Then set DISPATCHER_DATABASE_URL in .env to
---   postgresql://sentry_dispatcher:<strong-password>@db:5432/<database>
+--   postgresql://sea_dispatcher:<strong-password>@db:5432/<database>
 -- and (after the D1 commit) restart the webhook-dispatcher container.
 --
 -- Idempotent: safe to re-run. Both \gexec branches are predicated
@@ -79,29 +79,29 @@
 \set ON_ERROR_STOP on
 
 -- Branch 1: CREATE ROLE on first run.
-SELECT format('CREATE ROLE sentry_dispatcher LOGIN PASSWORD %L',
-              :'sentry_dispatcher_password')
- WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_dispatcher')
+SELECT format('CREATE ROLE sea_dispatcher LOGIN PASSWORD %L',
+              :'sea_dispatcher_password')
+ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_dispatcher')
 \gexec
 
 -- Branch 2: ALTER ROLE on subsequent runs (also rotates the
 -- password if the operator supplies a new value).
-SELECT format('ALTER ROLE sentry_dispatcher WITH LOGIN PASSWORD %L',
-              :'sentry_dispatcher_password')
- WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_dispatcher')
+SELECT format('ALTER ROLE sea_dispatcher WITH LOGIN PASSWORD %L',
+              :'sea_dispatcher_password')
+ WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_dispatcher')
 \gexec
 
 -- GRANT CONNECT needs a literal database name; derive it from
 -- current_database() so the script works regardless of whether
--- the operator deployed with POSTGRES_DB=sentry or a custom value.
-SELECT format('GRANT CONNECT ON DATABASE %I TO sentry_dispatcher',
+-- the operator deployed with POSTGRES_DB=sea or a custom value.
+SELECT format('GRANT CONNECT ON DATABASE %I TO sea_dispatcher',
               current_database())
 \gexec
 
-GRANT USAGE ON SCHEMA public TO sentry_dispatcher;
+GRANT USAGE ON SCHEMA public TO sea_dispatcher;
 
-GRANT SELECT                       ON integration_events    TO sentry_dispatcher;
-GRANT SELECT, UPDATE               ON webhook_subscriptions TO sentry_dispatcher;
-GRANT INSERT, SELECT, UPDATE       ON webhook_deliveries    TO sentry_dispatcher;
-GRANT USAGE                        ON SEQUENCE webhook_deliveries_delivery_id_seq TO sentry_dispatcher;
-GRANT SELECT                       ON webhook_secrets       TO sentry_dispatcher;
+GRANT SELECT                       ON integration_events    TO sea_dispatcher;
+GRANT SELECT, UPDATE               ON webhook_subscriptions TO sea_dispatcher;
+GRANT INSERT, SELECT, UPDATE       ON webhook_deliveries    TO sea_dispatcher;
+GRANT USAGE                        ON SEQUENCE webhook_deliveries_delivery_id_seq TO sea_dispatcher;
+GRANT SELECT                       ON webhook_secrets       TO sea_dispatcher;

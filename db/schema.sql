@@ -1,5 +1,5 @@
 -- ============================================================
--- SENTRY WMS - PostgreSQL Schema
+-- SEA - PostgreSQL Schema
 -- ============================================================
 -- Development: PostgreSQL (local Docker)
 -- Production:  PostgreSQL Cloud or Fabric SQL Database
@@ -994,7 +994,7 @@ CREATE TRIGGER tr_inbound_source_systems_allowlist_audit_truncate
 -- WMS TOKENS (v1.5.0 inbound API tokens for X-WMS-Token auth)
 -- ============================================================
 -- Hash-only storage per Decision P. token_hash is
--- SHA256(SENTRY_TOKEN_PEPPER || plaintext).hexdigest() per Decision Q.
+-- SHA256(SEA_TOKEN_PEPPER || plaintext).hexdigest() per Decision Q.
 -- Scope columns are typed arrays per Decision S. Default expiry is
 -- one year per Decision R.
 --
@@ -1553,7 +1553,7 @@ CREATE TRIGGER tr_integration_events_notify
 --
 -- delivery_url CHECK is permissive ('^https?://') so dev/CI can
 -- use http; production HTTPS-only enforcement lives in the admin
--- endpoint behind SENTRY_ALLOW_HTTP_WEBHOOKS opt-out.
+-- endpoint behind SEA_ALLOW_HTTP_WEBHOOKS opt-out.
 --
 -- webhook_secrets stores Fernet-encrypted HMAC signing material
 -- in two slots: generation=1 primary, generation=2 previous.
@@ -1934,7 +1934,7 @@ CREATE TABLE notification_webhooks (
     webhook_id    SERIAL PRIMARY KEY,
     warehouse_id  INT NOT NULL REFERENCES warehouses(warehouse_id),
     channel_kind  VARCHAR(20) NOT NULL,
-    -- Fernet-encrypted at rest via SENTRY_ENCRYPTION_KEY. Plaintext
+    -- Fernet-encrypted at rest via SEA_ENCRYPTION_KEY. Plaintext
     -- URL never appears in the DB.
     url           TEXT NOT NULL,
     event_filter  TEXT[] NOT NULL DEFAULT
@@ -2448,3 +2448,15 @@ ALTER TABLE purchase_order_lines
     ADD COLUMN IF NOT EXISTS service_order_number VARCHAR(40),
     ADD COLUMN IF NOT EXISTS service_order_type   VARCHAR(4)
         CHECK (service_order_type IS NULL OR service_order_type IN ('PM11', 'PM12'));
+
+-- ============================================================
+-- 086_sea_notificacoes_limpar.sql - SEA: limpar notificações
+-- ============================================================
+-- Cada usuário pode limpar a sua lista de notificações do painel. O que
+-- foi limpo deixa de aparecer para ele; os registros (e o histórico de
+-- envio de e-mail) continuam em sea_notifications.
+--
+-- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
+-- ============================================================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_cleared_id INT NOT NULL DEFAULT 0;

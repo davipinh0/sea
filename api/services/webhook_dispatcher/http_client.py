@@ -8,7 +8,7 @@ to the documented enum.
 TLS policy invariants:
 
   * ``verify=True`` always at this layer. The
-    ``SENTRY_ALLOW_HTTP_WEBHOOKS`` opt-out only relaxes the
+    ``SEA_ALLOW_HTTP_WEBHOOKS`` opt-out only relaxes the
     scheme check at admin time; cert verification at dispatch
     time is non-negotiable.
   * ``allow_redirects=False``. A 3xx response classifies as a
@@ -253,11 +253,11 @@ class HttpClient:
 
         headers = {
             "Content-Type": "application/json",
-            "X-Sentry-Signature": signature,
-            "X-Sentry-Signature-Generation": str(secret_generation),
-            "X-Sentry-Delivery-Id": f"{event_id}:{timestamp}",
-            "X-Sentry-Event-Type": event_type,
-            "X-Sentry-Timestamp": str(timestamp),
+            "X-SEA-Signature": signature,
+            "X-SEA-Signature-Generation": str(secret_generation),
+            "X-SEA-Delivery-Id": f"{event_id}:{timestamp}",
+            "X-SEA-Event-Type": event_type,
+            "X-SEA-Timestamp": str(timestamp),
         }
 
         session = self._get_session()

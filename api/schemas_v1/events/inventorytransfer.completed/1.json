@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/inventorytransfer.completed/1.json",
+  "$id": "https://sea.example/events/inventorytransfer.completed/1.json",
   "title": "inventorytransfer.completed v1",
   "description": "An inventory transfer has completed. Emitted from api/routes/transfers.py::move (bin-to-bin) and api/routes/admin/admin_transfer_orders.py::approve_transfer_order_approval (inter-warehouse approval). The entity-prefixed name connectors filter on; replaces the retired transfer.completed/1 event. Aggregate: inventory_transfer.",
   "type": "object",

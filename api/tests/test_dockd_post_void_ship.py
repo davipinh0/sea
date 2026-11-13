@@ -25,10 +25,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -200,7 +200,7 @@ class TestHappyPath:
         assert body["status"] == "PICKED"
         assert body["voided_at"].endswith("Z")
         assert body["audit_log_id"] is not None
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_shipped_to_packed(self, client, dockd_token):
         so_id, so_number, fid = _seed_shipped(pre_ship_status="PACKED")
@@ -495,7 +495,7 @@ class TestDraftHeader:
     def test_404_carries_draft_header(self, client, dockd_token):
         _ensure_user()
         resp = _post_void(client, dockd_token["plaintext"], "NEVER", _void_body())
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_409_carries_draft_header(self, client, dockd_token):
         _ensure_user()
@@ -503,10 +503,10 @@ class TestDraftHeader:
         so_id, so_number = _insert_so(status="PACKED")
         _insert_so_line(so_id, item_id, status="PACKED")
         resp = _post_void(client, dockd_token["plaintext"], so_number, _void_body())
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_422_carries_draft_header(self, client, dockd_token):
         body = _void_body()
         del body["reason"]
         resp = _post_void(client, dockd_token["plaintext"], "SO-X", body)
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"

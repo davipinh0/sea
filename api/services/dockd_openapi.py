@@ -19,7 +19,7 @@ from schemas.dockd import ShipBody, VoidShipBody
 
 
 _DRAFT_HEADER = {
-    "X-Sentry-Canonical-Model": {
+    "X-SEA-Canonical-Model": {
         "description": (
             "Always set to DRAFT-v1 in v1.9.0. Indicates the dockd "
             "contract may break at v2.0 alongside the inbound canonical "
@@ -322,7 +322,7 @@ def build_dockd_openapi() -> Dict[str, Any]:
                         "not_in_shippable_status. Details carry "
                         "current_status and allowed_statuses."
                     ),
-                    "413": _err_response("body_too_large; SENTRY_DOCKD_MAX_BODY_KB."),
+                    "413": _err_response("body_too_large; SEA_DOCKD_MAX_BODY_KB."),
                     "422": _err_response(
                         "invalid_body (Pydantic), invalid_so_number "
                         "(path regex), or unknown_operator "
@@ -407,14 +407,14 @@ def build_dockd_openapi() -> Dict[str, Any]:
     return {
         "openapi": "3.1.0",
         "info": {
-            "title": "SentryWMS v1.9.0 Dockd",
+            "title": "SEA v1.9.0 Dockd",
             "version": "1.9.0",
             "description": (
                 "Per-station shipping API for the dockd integration. "
                 "Three endpoints: GET /orders/<so_number> for load-on-"
                 "scan, POST /ship to record a ship, POST /void-ship to "
                 "reverse one. v1.9 ships the contract as DRAFT; "
-                "X-Sentry-Canonical-Model: DRAFT-v1 header on every "
+                "X-SEA-Canonical-Model: DRAFT-v1 header on every "
                 "response."
             ),
         },

@@ -4,7 +4,7 @@
 -- Migrations 039-043 shipped source_payload JSONB NOT NULL across
 -- all five inbound_<resource> tables. The retention beat task
 -- (jobs.cleanup_tasks.cleanup_inbound_source_payload) needs to NULL
--- the column past the SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS
+-- the column past the SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS
 -- window while preserving canonical_payload (R6 mitigation: drop
 -- per-row size at scale, keep the canonical history queryable).
 --

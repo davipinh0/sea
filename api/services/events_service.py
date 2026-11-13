@@ -14,7 +14,7 @@ NOTHING RETURNING event_id`` returns the new ``event_id`` on first
 emit and ``None`` when the row was a duplicate; callers treat
 ``None`` as "already emitted, no-op."
 
-Schema validation is gated by ``SENTRY_VALIDATE_EVENT_SCHEMAS`` (Decision U):
+Schema validation is gated by ``SEA_VALIDATE_EVENT_SCHEMAS`` (Decision U):
 
 - ``true`` / ``1`` / ``yes``: validate every payload against the
   registered schema before insert. A mismatch raises; tests and CI run
@@ -40,7 +40,7 @@ from sqlalchemy import text
 from services.events_schema_registry import get_validator
 
 def _validation_enabled() -> bool:
-    """v1.5.1 V-217 (umbrella #156): read SENTRY_VALIDATE_EVENT_SCHEMAS
+    """v1.5.1 V-217 (umbrella #156): read SEA_VALIDATE_EVENT_SCHEMAS
     on every emit rather than snapshotting it at module import.
 
     Pre-v1.5.1 a module-level constant froze the value at the first
@@ -50,7 +50,7 @@ def _validation_enabled() -> bool:
     resolved. Reading the env var per-call makes the flag behave
     like every other operator-tunable toggle -- set it, restart the
     worker if desired, or just flip it and wait a request cycle."""
-    return os.getenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "").lower() in (
+    return os.getenv("SEA_VALIDATE_EVENT_SCHEMAS", "").lower() in (
         "1",
         "true",
         "yes",
@@ -75,7 +75,7 @@ def emit_event(
     already exists (idempotent replay).
 
     Validation failure raises ``jsonschema.ValidationError`` when the
-    ``SENTRY_VALIDATE_EVENT_SCHEMAS`` env var is set. An unknown
+    ``SEA_VALIDATE_EVENT_SCHEMAS`` env var is set. An unknown
     ``(event_type, event_version)`` always raises ``KeyError`` - that's
     a code bug regardless of env.
 

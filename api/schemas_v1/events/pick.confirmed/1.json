@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/pick.confirmed/1.json",
+  "$id": "https://sea.example/events/pick.confirmed/1.json",
   "title": "pick.confirmed v1",
   "description": "One sales order has flipped to PICKED inside a batch. Emitted by api/services/picking_service.py::complete_batch once per SO. Aggregate: sales_order.",
   "type": "object",

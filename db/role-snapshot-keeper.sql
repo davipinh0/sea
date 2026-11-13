@@ -3,7 +3,7 @@
 -- regression fix #170)
 -- ============================================================
 -- Pre-v1.5.1 the snapshot-keeper service shared DATABASE_URL with
--- the api container and ran under the full `sentry` role. A
+-- the api container and ran under the full `sea` role. A
 -- separate compromise of the api host then gave the attacker every
 -- permission the keeper had (and vice versa). V-214 narrows the
 -- blast radius by defining a dedicated role whose grants cover
@@ -22,7 +22,7 @@
 --
 --   The original v1.5.1 script wrapped CREATE ROLE / ALTER ROLE
 --   in DO $$ ... $$; blocks that referenced the password via
---   :'sentry_keeper_password'. psql does NOT perform :'var'
+--   :'sea_keeper_password'. psql does NOT perform :'var'
 --   substitution inside dollar-quoted strings; the literal text
 --   passes through to the server's SQL parser and surfaces
 --   ERROR: syntax error at or near ":". The script also lacked
@@ -41,17 +41,17 @@
 -- deployment after the v1.5.1 upgrade; the operator supplies the
 -- password via a psql variable.
 --
---   psql -v sentry_keeper_password=<strong-password> \
+--   psql -v sea_keeper_password=<strong-password> \
 --        -U <db-superuser> -d <database> \
 --        -f db/role-snapshot-keeper.sql
 --
 -- (Pass the password unquoted; the script wraps it as an SQL
 -- string literal via psql's :'var' interpolation. The variable
--- name `sentry_keeper_password` is preserved from the v1.5.1
+-- name `sea_keeper_password` is preserved from the v1.5.1
 -- shape so existing operator runbooks keep working.)
 --
 -- Then set SNAPSHOT_KEEPER_DATABASE_URL in .env to
---   postgresql://sentry_keeper:<strong-password>@db:5432/<database>
+--   postgresql://sea_keeper:<strong-password>@db:5432/<database>
 -- and restart the snapshot-keeper container.
 --
 -- Idempotent: safe to re-run. The CREATE branch's WHERE clause
@@ -63,31 +63,31 @@
 \set ON_ERROR_STOP on
 
 -- Branch 1: CREATE ROLE on first run.
-SELECT format('CREATE ROLE sentry_keeper LOGIN PASSWORD %L',
-              :'sentry_keeper_password')
- WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_keeper')
+SELECT format('CREATE ROLE sea_keeper LOGIN PASSWORD %L',
+              :'sea_keeper_password')
+ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_keeper')
 \gexec
 
 -- Branch 2: ALTER ROLE on subsequent runs (also rotates the
 -- password if the operator supplies a new value).
-SELECT format('ALTER ROLE sentry_keeper WITH LOGIN PASSWORD %L',
-              :'sentry_keeper_password')
- WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sentry_keeper')
+SELECT format('ALTER ROLE sea_keeper WITH LOGIN PASSWORD %L',
+              :'sea_keeper_password')
+ WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sea_keeper')
 \gexec
 
 -- GRANT CONNECT needs a literal database name; derive it from
 -- current_database() so the script works regardless of whether the
--- operator deployed with POSTGRES_DB=sentry or a custom value.
-SELECT format('GRANT CONNECT ON DATABASE %I TO sentry_keeper',
+-- operator deployed with POSTGRES_DB=sea or a custom value.
+SELECT format('GRANT CONNECT ON DATABASE %I TO sea_keeper',
               current_database())
 \gexec
 
-GRANT USAGE ON SCHEMA public TO sentry_keeper;
+GRANT USAGE ON SCHEMA public TO sea_keeper;
 
-GRANT SELECT ON integration_events TO sentry_keeper;
-GRANT SELECT, UPDATE, DELETE ON snapshot_scans TO sentry_keeper;
+GRANT SELECT ON integration_events TO sea_keeper;
+GRANT SELECT, UPDATE, DELETE ON snapshot_scans TO sea_keeper;
 
 -- pg_export_snapshot() is PUBLIC by default; keep the explicit
 -- grant here so a future lockdown that revokes PUBLIC does not
 -- silently break the keeper.
-GRANT EXECUTE ON FUNCTION pg_export_snapshot() TO sentry_keeper;
+GRANT EXECUTE ON FUNCTION pg_export_snapshot() TO sea_keeper;

@@ -12,7 +12,7 @@
 -- dispatcher selects an adapter by channel_kind.
 --
 -- url is Fernet-encrypted at rest via the existing
--- SENTRY_ENCRYPTION_KEY wrapper that token storage uses today
+-- SEA_ENCRYPTION_KEY wrapper that token storage uses today
 -- (services/credential_vault.py). Plaintext URL never appears in
 -- the DB.
 --
@@ -47,7 +47,7 @@ COMMENT ON TABLE notification_webhooks IS
     'Chat-channel notification destinations (Teams adaptive cards in v1). Distinct from webhook_subscriptions, which carries signed-envelope HTTP subscribers with a different payload shape and audit surface. Folded into services/webhook_dispatcher via a channel_kind adapter; routing reads this table for events in the backorder.* family.';
 
 COMMENT ON COLUMN notification_webhooks.url IS
-    'Fernet-encrypted at rest via SENTRY_ENCRYPTION_KEY. Plaintext URL never appears in the DB; the admin-facing CRUD surface accepts the URL on create and exposes a "rotate URL" flow that swaps the ciphertext.';
+    'Fernet-encrypted at rest via SEA_ENCRYPTION_KEY. Plaintext URL never appears in the DB; the admin-facing CRUD surface accepts the URL on create and exposes a "rotate URL" flow that swaps the ciphertext.';
 
 COMMENT ON COLUMN notification_webhooks.channel_kind IS
     'Adapter selector. v1 only ships ''teams''; the column is sized for future ''slack'', ''pagerduty'', etc.';

@@ -3,10 +3,10 @@
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -20,24 +20,24 @@ _GOOD_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 class TestLoadKey:
     def test_load_key_returns_bytes(self, monkeypatch):
-        monkeypatch.setenv("SENTRY_PUBSUB_HMAC_KEY", _GOOD_KEY)
+        monkeypatch.setenv("SEA_PUBSUB_HMAC_KEY", _GOOD_KEY)
         key = pubsub_signing.load_key()
         assert isinstance(key, bytes)
         assert key == _GOOD_KEY.encode("utf-8")
 
     def test_load_key_unset_raises(self, monkeypatch):
-        monkeypatch.delenv("SENTRY_PUBSUB_HMAC_KEY", raising=False)
+        monkeypatch.delenv("SEA_PUBSUB_HMAC_KEY", raising=False)
         with pytest.raises(pubsub_signing.PubsubKeyConfigError, match="unset"):
             pubsub_signing.load_key()
 
     def test_load_key_empty_raises(self, monkeypatch):
-        monkeypatch.setenv("SENTRY_PUBSUB_HMAC_KEY", "   ")
+        monkeypatch.setenv("SEA_PUBSUB_HMAC_KEY", "   ")
         with pytest.raises(pubsub_signing.PubsubKeyConfigError, match="unset"):
             pubsub_signing.load_key()
 
     def test_load_key_placeholder_raises(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_PUBSUB_HMAC_KEY",
+            "SEA_PUBSUB_HMAC_KEY",
             "replace-me-with-secrets-token-hex-32",
         )
         with pytest.raises(
@@ -46,7 +46,7 @@ class TestLoadKey:
             pubsub_signing.load_key()
 
     def test_load_key_short_raises(self, monkeypatch):
-        monkeypatch.setenv("SENTRY_PUBSUB_HMAC_KEY", "too-short")
+        monkeypatch.setenv("SEA_PUBSUB_HMAC_KEY", "too-short")
         with pytest.raises(
             pubsub_signing.PubsubKeyConfigError, match="32 bytes"
         ):

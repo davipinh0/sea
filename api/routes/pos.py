@@ -16,7 +16,7 @@ Per-request shape:
   reflects that.
 - @with_db opens the request-scoped SQLAlchemy session.
 - Every response (success and failure) carries
-  X-Sentry-Canonical-Model: DRAFT-v1 so consumers can detect schema-
+  X-SEA-Canonical-Model: DRAFT-v1 so consumers can detect schema-
   stability stage on each response, including 4xx.
 - Standard error body shape:
       {"error_kind": str, "message": str, "details": {}}
@@ -92,7 +92,7 @@ def _draft_response(body, status_code=200, extra_headers=None):
     """Build a Flask response carrying the POS canonical-model header
     on every response (success or failure). Mirrors the dockd helper."""
     response = make_response(jsonify(body), status_code)
-    response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
+    response.headers["X-SEA-Canonical-Model"] = "DRAFT-v1"
     if extra_headers:
         for k, v in extra_headers.items():
             response.headers[k] = v
@@ -465,7 +465,7 @@ def validate_cart():
     if request.content_length is not None and request.content_length > cap_bytes:
         return _err(
             "body_too_large",
-            "request body exceeds SENTRY_POS_MAX_BODY_KB",
+            "request body exceeds SEA_POS_MAX_BODY_KB",
             413,
             {"max_body_kb": get_max_body_kb()},
         )
@@ -578,7 +578,7 @@ def _pydantic_invalid_body(exc):
 
 
 def _set_lock_timeouts(db):
-    """Apply SENTRY_POS_LOCK_TIMEOUT_MS / STATEMENT_TIMEOUT_MS to the
+    """Apply SEA_POS_LOCK_TIMEOUT_MS / STATEMENT_TIMEOUT_MS to the
     current transaction. SQLite or any non-Postgres engine in tests
     rejects SET LOCAL; swallow so unit tests against an in-memory
     engine still work. Production is Postgres."""
@@ -612,7 +612,7 @@ def checkout():
     if request.content_length is not None and request.content_length > cap_bytes:
         return _err(
             "body_too_large",
-            "request body exceeds SENTRY_POS_MAX_BODY_KB",
+            "request body exceeds SEA_POS_MAX_BODY_KB",
             413,
             {"max_body_kb": get_max_body_kb()},
         )
@@ -1430,7 +1430,7 @@ def refund():
     if request.content_length is not None and request.content_length > cap_bytes:
         return _err(
             "body_too_large",
-            "request body exceeds SENTRY_POS_MAX_BODY_KB",
+            "request body exceeds SEA_POS_MAX_BODY_KB",
             413,
             {"max_body_kb": get_max_body_kb()},
         )
@@ -2026,7 +2026,7 @@ def reference_orders():
     if request.content_length is not None and request.content_length > cap_bytes:
         return _err(
             "body_too_large",
-            "request body exceeds SENTRY_POS_MAX_BODY_KB",
+            "request body exceeds SEA_POS_MAX_BODY_KB",
             413,
             {"max_body_kb": get_max_body_kb()},
         )

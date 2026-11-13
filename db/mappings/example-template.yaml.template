@@ -13,7 +13,7 @@
 #
 #   db/mappings/<source_system>.yaml
 #
-# The mapping-loader resolves SENTRY_INBOUND_MAPPINGS_DIR -- default
+# The mapping-loader resolves SEA_INBOUND_MAPPINGS_DIR -- default
 # `/db/mappings`, matching the docker-compose `./db:/db` volume mount
 # -- to this directory at the repo root.
 #
@@ -49,7 +49,7 @@ mapping_version: "1.0"
 # `mapping_version` is a free-form label so the operator can track
 # revisions of THIS document. It rolls forward independently of
 # SEA's own canonical model version (which is pinned in the
-# X-Sentry-Canonical-Model response header).
+# X-SEA-Canonical-Model response header).
 
 source_system: "your-source-system"
 # `source_system` MUST equal the filename stem after rename. If the

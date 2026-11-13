@@ -1428,6 +1428,10 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
   border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.3); font-size: 13px;
 }
 .sea-notif-list { max-height: 420px; overflow-y: auto; }
+.sea-notif-actions {
+  position: sticky; top: 0; display: flex; justify-content: flex-end; padding: 8px 12px;
+  background: var(--white); border-bottom: 1px solid var(--border-dark);
+}
 .sea-notif-item {
   display: block; width: 100%; padding: 10px 12px; text-align: left; font: inherit; color: inherit;
   background: none; border: 0; border-bottom: 1px solid var(--border-dark); cursor: pointer;

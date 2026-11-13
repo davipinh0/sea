@@ -2,7 +2,7 @@
 
 All endpoints require ADMIN role via cookie auth. The plaintext token
 value is generated server-side from ``secrets.token_urlsafe(32)``,
-hashed with SENTRY_TOKEN_PEPPER per Decision Q, and returned to the
+hashed with SEA_TOKEN_PEPPER per Decision Q, and returned to the
 admin exactly once in the response body for issuance and rotation.
 Storage is hash-only (Decision P): a lost plaintext means the admin
 rotates, no recovery path.
@@ -108,7 +108,7 @@ def _hash_for_storage(plaintext: str) -> str:
     silently produce a weakly-peppered hash at issuance time even
     if the boot guard was bypassed.
     """
-    pepper_bytes = validate_pepper_config(os.environ.get("SENTRY_TOKEN_PEPPER"))
+    pepper_bytes = validate_pepper_config(os.environ.get("SEA_TOKEN_PEPPER"))
     return hashlib.sha256(pepper_bytes + plaintext.encode("utf-8")).hexdigest()
 
 

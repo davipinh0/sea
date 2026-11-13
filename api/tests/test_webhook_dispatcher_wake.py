@@ -13,7 +13,7 @@ Three wake sources, one shared queue, three threads. Coverage:
   * Malformed pubsub messages are logged + dropped, not crashed on.
   * Shutdown stops all three threads within the drain timeout.
 
-The tests use the live sentry-redis + sentry-db services already
+The tests use the live sea-redis + sea-db services already
 running for the dev stack. WakeOrchestrator opens its own
 psycopg2 + redis connections so the tests do not need to share
 connection pools with the rest of the suite.
@@ -27,14 +27,14 @@ import threading
 import time
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 # #227: pubsub HMAC key. Tests that exercise weak-key rejection
 # clear / mutate this at the test level.
 os.environ.setdefault(
-    "SENTRY_PUBSUB_HMAC_KEY",
+    "SEA_PUBSUB_HMAC_KEY",
     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 )
 

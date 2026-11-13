@@ -10,9 +10,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: sentry
-          POSTGRES_PASSWORD: sentry
-          POSTGRES_DB: sentry
+          POSTGRES_USER: sea
+          POSTGRES_PASSWORD: sea
+          POSTGRES_DB: sea
         ports:
           - 5432:5432
         options: >-
@@ -152,7 +152,7 @@ jobs:
             echo "ERROR: verify=False found in api/services/webhook_dispatcher/"
             echo "The dispatcher MUST always send with TLS verification on."
             echo "Plan §2.1 + §4.1: requests.Session.verify stays True"
-            echo "regardless of SENTRY_ALLOW_HTTP_WEBHOOKS."
+            echo "regardless of SEA_ALLOW_HTTP_WEBHOOKS."
             exit 1
           fi
           echo "OK: no verify=False in api/services/webhook_dispatcher/"
@@ -185,31 +185,31 @@ jobs:
 
       - name: Load database schema
         env:
-          PGPASSWORD: sentry
-        run: psql -h localhost -U sentry -d sentry -f db/schema.sql
+          PGPASSWORD: sea
+        run: psql -h localhost -U sea -d sea -f db/schema.sql
 
       - name: Load seed data
         env:
-          PGPASSWORD: sentry
-        run: psql -h localhost -U sentry -d sentry -f db/seed-apartment-lab.sql
+          PGPASSWORD: sea
+        run: psql -h localhost -U sea -d sea -f db/seed-apartment-lab.sql
 
       - name: Create + schema-load test database
         # v1.7.0 test-DB isolation: the conftest TRUNCATEs 39 tables at
-        # session start. Routing it at a dedicated `sentry_test`
+        # session start. Routing it at a dedicated `sea_test`
         # database keeps the application DB intact when pytest runs
         # against a real stack.
         env:
-          PGPASSWORD: sentry
+          PGPASSWORD: sea
         run: |
-          psql -h localhost -U sentry -d sentry -c "CREATE DATABASE sentry_test;"
-          psql -h localhost -U sentry -d sentry_test -f db/schema.sql
+          psql -h localhost -U sea -d sea -c "CREATE DATABASE sea_test;"
+          psql -h localhost -U sea -d sea_test -f db/schema.sql
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://sentry:sentry@localhost:5432/sentry
+          DATABASE_URL: postgresql://sea:sea@localhost:5432/sea
           # v1.7.0: dedicated test DB. conftest hard-fails when this is
           # missing or equal to DATABASE_URL.
-          TEST_DATABASE_URL: postgresql://sentry:sentry@localhost:5432/sentry_test
+          TEST_DATABASE_URL: postgresql://sea:sea@localhost:5432/sea_test
           JWT_SECRET: test-secret
           # v1.6.0 D3 #175: wake.WakeOrchestrator pubsub tests
           # need REDIS_URL pointing at the service container above.
@@ -220,5 +220,5 @@ jobs:
           # the dispatcher's publish / subscribe path need a valid
           # key; tests that exercise weak-key rejection clear or
           # mutate the env at the test level.
-          SENTRY_PUBSUB_HMAC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          SEA_PUBSUB_HMAC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
         run: cd api && python -m pytest tests/ -v

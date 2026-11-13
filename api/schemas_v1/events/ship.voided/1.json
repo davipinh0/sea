@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/ship.voided/1.json",
+  "$id": "https://sea.example/events/ship.voided/1.json",
   "title": "ship.voided v1",
   "description": "A previously-shipped sales order has been voided. Emitted by api/routes/dockd.py::void_ship. Aggregate: sales_order.",
   "type": "object",

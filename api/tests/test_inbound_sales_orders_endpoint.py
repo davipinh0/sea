@@ -17,10 +17,10 @@ import uuid
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -245,7 +245,7 @@ class TestHappyPath:
         scenario["canonical_external_ids"].append(body["canonical_id"])
         assert body["canonical_type"] == "sales_order"
         assert body["warning"].startswith("Canonical model is DRAFT")
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
         rows = _query(
             "SELECT so_number, warehouse_id, customer_name, latest_inbound_id "
@@ -368,12 +368,12 @@ class TestRequestValidation:
         })
         assert resp.status_code == 422
         assert resp.get_json()["error_kind"] == "validation_error"
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
     def test_body_just_over_cap_returns_413(
         self, client, app, scenario, monkeypatch
     ):
-        monkeypatch.setenv("SENTRY_INBOUND_MAX_BODY_KB", "16")
+        monkeypatch.setenv("SEA_INBOUND_MAX_BODY_KB", "16")
         _setup_basic(app, scenario, "size-1")
         blob = "x" * (17 * 1024)
         resp = _post(client, "size-1", {
@@ -383,7 +383,7 @@ class TestRequestValidation:
         })
         assert resp.status_code == 413
         assert resp.get_json()["error_kind"] == "body_too_large"
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
 
 # ----------------------------------------------------------------------

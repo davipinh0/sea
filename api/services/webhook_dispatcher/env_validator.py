@@ -90,8 +90,8 @@ _REQUIRED_VARS_WHEN_ENABLED = [
     # pubsub_signing.load_key; this guard fires fast at boot so the
     # daemon refuses to come up unconfigured.
     (
-        "SENTRY_PUBSUB_HMAC_KEY",
-        "SENTRY_PUBSUB_HMAC_KEY is required when the dispatcher is "
+        "SEA_PUBSUB_HMAC_KEY",
+        "SEA_PUBSUB_HMAC_KEY is required when the dispatcher is "
         "enabled. The webhook_subscription_events Redis channel is "
         "HMAC-signed (#227); an unset key would let a Redis-side "
         "attacker forge eviction or secret_rotated messages. "
@@ -122,7 +122,7 @@ def bool_var(name: str, default: bool = False) -> bool:
     lowercase string ``true`` (case-insensitive comparison after
     lowercase) returns True; anything else falls back to the
     default. Conservative because a bool-flag typo should not
-    silently flip a security gate (e.g. SENTRY_ALLOW_HTTP_WEBHOOKS)."""
+    silently flip a security gate (e.g. SEA_ALLOW_HTTP_WEBHOOKS)."""
     raw = _read_str(name)
     if raw is None:
         return default
@@ -178,8 +178,8 @@ def _validate_combinations() -> None:
     """Refuse boot on the dangerous combinations called out in
     plan §2.10. Each is a separate function so the test suite can
     exercise them independently."""
-    allow_http = bool_var("SENTRY_ALLOW_HTTP_WEBHOOKS", default=False)
-    allow_internal = bool_var("SENTRY_ALLOW_INTERNAL_WEBHOOKS", default=False)
+    allow_http = bool_var("SEA_ALLOW_HTTP_WEBHOOKS", default=False)
+    allow_internal = bool_var("SEA_ALLOW_INTERNAL_WEBHOOKS", default=False)
 
     # Hardest gate: SSRF-into-VPC by combining http + internal opt-outs.
     # Refuse boot regardless of FLASK_ENV; this is operator-error in
@@ -187,8 +187,8 @@ def _validate_combinations() -> None:
     # the dispatch-time DNS rebinding guard simultaneously.
     if allow_http and allow_internal:
         raise DispatcherEnvError(
-            "refusing to boot: SENTRY_ALLOW_HTTP_WEBHOOKS=true AND "
-            "SENTRY_ALLOW_INTERNAL_WEBHOOKS=true. The combination opens "
+            "refusing to boot: SEA_ALLOW_HTTP_WEBHOOKS=true AND "
+            "SEA_ALLOW_INTERNAL_WEBHOOKS=true. The combination opens "
             "an SSRF path into the VPC by relaxing both the HTTPS-only "
             "scheme check and the dispatch-time private-range guard. "
             "Each var has dev/CI use cases on its own; the combination "
@@ -199,7 +199,7 @@ def _validate_combinations() -> None:
     # dispatch-time SSRF guard, which is load-bearing in production.
     if allow_internal and _is_production():
         raise DispatcherEnvError(
-            "refusing to boot: SENTRY_ALLOW_INTERNAL_WEBHOOKS=true with "
+            "refusing to boot: SEA_ALLOW_INTERNAL_WEBHOOKS=true with "
             "FLASK_ENV=production. The dispatch-time DNS resolution + "
             "private-range reject is the security boundary against "
             "DNS-rebinding and split-horizon DNS attacks; disabling it "
@@ -233,10 +233,10 @@ def _validate_combinations() -> None:
     # hatch shape from v1.5.1.
     if allow_http and _is_production():
         LOGGER.critical(
-            "SENTRY_ALLOW_HTTP_WEBHOOKS=true with FLASK_ENV=production: "
+            "SEA_ALLOW_HTTP_WEBHOOKS=true with FLASK_ENV=production: "
             "the dispatcher will accept http:// delivery URLs in this "
             "deployment. This relaxes the v1.6.0 HTTPS-only policy. "
-            "Set SENTRY_ALLOW_HTTP_WEBHOOKS=false (or unset) and restart "
+            "Set SEA_ALLOW_HTTP_WEBHOOKS=false (or unset) and restart "
             "to re-enable the policy."
         )
 

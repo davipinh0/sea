@@ -3,7 +3,7 @@
 -- ============================================================
 -- Tracks executions of the Celery beat task that nullifies
 -- source_payload on inbound_<resource> rows older than
--- SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS (floor 7, V-201
+-- SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS (floor 7, V-201
 -- shape; boot fails loud on values < 7 to prevent a typo from
 -- wiping forensic context).
 --

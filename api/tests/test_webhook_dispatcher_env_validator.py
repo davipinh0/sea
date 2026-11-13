@@ -9,10 +9,10 @@ weak-pepper validation tests in v1.5.1.
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -40,18 +40,18 @@ def _clean_env(monkeypatch):
     """Wipe every env var the validator looks at so a host-shell
     leak does not interfere with the test. REDIS_URL is set to a
     valid placeholder because #212 added it as a required env;
-    SENTRY_PUBSUB_HMAC_KEY is set to a valid 32-byte placeholder
+    SEA_PUBSUB_HMAC_KEY is set to a valid 32-byte placeholder
     because #227 added it as a required env. Tests that target
     those guards specifically delete the var after this helper runs."""
     for name, _lo, _hi in _RANGE_CASES:
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.delenv("SENTRY_ALLOW_HTTP_WEBHOOKS", raising=False)
-    monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_HTTP_WEBHOOKS", raising=False)
+    monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.delenv("DISPATCHER_ENABLED", raising=False)
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv(
-        "SENTRY_PUBSUB_HMAC_KEY",
+        "SEA_PUBSUB_HMAC_KEY",
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     )
 
@@ -117,24 +117,24 @@ class TestRangeValidators:
 class TestCombinationGuards:
     def test_http_plus_internal_refuses_in_any_environment(self, monkeypatch):
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
         # No FLASK_ENV set -> not production. The combination is still
         # rejected because the SSRF-into-VPC surface is operator error
         # in any environment.
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             env_validator.validate_or_die()
         msg = str(excinfo.value)
-        assert "SENTRY_ALLOW_HTTP_WEBHOOKS" in msg
-        assert "SENTRY_ALLOW_INTERNAL_WEBHOOKS" in msg
+        assert "SEA_ALLOW_HTTP_WEBHOOKS" in msg
+        assert "SEA_ALLOW_INTERNAL_WEBHOOKS" in msg
 
     def test_internal_in_production_refuses(self, monkeypatch):
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
         monkeypatch.setenv("FLASK_ENV", "production")
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             env_validator.validate_or_die()
-        assert "SENTRY_ALLOW_INTERNAL_WEBHOOKS" in str(excinfo.value)
+        assert "SEA_ALLOW_INTERNAL_WEBHOOKS" in str(excinfo.value)
         assert "production" in str(excinfo.value)
 
     def test_internal_in_development_does_not_refuse(self, monkeypatch):
@@ -142,7 +142,7 @@ class TestCombinationGuards:
         a private-range mock consumer. The opt-out is allowed
         outside production; the validator must not refuse."""
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
         monkeypatch.setenv("FLASK_ENV", "development")
         env_validator.validate_or_die()  # no raise
 
@@ -153,12 +153,12 @@ class TestCombinationGuards:
         import logging
 
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
         monkeypatch.setenv("FLASK_ENV", "production")
         with caplog.at_level(logging.CRITICAL, logger="webhook_dispatcher.env_validator"):
             env_validator.validate_or_die()  # no raise
         assert any(
-            "SENTRY_ALLOW_HTTP_WEBHOOKS" in record.getMessage()
+            "SEA_ALLOW_HTTP_WEBHOOKS" in record.getMessage()
             for record in caplog.records
         ), "production http opt-out must produce a CRITICAL log line"
 
@@ -166,13 +166,13 @@ class TestCombinationGuards:
         import logging
 
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
         monkeypatch.setenv("FLASK_ENV", "development")
         with caplog.at_level(logging.CRITICAL, logger="webhook_dispatcher.env_validator"):
             env_validator.validate_or_die()
         assert not [
             record for record in caplog.records
-            if "SENTRY_ALLOW_HTTP_WEBHOOKS" in record.getMessage()
+            if "SEA_ALLOW_HTTP_WEBHOOKS" in record.getMessage()
         ], "dev http opt-out should not produce a CRITICAL log; only production opt-out should"
 
     def test_default_combination_is_safe_no_raise_no_warn(self, monkeypatch, caplog):
@@ -215,9 +215,9 @@ class TestEnvVarHelpers:
             ("yes", False),
             ("", False),
         ):
-            monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", value)
+            monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", value)
             assert (
-                env_validator.bool_var("SENTRY_ALLOW_HTTP_WEBHOOKS") is expected
+                env_validator.bool_var("SEA_ALLOW_HTTP_WEBHOOKS") is expected
             ), f"bool_var({value!r}) should be {expected}"
 
     def test_int_var_unknown_var_raises(self, monkeypatch):
@@ -303,29 +303,29 @@ class TestHttpTimeoutInequality:
 
 
 class TestPubsubHmacKeyBootGuard:
-    """#227: SENTRY_PUBSUB_HMAC_KEY is required when the dispatcher
+    """#227: SEA_PUBSUB_HMAC_KEY is required when the dispatcher
     is enabled. The wake module's pubsub envelope is HMAC-signed
     with this key; an unset / placeholder / short key would let a
     Redis-side attacker forge subscription_event messages."""
 
     def test_unset_key_refuses_boot(self, monkeypatch):
         _clean_env(monkeypatch)
-        monkeypatch.delenv("SENTRY_PUBSUB_HMAC_KEY", raising=False)
+        monkeypatch.delenv("SEA_PUBSUB_HMAC_KEY", raising=False)
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             env_validator.validate_or_die()
-        assert "SENTRY_PUBSUB_HMAC_KEY" in str(excinfo.value)
+        assert "SEA_PUBSUB_HMAC_KEY" in str(excinfo.value)
 
     def test_empty_key_refuses_boot(self, monkeypatch):
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_PUBSUB_HMAC_KEY", "")
+        monkeypatch.setenv("SEA_PUBSUB_HMAC_KEY", "")
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             env_validator.validate_or_die()
-        assert "SENTRY_PUBSUB_HMAC_KEY" in str(excinfo.value)
+        assert "SEA_PUBSUB_HMAC_KEY" in str(excinfo.value)
 
     def test_placeholder_key_refuses_boot(self, monkeypatch):
         _clean_env(monkeypatch)
         monkeypatch.setenv(
-            "SENTRY_PUBSUB_HMAC_KEY",
+            "SEA_PUBSUB_HMAC_KEY",
             "replace-me-with-secrets-token-hex-32",
         )
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
@@ -334,7 +334,7 @@ class TestPubsubHmacKeyBootGuard:
 
     def test_short_key_refuses_boot(self, monkeypatch):
         _clean_env(monkeypatch)
-        monkeypatch.setenv("SENTRY_PUBSUB_HMAC_KEY", "short")
+        monkeypatch.setenv("SEA_PUBSUB_HMAC_KEY", "short")
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             env_validator.validate_or_die()
         assert "32 bytes" in str(excinfo.value)
@@ -344,7 +344,7 @@ class TestPubsubHmacKeyBootGuard:
         too, so an operator can run the kill switch without having
         configured the key."""
         _clean_env(monkeypatch)
-        monkeypatch.delenv("SENTRY_PUBSUB_HMAC_KEY", raising=False)
+        monkeypatch.delenv("SEA_PUBSUB_HMAC_KEY", raising=False)
         monkeypatch.setenv("DISPATCHER_ENABLED", "false")
         env_validator.validate_or_die()  # no raise
 

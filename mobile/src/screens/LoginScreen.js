@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import client, { getStoredApiUrl, setApiUrl, hasStoredApiUrl } from '../api/client';
 import { colors, fonts, radii } from '../theme/styles';
 
-const SENTRY_LOGIN_RENDERED = '__sentry_login_rendered__';
+const SEA_LOGIN_RENDERED = '__sea_login_rendered__';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -24,17 +24,17 @@ export default function LoginScreen() {
   const [modalChecking, setModalChecking] = useState(false);
   const [renderGuard] = useState(() => {
     // Guard against duplicate renders  -  only allow one instance
-    if (global[SENTRY_LOGIN_RENDERED]) return false;
-    global[SENTRY_LOGIN_RENDERED] = true;
+    if (global[SEA_LOGIN_RENDERED]) return false;
+    global[SEA_LOGIN_RENDERED] = true;
     return true;
   });
 
   useEffect(() => {
-    return () => { global[SENTRY_LOGIN_RENDERED] = false; };
+    return () => { global[SEA_LOGIN_RENDERED] = false; };
   }, []);
 
   useEffect(() => {
-    AsyncStorage.getItem('sentry_last_username').then((saved) => {
+    AsyncStorage.getItem('sea_last_username').then((saved) => {
       if (saved) setUsername(saved);
     }).catch(() => {});
 
@@ -79,7 +79,7 @@ export default function LoginScreen() {
     }
     setError('');
     setLoading(true);
-    AsyncStorage.setItem('sentry_last_username', username).catch(() => {});
+    AsyncStorage.setItem('sea_last_username', username).catch(() => {});
     try {
       await login(username, password);
     } catch (err) {

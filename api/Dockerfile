@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # api/tests/test_role_creation_scripts.py (operator-path coverage for
 # db/role-*.sql). CI runs pytest on the ubuntu-latest runner where
 # psql is provided by the postgres:16 service container; this line
-# closes the parity gap so `docker exec sentry-api pytest` exercises
+# closes the parity gap so `docker exec sea-api pytest` exercises
 # the same code path locally instead of silently skipping. The test
 # itself loud-fails at collection time when psql is missing, so a
 # future refactor that drops this line will surface as a test
@@ -25,7 +25,7 @@ COPY api/ .
 
 # Bake mapping documents (db/mappings/<source>.yaml) into the image so
 # Pipe B inbound has its schema available at /app/db/mappings without a
-# runtime volume mount. SENTRY_INBOUND_MAPPINGS_DIR=/app/db/mappings in
+# runtime volume mount. SEA_INBOUND_MAPPINGS_DIR=/app/db/mappings in
 # managed-platform deploys (ACA, K8s); docker-compose keeps using its
 # ./db:/db volume mount and points the env var at /db/mappings instead.
 COPY db/mappings /app/db/mappings

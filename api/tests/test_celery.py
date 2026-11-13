@@ -7,7 +7,7 @@ synchronously without needing a running Redis instance.
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
 os.environ.setdefault("CELERY_BROKER_URL", "memory://")
 os.environ.setdefault("CELERY_RESULT_BACKEND", "cache+memory://")
@@ -39,7 +39,7 @@ class TestCeleryApp:
     def test_app_initializes(self):
         """Celery app should be importable and configured."""
         assert celery_app is not None
-        assert celery_app.main == "sentry_wms"
+        assert celery_app.main == "sea"
 
     def test_serializer_is_json(self):
         """Task serializer should be JSON for safe cross-process communication."""

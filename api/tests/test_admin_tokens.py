@@ -16,7 +16,7 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -25,7 +25,7 @@ import psycopg2
 from db_test_context import get_raw_connection
 
 
-PEPPER = os.environ["SENTRY_TOKEN_PEPPER"]
+PEPPER = os.environ["SEA_TOKEN_PEPPER"]
 
 
 def _expected_hash(plaintext: str) -> str:

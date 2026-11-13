@@ -11,9 +11,9 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -43,7 +43,7 @@ def _valid_payload():
 def _reload_with_validation(enabled: bool):
     """Reload events_service with the flag flipped so the module-level
     _VALIDATION_ENABLED constant reflects the test's chosen state."""
-    os.environ["SENTRY_VALIDATE_EVENT_SCHEMAS"] = "true" if enabled else "false"
+    os.environ["SEA_VALIDATE_EVENT_SCHEMAS"] = "true" if enabled else "false"
     import services.events_service as events_service
     importlib.reload(events_service)
     return events_service
@@ -209,7 +209,7 @@ class TestValidationFlag:
         self, aggregate_id, monkeypatch
     ):
         """v1.5.1 V-217 (umbrella #156): emit_event reads
-        SENTRY_VALIDATE_EVENT_SCHEMAS on every call via
+        SEA_VALIDATE_EVENT_SCHEMAS on every call via
         _validation_enabled(). Toggling the env var mid-process
         (e.g. operator hot-flipping during an incident) must take
         effect on the next emit, NOT require a worker restart.
@@ -219,7 +219,7 @@ class TestValidationFlag:
         import services.events_service as events_service
 
         # Disabled: a malformed payload is accepted as a plain row.
-        monkeypatch.setenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "false")
+        monkeypatch.setenv("SEA_VALIDATE_EVENT_SCHEMAS", "false")
         assert events_service._validation_enabled() is False
         try:
             event_id = _emit_via_engine(
@@ -232,7 +232,7 @@ class TestValidationFlag:
         # Flip the var in-process. A fresh aggregate_id avoids the
         # idempotency UNIQUE collision; no module reload happens.
         other_id = aggregate_id + 1
-        monkeypatch.setenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "true")
+        monkeypatch.setenv("SEA_VALIDATE_EVENT_SCHEMAS", "true")
         assert events_service._validation_enabled() is True
         try:
             with pytest.raises(jsonschema.ValidationError):

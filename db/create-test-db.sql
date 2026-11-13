@@ -7,15 +7,15 @@
 -- state (inbound_source_systems_allowlist + cross_system_mappings).
 --
 -- This script runs ONCE during the postgres image's first-boot init
--- (docker-entrypoint-initdb.d) and creates an empty `sentry_test`
+-- (docker-entrypoint-initdb.d) and creates an empty `sea_test`
 -- database. The conftest connects via TEST_DATABASE_URL to this DB
--- and the application code keeps using `sentry` via DATABASE_URL.
+-- and the application code keeps using `sea` via DATABASE_URL.
 --
 -- Existing volumes won't pick this up without `docker compose down -v`
 -- (the postgres image only runs init scripts on a virgin data dir).
 -- See docs/deployment.md for the bootstrap sequence and the
--- sentry-v1_7_0-premerge-gate.md pre-flight.
+-- sea-v1_7_0-premerge-gate.md pre-flight.
 -- ============================================================
 
-CREATE DATABASE sentry_test;
-GRANT ALL PRIVILEGES ON DATABASE sentry_test TO sentry;
+CREATE DATABASE sea_test;
+GRANT ALL PRIVILEGES ON DATABASE sea_test TO sea;

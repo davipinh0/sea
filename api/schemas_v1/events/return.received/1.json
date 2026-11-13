@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/return.received/1.json",
+  "$id": "https://sea.example/events/return.received/1.json",
   "title": "return.received v1",
   "description": "Goods have been received back against a return SO (the <orig>-RMA goods-in). Emitted by the RMA receive route, one event per item_receipts row, mirroring receipt.completed. so_external_id is the return SO the goods came back against; parent_so_external_id (when present) is the original order, for GL correlation. The destination warehouse_code (a sellable bin vs a defective / open-box bin) is the disposition signal; a downstream ledger maps it to its GL treatment. Aggregate: item_receipts.",
   "type": "object",

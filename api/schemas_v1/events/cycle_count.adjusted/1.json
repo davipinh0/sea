@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/cycle_count.adjusted/1.json",
+  "$id": "https://sea.example/events/cycle_count.adjusted/1.json",
   "title": "cycle_count.adjusted v1",
   "description": "A cycle-count variance has been approved by an admin. Emitted at the APPROVED branch of review_adjustments when adjustment.cycle_count_id is non-null (Decision C routing). Aggregate: inventory_adjustment.",
   "type": "object",

@@ -21,7 +21,7 @@
 services:
   nginx-proxy:
     image: nginx:1.27-alpine
-    container_name: sentry-nginx-proxy
+    container_name: sea-nginx-proxy
     ports:
       - "443:443"
     volumes:

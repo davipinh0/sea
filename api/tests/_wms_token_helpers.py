@@ -12,9 +12,9 @@ import os
 import psycopg2
 
 
-PEPPER = os.environ.get("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+PEPPER = os.environ.get("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry"
+    "DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea"
 )
 
 # v1.5.1 V-200 (#140): the @require_wms_token decorator now enforces

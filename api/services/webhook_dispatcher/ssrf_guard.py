@@ -26,10 +26,10 @@ range so this is technically redundant on most stdlib versions, but
 the explicit check is documented as a belt-and-suspenders against
 future-version drift).
 
-Opt-out: ``SENTRY_ALLOW_INTERNAL_WEBHOOKS=true`` disables the
+Opt-out: ``SEA_ALLOW_INTERNAL_WEBHOOKS=true`` disables the
 dispatch-time check. The env validator refuses to boot if this is
 set in production (``FLASK_ENV=production``); dev / CI only. The
-companion ``SENTRY_ALLOW_HTTP_WEBHOOKS`` only relaxes the scheme
+companion ``SEA_ALLOW_HTTP_WEBHOOKS`` only relaxes the scheme
 check at admin time and is unrelated to this module's behavior.
 """
 
@@ -147,12 +147,12 @@ def assert_url_safe(
     private / loopback / link-local / IMDS range. Returns the
     resolved address list on pass so the caller can log it.
 
-    Honors the ``SENTRY_ALLOW_INTERNAL_WEBHOOKS`` opt-out: when
+    Honors the ``SEA_ALLOW_INTERNAL_WEBHOOKS`` opt-out: when
     set to ``true`` the function returns immediately without
     checking. The env validator refuses to boot if this is set in
     production, so the bypass exists only in dev / CI.
     """
-    if env_validator.bool_var("SENTRY_ALLOW_INTERNAL_WEBHOOKS", default=False):
+    if env_validator.bool_var("SEA_ALLOW_INTERNAL_WEBHOOKS", default=False):
         # Dev/CI bypass. Caller still resolves on send.
         return list(resolved_addresses) if resolved_addresses is not None else []
 

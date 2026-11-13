@@ -10,10 +10,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -107,7 +107,7 @@ class TestDrainChannel:
         # Exercise the loop, not the SSRF guard: bypass the dispatch-time check
         # (the fake sink hostname does not resolve). The guard's real behavior is
         # covered in test_connector_publisher_publish.
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
         session = md.SessionLocal()
         try:
             _mk_channel("amz", batch_size=2)
@@ -135,7 +135,7 @@ class TestDrainChannel:
             session.close()
 
     def test_drain_stops_on_failure(self, _db_transaction, monkeypatch):
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
         session = md.SessionLocal()
         try:
             _mk_channel("amz", batch_size=2)

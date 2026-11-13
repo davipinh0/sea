@@ -382,6 +382,27 @@ def list_materiais():
 
 # ------------------------------------------------------- Notificações
 
+@sea_bp.route("/notificacoes/limpar", methods=["POST"])
+@require_auth
+@with_db
+def limpar_notificacoes():
+    """Clear the user's own notification list. The records stay."""
+    cleared = g.db.execute(
+        text(
+            """
+            UPDATE users
+            SET notifications_cleared_id =
+                (SELECT COALESCE(MAX(notification_id), 0) FROM sea_notifications)
+            WHERE user_id = :uid
+            RETURNING notifications_cleared_id
+            """
+        ),
+        {"uid": g.current_user["user_id"]},
+    ).scalar()
+    g.db.commit()
+    return jsonify({"message": "Notificações limpas", "cleared_id": cleared})
+
+
 @sea_bp.route("/notificacoes")
 @require_auth
 @with_db
@@ -397,12 +418,16 @@ def list_notificacoes():
             SELECT n.notification_id, n.kind, n.title, n.message, n.ot, n.created_by,
                    n.created_at, n.email_status, n.warehouse_id, w.warehouse_code
             FROM sea_notifications n JOIN warehouses w ON w.warehouse_id = n.warehouse_id
-            WHERE (CAST(:after AS INT) IS NULL OR n.notification_id > :after) {scope_clause}
+            WHERE (CAST(:after AS INT) IS NULL OR n.notification_id > :after)
+              -- what this user cleared no longer shows for them
+              AND n.notification_id > (SELECT notifications_cleared_id FROM users
+                                       WHERE user_id = :uid)
+              {scope_clause}
             ORDER BY n.notification_id DESC
             LIMIT :limit
             """
         ),
-        {"after": after, "limit": limit, **scope_params},
+        {"after": after, "limit": limit, "uid": g.current_user["user_id"], **scope_params},
     ).fetchall()
     return jsonify({
         "notifications": [

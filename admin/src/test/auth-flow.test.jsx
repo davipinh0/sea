@@ -5,7 +5,7 @@
  * Session lives in an HttpOnly cookie; the bootstrap flow asks
  * /api/auth/me to determine whether the user is logged in, and all
  * mutating requests attach an X-CSRF-Token header read from the
- * readable sentry_csrf cookie.
+ * readable sea_csrf cookie.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -112,7 +112,7 @@ describe('api client', () => {
   });
 
   it('attaches X-CSRF-Token header on POST when the CSRF cookie is set', async () => {
-    document.cookie = 'sentry_csrf=test-csrf-value-123; path=/';
+    document.cookie = 'sea_csrf=test-csrf-value-123; path=/';
     const fetchSpy = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
@@ -146,7 +146,7 @@ describe('api client', () => {
   });
 
   it('does not attach CSRF header on GET requests', async () => {
-    document.cookie = 'sentry_csrf=csrf-v; path=/';
+    document.cookie = 'sea_csrf=csrf-v; path=/';
     const fetchSpy = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,

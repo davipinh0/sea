@@ -33,10 +33,10 @@ import sys
 import uuid
 from urllib.parse import urlparse, urlunparse
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -61,7 +61,7 @@ SCRIPTS_REACHABLE = (
 # class; silently skipping it would reproduce the V-214 silent-
 # failure pattern at the test layer. CI runs pytest on the
 # ubuntu-latest runner with psql provided by the postgres:16
-# service; local `docker exec sentry-api pytest` requires
+# service; local `docker exec sea-api pytest` requires
 # postgresql-client in api/Dockerfile (added in the same commit
 # that introduces this loud-fail).
 if shutil.which("psql") is None:
@@ -80,8 +80,8 @@ if shutil.which("psql") is None:
 ROLE_SCRIPTS = [
     (
         "role-snapshot-keeper.sql",
-        "sentry_keeper",
-        "sentry_keeper_password",
+        "sea_keeper",
+        "sea_keeper_password",
         {
             ("integration_events", "SELECT"),
             ("snapshot_scans", "SELECT"),
@@ -91,8 +91,8 @@ ROLE_SCRIPTS = [
     ),
     (
         "role-dispatcher.sql",
-        "sentry_dispatcher",
-        "sentry_dispatcher_password",
+        "sea_dispatcher",
+        "sea_dispatcher_password",
         {
             ("integration_events", "SELECT"),
             ("webhook_subscriptions", "SELECT"),
@@ -136,7 +136,7 @@ def _make_scratch_db():
     exist' and the test conflates that signal with the actual
     role-creation failure mode it is trying to catch.
     """
-    name = f"sentry_role_test_{uuid.uuid4().hex[:8]}"
+    name = f"sea_role_test_{uuid.uuid4().hex[:8]}"
     admin = psycopg2.connect(_admin_url())
     admin.autocommit = True
     cur = admin.cursor()
@@ -186,7 +186,7 @@ def _drop_role(role_name):
     AFTER every scratch DB the role had grants in is dropped --
     otherwise PostgreSQL refuses with DependentObjectsStillExist.
 
-    Belt-and-suspenders: iterate through every sentry_role_test_*
+    Belt-and-suspenders: iterate through every sea_role_test_*
     database that still exists and DROP OWNED BY the role inside
     each, so a half-dropped state from a prior failed run does
     not pin a role that subsequent tests then trip over."""
@@ -203,7 +203,7 @@ def _drop_role(role_name):
     # Find any leftover scratch DBs the role might still hold
     # grants in (e.g. from a previously-aborted test run).
     cur.execute(
-        "SELECT datname FROM pg_database WHERE datname LIKE 'sentry_role_test_%'"
+        "SELECT datname FROM pg_database WHERE datname LIKE 'sea_role_test_%'"
     )
     leftovers = [r[0] for r in cur.fetchall()]
     admin.close()
@@ -241,12 +241,12 @@ def _run_role_script(script_filename, scratch_db, var_value=None):
         # as a bare value; the script wraps it with format(%L) at
         # the top level.
         var_name = script_filename.replace("role-", "").replace(".sql", "").replace("-", "_") + "_password"
-        # The keeper uses sentry_keeper_password, the dispatcher uses
-        # sentry_dispatcher_password. Derive from filename for parity.
+        # The keeper uses sea_keeper_password, the dispatcher uses
+        # sea_dispatcher_password. Derive from filename for parity.
         if script_filename == "role-snapshot-keeper.sql":
-            var_name = "sentry_keeper_password"
+            var_name = "sea_keeper_password"
         elif script_filename == "role-dispatcher.sql":
-            var_name = "sentry_dispatcher_password"
+            var_name = "sea_dispatcher_password"
         cmd.extend(["-v", f"{var_name}={var_value}"])
     return subprocess.run(cmd, capture_output=True, text=True)
 

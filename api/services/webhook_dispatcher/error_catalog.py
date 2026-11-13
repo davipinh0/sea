@@ -61,7 +61,7 @@ _ERROR_CATALOG: dict[str, ErrorEntry] = {
         "triage_hint": (
             "Inspect the consumer's certificate (`openssl s_client "
             "-connect host:port`). The dispatcher always verifies "
-            "certificates; SENTRY_ALLOW_HTTP_WEBHOOKS does not relax "
+            "certificates; SEA_ALLOW_HTTP_WEBHOOKS does not relax "
             "this. If the consumer must present a self-signed "
             "certificate the contract is to use a properly issued cert "
             "instead."
@@ -78,7 +78,7 @@ _ERROR_CATALOG: dict[str, ErrorEntry] = {
         ),
         "triage_hint": (
             "Confirm the delivery_url resolves to a public address from "
-            "the dispatcher host's network view. SENTRY_ALLOW_INTERNAL_"
+            "the dispatcher host's network view. SEA_ALLOW_INTERNAL_"
             "WEBHOOKS=true bypasses the check in dev / CI but refuses to "
             "boot in production. Mid-session DNS rebinds are caught on "
             "the next dispatch via session teardown."

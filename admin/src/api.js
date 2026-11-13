@@ -1,7 +1,7 @@
 const API_BASE = '/api';
 
 function getCsrfToken() {
-  const match = document.cookie.match(/(?:^|;\s*)sentry_csrf=([^;]+)/);
+  const match = document.cookie.match(/(?:^|;\s*)sea_csrf=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
@@ -39,7 +39,7 @@ async function apiFetch(path, options = {}) {
     try {
       const peek = await res.clone().json();
       if (peek?.error === 'Permission denied' && peek?.page_key) {
-        window.dispatchEvent(new CustomEvent('sentry:permission-denied', {
+        window.dispatchEvent(new CustomEvent('sea:permission-denied', {
           detail: { page_key: peek.page_key, path },
         }));
       }

@@ -1,4 +1,4 @@
-"""Boot-time validation for SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS.
+"""Boot-time validation for SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS.
 
 The worker-side get_inbound_retention_days() helper clamps below
 the 7-day floor. The boot guard refuses to start at all so a
@@ -11,12 +11,12 @@ import sys
 
 import pytest
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 os.environ.setdefault(
-    "SENTRY_PUBSUB_HMAC_KEY",
+    "SEA_PUBSUB_HMAC_KEY",
     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 )
 
@@ -31,7 +31,7 @@ def _import_create_app():
 class TestRetentionBootGuard:
     def test_below_floor_refuses_to_boot(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "1",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "1",
         )
         create_app = _import_create_app()
         with pytest.raises(RuntimeError, match=r"7-day hard floor"):
@@ -39,7 +39,7 @@ class TestRetentionBootGuard:
 
     def test_zero_refuses_to_boot(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "0",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "0",
         )
         create_app = _import_create_app()
         with pytest.raises(RuntimeError, match=r"7-day hard floor"):
@@ -47,7 +47,7 @@ class TestRetentionBootGuard:
 
     def test_garbage_refuses_to_boot(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "garbage",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "garbage",
         )
         create_app = _import_create_app()
         with pytest.raises(RuntimeError, match=r"is not an integer"):
@@ -55,7 +55,7 @@ class TestRetentionBootGuard:
 
     def test_at_floor_boots_cleanly(self, monkeypatch):
         monkeypatch.setenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "7",
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", "7",
         )
         create_app = _import_create_app()
         # Booting create_app() succeeds; we don't need the result.
@@ -66,7 +66,7 @@ class TestRetentionBootGuard:
 
     def test_unset_uses_default(self, monkeypatch):
         monkeypatch.delenv(
-            "SENTRY_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", raising=False,
+            "SEA_INBOUND_SOURCE_PAYLOAD_RETENTION_DAYS", raising=False,
         )
         create_app = _import_create_app()
         app = create_app()

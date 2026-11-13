@@ -38,7 +38,7 @@ _PAGE = "channels"
 def _http_sink_allowed() -> bool:
     # Reuse the dispatcher's HTTPS-only opt-out: only the literal 'true' relaxes
     # it, and the dispatcher env validator refuses that in production.
-    return os.environ.get("SENTRY_ALLOW_HTTP_WEBHOOKS", "").lower() == "true"
+    return os.environ.get("SEA_ALLOW_HTTP_WEBHOOKS", "").lower() == "true"
 
 
 def _validate_sink(url: str):
@@ -50,7 +50,7 @@ def _validate_sink(url: str):
         return {
             "error": "https_required",
             "detail": (
-                "delivery_url deve usar https. Defina SENTRY_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
+                "delivery_url deve usar https. Defina SEA_ALLOW_HTTP_WEBHOOKS=true para flexibilizar em dev / CI; produção recusa essa exceção."
             ),
         }, 400
     try:

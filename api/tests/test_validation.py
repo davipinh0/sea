@@ -7,7 +7,7 @@ conditions, and integration tests verifying 400 on invalid / 200 on valid.
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

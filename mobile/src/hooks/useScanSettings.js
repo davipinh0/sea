@@ -9,9 +9,9 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const KEYS = {
-  mode: 'sentry_scan_mode',           // 'keyboard' | 'intent'
-  intentAction: 'sentry_scan_action',  // broadcast intent action string
-  intentExtra: 'sentry_scan_extra',    // broadcast intent extra key
+  mode: 'sea_scan_mode',           // 'keyboard' | 'intent'
+  intentAction: 'sea_scan_action',  // broadcast intent action string
+  intentExtra: 'sea_scan_extra',    // broadcast intent extra key
 };
 
 const DEFAULTS = {

@@ -311,6 +311,21 @@ describe('Notificações clicáveis', () => {
     // The list closes once the notification is opened.
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('clears the list on request', async () => {
+    currentUser = { username: 'admin', role: 'ADMIN' };
+    apiGet.mockImplementation(() => ok({ notifications: [
+      { notification_id: 8, kind: 'RECEBIMENTO', title: 'Aviso de teste', message: 'm', warehouse_id: 7, warehouse_code: 'SP12', email_status: 'ENVIADO', created_at: '2026-11-11T10:00:00Z' },
+    ] }));
+    apiPost.mockImplementation(() => ok({ cleared_id: 8 }));
+    render(<MemoryRouter><Notificacoes /></MemoryRouter>);
+    fireEvent.click(await screen.findByLabelText('Notificações'));
+    fireEvent.click(await screen.findByText('Limpar notificações'));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/notificacoes/limpar', {}));
+    expect(await screen.findByText('Nenhuma notificação.')).toBeInTheDocument();
+    expect(screen.queryByText('Aviso de teste')).toBeNull();
+    expect(screen.queryByText('Limpar notificações')).toBeNull();
+  });
 });
 
 describe('Recebimento de OT', () => {

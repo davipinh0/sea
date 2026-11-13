@@ -173,14 +173,14 @@ def publish_subscription_event(
     # #227: HMAC-sign the payload so a Redis-side attacker cannot
     # forge fake subscription_event messages (eviction storms,
     # spammed secret_rotated notifications). The key is loaded
-    # from SENTRY_PUBSUB_HMAC_KEY on every publish so a runtime
+    # from SEA_PUBSUB_HMAC_KEY on every publish so a runtime
     # rotation propagates without restarting the api container.
     try:
         key = pubsub_signing.load_key()
     except pubsub_signing.PubsubKeyConfigError as exc:
         _record_publish_failure()
         LOGGER.warning(
-            "wake: SENTRY_PUBSUB_HMAC_KEY misconfigured (%s); refusing "
+            "wake: SEA_PUBSUB_HMAC_KEY misconfigured (%s); refusing "
             "to publish unsigned subscription_event. Peer workers will "
             "see the change on the next 60s refresh cycle.",
             exc,
@@ -627,7 +627,7 @@ class WakeOrchestrator:
         Pre-#227 the subscriber accepted the inner shape directly;
         a Redis-side attacker could forge eviction / rotation
         events with no key. Post-#227 the inner payload is verified
-        with HMAC-SHA256 keyed on SENTRY_PUBSUB_HMAC_KEY before
+        with HMAC-SHA256 keyed on SEA_PUBSUB_HMAC_KEY before
         the wake queue picks it up.
         """
         raw = message.get("data")
@@ -646,7 +646,7 @@ class WakeOrchestrator:
             key = pubsub_signing.load_key()
         except pubsub_signing.PubsubKeyConfigError as exc:
             LOGGER.warning(
-                "wake: SENTRY_PUBSUB_HMAC_KEY misconfigured (%s); dropping "
+                "wake: SEA_PUBSUB_HMAC_KEY misconfigured (%s); dropping "
                 "pubsub message",
                 exc,
             )

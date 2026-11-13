@@ -23,7 +23,7 @@ operational consequence (auto-pause at ceilings) lands in D7.
 
 Consumer dedupe contract (plan §3.1): the dedupe key is
 ``event_id`` from the envelope BODY, not the
-``X-Sentry-Delivery-Id`` header. The header is a composite
+``X-SEA-Delivery-Id`` header. The header is a composite
 ``f"{event_id}:{timestamp}"`` scoped to a specific delivery
 attempt; a consumer that dedupes on the header would mistake
 two retries of the same event for two distinct events. The

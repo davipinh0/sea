@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/backorder.opened/1.json",
+  "$id": "https://sea.example/events/backorder.opened/1.json",
   "title": "backorder.opened v1",
   "description": "A backorder SO has been opened. Two producers: admin_orders.py::partial_fulfill_sales_order (a -BO child spawned from a short-shipped parent; parent_so_* populated) and pos.py checkout create-without-stock (a self-standing WAITING_STOCK SO placed at the counter; it has no parent, so parent_so_* are null). Aggregate: sales_order (the backorder so_id).",
   "type": "object",

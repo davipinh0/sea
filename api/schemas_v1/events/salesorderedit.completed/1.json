@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/salesorderedit.completed/1.json",
+  "$id": "https://sea.example/events/salesorderedit.completed/1.json",
   "title": "salesorderedit.completed v1",
   "description": "A sales order header was edited through the admin edit surface (PUT /api/admin/sales-orders/<id>). Carries the per-field diff that landed. Aggregate: sales_order. A status transition to SHIPPED on the same edit additionally emits ship.confirmed via record_ship. sales_order_external_id carries the source-system identifier when one exists (cross_system_mappings), falling back to the SEA canonical UUID, so it is a plain string rather than format:uuid.",
   "type": "object",

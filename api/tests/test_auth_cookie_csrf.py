@@ -40,7 +40,7 @@ class TestLoginCookies:
     def test_login_sets_httponly_auth_cookie(self, client):
         resp = _login(client)
         assert resp.status_code == 200
-        auth_cookie = _find_cookie(resp, "sentry_auth")
+        auth_cookie = _find_cookie(resp, "sea_auth")
         assert auth_cookie is not None
         assert "httponly" in auth_cookie
         assert auth_cookie.get("samesite", "").lower() == "strict"
@@ -49,7 +49,7 @@ class TestLoginCookies:
 
     def test_login_sets_readable_csrf_cookie(self, client):
         resp = _login(client)
-        csrf_cookie = _find_cookie(resp, "sentry_csrf")
+        csrf_cookie = _find_cookie(resp, "sea_csrf")
         assert csrf_cookie is not None
         # CSRF cookie must NOT be HttpOnly -- JS must read it to attach the header
         assert "httponly" not in csrf_cookie
@@ -64,8 +64,8 @@ class TestLoginCookies:
 
     def test_refresh_rotates_cookies(self, client):
         login_resp = _login(client)
-        first_auth = _find_cookie(login_resp, "sentry_auth")["_value"]
-        first_csrf = _find_cookie(login_resp, "sentry_csrf")["_value"]
+        first_auth = _find_cookie(login_resp, "sea_auth")["_value"]
+        first_csrf = _find_cookie(login_resp, "sea_csrf")["_value"]
 
         # Refresh via cookie auth. GET-equivalent path is /auth/refresh POST;
         # no CSRF header needed because we'll use the Authorization header
@@ -75,8 +75,8 @@ class TestLoginCookies:
             headers={"Authorization": f"Bearer {login_resp.get_json()['token']}"},
         )
         assert refresh_resp.status_code == 200
-        new_auth = _find_cookie(refresh_resp, "sentry_auth")
-        new_csrf = _find_cookie(refresh_resp, "sentry_csrf")
+        new_auth = _find_cookie(refresh_resp, "sea_auth")
+        new_csrf = _find_cookie(refresh_resp, "sea_csrf")
         assert new_auth is not None and new_auth["_value"]
         assert new_csrf is not None and new_csrf["_value"]
         assert new_auth["_value"] != first_auth
@@ -107,7 +107,7 @@ class TestCookieAuth:
 class TestCsrfEnforcement:
     def _login_with_csrf(self, client):
         resp = _login(client)
-        csrf = _find_cookie(resp, "sentry_csrf")["_value"]
+        csrf = _find_cookie(resp, "sea_csrf")["_value"]
         return csrf
 
     def test_post_with_cookie_and_no_csrf_header_is_forbidden(self, client):
@@ -153,18 +153,18 @@ class TestCsrfEnforcement:
 class TestLogout:
     def test_logout_clears_both_cookies(self, client):
         login_resp = _login(client)
-        csrf = _find_cookie(login_resp, "sentry_csrf")["_value"]
+        csrf = _find_cookie(login_resp, "sea_csrf")["_value"]
         resp = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
         assert resp.status_code == 200
 
-        auth_set = _find_cookie(resp, "sentry_auth")
-        csrf_set = _find_cookie(resp, "sentry_csrf")
+        auth_set = _find_cookie(resp, "sea_auth")
+        csrf_set = _find_cookie(resp, "sea_csrf")
         assert auth_set is not None and auth_set["_value"] == ""
         assert csrf_set is not None and csrf_set["_value"] == ""
 
     def test_after_logout_cookie_auth_no_longer_works(self, client):
         login_resp = _login(client)
-        csrf = _find_cookie(login_resp, "sentry_csrf")["_value"]
+        csrf = _find_cookie(login_resp, "sea_csrf")["_value"]
         client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
         resp = client.get("/api/auth/me")
         assert resp.status_code == 401
@@ -176,8 +176,8 @@ class TestLogout:
         # and must not be able to force the victim's session to end.
         resp = client.post("/api/auth/logout")
         assert resp.status_code == 200
-        assert _find_cookie(resp, "sentry_auth") is None
-        assert _find_cookie(resp, "sentry_csrf") is None
+        assert _find_cookie(resp, "sea_auth") is None
+        assert _find_cookie(resp, "sea_csrf") is None
 
     def test_logout_with_valid_cookie_but_no_csrf_is_forbidden(self, client):
         # V-100: a same-origin request with the auth cookie attached
@@ -201,10 +201,10 @@ class TestLogout:
         # V-100: a cookie that cannot decode (expired or garbage JWT)
         # represents a session that is already dead. Clear the cookies
         # without demanding a CSRF token the client may no longer have.
-        client.set_cookie("sentry_auth", "not-a-real-jwt", domain="localhost")
+        client.set_cookie("sea_auth", "not-a-real-jwt", domain="localhost")
         resp = client.post("/api/auth/logout")
         assert resp.status_code == 200
-        auth_set = _find_cookie(resp, "sentry_auth")
-        csrf_set = _find_cookie(resp, "sentry_csrf")
+        auth_set = _find_cookie(resp, "sea_auth")
+        csrf_set = _find_cookie(resp, "sea_csrf")
         assert auth_set is not None and auth_set["_value"] == ""
         assert csrf_set is not None and csrf_set["_value"] == ""

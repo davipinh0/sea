@@ -50,7 +50,7 @@
 #      triggers in your downstream system.
 
 mapping_version: "reference-v1.5.1"
-source_system: "sentry-wms"
+source_system: "sea"
 
 # =====================================================================
 # Transport

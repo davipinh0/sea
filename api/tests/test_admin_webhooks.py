@@ -4,9 +4,9 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 os.environ.setdefault(
-    "SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8="
+    "SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8="
 )
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -24,7 +24,7 @@ def _ensure_internal_webhook_opt_out(monkeypatch):
     dev/CI opt-out so create-path tests can supply any URL.
     Tests that target the SSRF reject path explicitly clear the
     opt-out at the test level."""
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
     yield
 
 
@@ -250,7 +250,7 @@ class TestValidationFailures:
     def test_http_url_rejected_without_opt_out(
         self, client, auth_headers, monkeypatch
     ):
-        monkeypatch.delenv("SENTRY_ALLOW_HTTP_WEBHOOKS", raising=False)
+        monkeypatch.delenv("SEA_ALLOW_HTTP_WEBHOOKS", raising=False)
         resp = client.post(
             "/api/admin/webhooks",
             json={
@@ -266,7 +266,7 @@ class TestValidationFailures:
     def test_http_url_allowed_with_opt_out(
         self, client, auth_headers, monkeypatch
     ):
-        monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
         resp = client.post(
             "/api/admin/webhooks",
             json={
@@ -315,7 +315,7 @@ class TestValidationFailures:
     def test_private_url_rejected_at_admin_time(
         self, client, auth_headers, monkeypatch
     ):
-        monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+        monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
         resp = client.post(
             "/api/admin/webhooks",
             json={
@@ -384,7 +384,7 @@ class TestUrlReuseTombstone:
         body = resp.get_json()
         assert body["error"] == "url_reuse_tombstone"
         assert body["tombstone_id"] == tombstone_id
-        assert resp.headers.get("X-Sentry-URL-Reuse-Tombstone") == str(tombstone_id)
+        assert resp.headers.get("X-SEA-URL-Reuse-Tombstone") == str(tombstone_id)
 
     def test_reuse_with_acknowledge_creates_and_marks_tombstone(
         self, client, auth_headers
@@ -911,7 +911,7 @@ class TestPatchUpdate:
         self, client, auth_headers, monkeypatch
     ):
         self._publishes(monkeypatch)
-        monkeypatch.delenv("SENTRY_ALLOW_HTTP_WEBHOOKS", raising=False)
+        monkeypatch.delenv("SEA_ALLOW_HTTP_WEBHOOKS", raising=False)
         created = _create_one(client, auth_headers)
         sub_id = created["subscription_id"]
         resp = client.patch(
@@ -926,7 +926,7 @@ class TestPatchUpdate:
         self, client, auth_headers, monkeypatch
     ):
         self._publishes(monkeypatch)
-        monkeypatch.delenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", raising=False)
+        monkeypatch.delenv("SEA_ALLOW_INTERNAL_WEBHOOKS", raising=False)
         created = _create_one(client, auth_headers)
         sub_id = created["subscription_id"]
         resp = client.patch(

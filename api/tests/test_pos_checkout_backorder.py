@@ -24,10 +24,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -396,7 +396,7 @@ class TestBackorderOpenedEmit:
         # Validate the payload against the (widened) schema on emit, so this
         # proves the null-parent POS shape is schema-VALID, not merely that a
         # row lands.
-        monkeypatch.setenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "true")
+        monkeypatch.setenv("SEA_VALIDATE_EVENT_SCHEMAS", "true")
         _ensure_backorder_warehouse()
         body = _backorder_body(qty=2)
         resp = _post(client, pos_token["plaintext"], body)

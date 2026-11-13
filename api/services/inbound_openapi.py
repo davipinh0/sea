@@ -22,7 +22,7 @@ from services.inbound_service import _CONFIGS
 
 
 _DRAFT_HEADER = {
-    "X-Sentry-Canonical-Model": {
+    "X-SEA-Canonical-Model": {
         "description": (
             "Always set to DRAFT-v1 in v1.7.0. Indicates the canonical model "
             "may break at v2.0 once NetSuite validation drives schema lock."
@@ -124,7 +124,7 @@ _ERROR_RESPONSES: Dict[str, Dict[str, Any]] = {
     "413": {
         "description": (
             "body_too_large: Content-Length exceeds "
-            "SENTRY_INBOUND_MAX_BODY_KB (16-4096 KB; default 256)."
+            "SEA_INBOUND_MAX_BODY_KB (16-4096 KB; default 256)."
         ),
         "headers": {**_DRAFT_HEADER},
     },
@@ -248,7 +248,7 @@ def build_inbound_openapi() -> Dict[str, Any]:
                     "external_version). The source_system is bound to "
                     "the X-WMS-Token; admins set it at issuance and the "
                     "decorator enforces it on every call. v1.7 ships the "
-                    "canonical model as DRAFT; X-Sentry-Canonical-Model: "
+                    "canonical model as DRAFT; X-SEA-Canonical-Model: "
                     "DRAFT-v1 header on every response."
                 ),
                 "operationId": f"post_inbound_{resource_key}",
@@ -298,12 +298,12 @@ def build_inbound_openapi() -> Dict[str, Any]:
     return {
         "openapi": "3.1.0",
         "info": {
-            "title": "SentryWMS v1.7.0 Inbound (Pipe B)",
+            "title": "SEA v1.7.0 Inbound (Pipe B)",
             "version": "1.7.0",
             "description": (
                 "Inbound write surface for external systems and internal "
                 "tools. v1.7 ships the canonical model as DRAFT; "
-                "X-Sentry-Canonical-Model: DRAFT-v1 header on every "
+                "X-SEA-Canonical-Model: DRAFT-v1 header on every "
                 "response. Schema may break at v2.0 once NetSuite "
                 "validation drives the canonical lock."
             ),

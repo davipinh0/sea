@@ -11,13 +11,13 @@ operational outages (`event="deleted"`) or DoS amplification
 This module provides the HMAC-SHA256 envelope: every published
 payload is wrapped as ``{"sig": <hex>, "payload": <inner-json>}``
 where ``sig`` is the HMAC of ``payload`` keyed on
-``SENTRY_PUBSUB_HMAC_KEY``. Subscribers verify with
+``SEA_PUBSUB_HMAC_KEY``. Subscribers verify with
 ``hmac.compare_digest`` before dispatching the inner payload to
 the wake orchestrator's queue. Unsigned or tampered messages are
 logged and dropped.
 
-The key is intentionally separate from SENTRY_ENCRYPTION_KEY
-(webhook secret material), SENTRY_TOKEN_PEPPER (inbound auth),
+The key is intentionally separate from SEA_ENCRYPTION_KEY
+(webhook secret material), SEA_TOKEN_PEPPER (inbound auth),
 and JWT_SECRET (session signing); each rotates on its own
 schedule. Boot validation lives in env_validator.py: an unset or
 trivial value refuses dispatcher boot under DISPATCHER_ENABLED=true.
@@ -30,7 +30,7 @@ import os
 from typing import Optional
 
 
-_KEY_ENV_VAR = "SENTRY_PUBSUB_HMAC_KEY"
+_KEY_ENV_VAR = "SEA_PUBSUB_HMAC_KEY"
 _PLACEHOLDER_KEYS = frozenset(
     {
         "replace-me-with-secrets-token-hex-32",
@@ -51,7 +51,7 @@ class PubsubKeyConfigError(RuntimeError):
 
 
 def load_key() -> bytes:
-    """Read SENTRY_PUBSUB_HMAC_KEY on every call (V-217 #156: no
+    """Read SEA_PUBSUB_HMAC_KEY on every call (V-217 #156: no
     module-level env reads). Raises PubsubKeyConfigError if the
     value is unset, the .env.example placeholder, or shorter than
     _MIN_KEY_BYTES bytes when interpreted as utf-8."""

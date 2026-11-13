@@ -2,7 +2,7 @@
 
 The table backs per-warehouse Teams (initially) notification
 destinations for the backorder.* event family. URLs are
-Fernet-encrypted at rest via SENTRY_ENCRYPTION_KEY; the API never
+Fernet-encrypted at rest via SEA_ENCRYPTION_KEY; the API never
 echoes the plaintext URL back, only a masked host preview.
 """
 

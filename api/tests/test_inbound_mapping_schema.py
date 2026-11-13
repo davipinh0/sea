@@ -7,7 +7,7 @@ Covers:
 - top-level $schema and title set
 - schema validates a known-good mapping doc and rejects an
   extra-keys mapping doc (round-trip parity with the loader)
-- X-Sentry-Canonical-Model: DRAFT-v1 header set
+- X-SEA-Canonical-Model: DRAFT-v1 header set
 - on-disk docs/api/mapping-document-schema.json content matches
   the live wire-served schema (so the two cannot drift)
 """
@@ -16,9 +16,9 @@ import json
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -35,14 +35,14 @@ class TestMappingSchemaEndpoint:
     def test_returns_200_unauthenticated(self, client):
         resp = client.get("/api/v1/inbound/mapping-schema")
         assert resp.status_code == 200
-        assert resp.headers.get("X-Sentry-Canonical-Model") == "DRAFT-v1"
+        assert resp.headers.get("X-SEA-Canonical-Model") == "DRAFT-v1"
         assert "Cache-Control" in resp.headers
 
     def test_returns_valid_draft_2020_12_schema(self, client):
         resp = client.get("/api/v1/inbound/mapping-schema")
         body = resp.get_json()
         assert body["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-        assert body["title"] == "SentryWMS Inbound Mapping Document"
+        assert body["title"] == "SEA Inbound Mapping Document"
         # check_schema raises on a malformed schema. Validates the meta-shape.
         Draft202012Validator.check_schema(body)
 

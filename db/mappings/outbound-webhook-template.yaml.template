@@ -55,7 +55,7 @@ mapping_version: "reference-v1.6.1"
 # This is a reference document, not a mapping doc; the field is
 # carried for parity with the inbound template's frontmatter.
 
-source_system: "sentry-wms"
+source_system: "sea"
 # The wire is emitted BY SEA, so source_system here names SEA
 # itself rather than an external connector.
 
@@ -166,7 +166,7 @@ envelope:
       format: "RFC 3339 / ISO-8601 with offset"
       description: |
         When the warehouse operation that produced the event happened.
-        Distinct from the X-Sentry-Timestamp header, which reflects
+        Distinct from the X-SEA-Timestamp header, which reflects
         DISPATCH (or replay) time on the dispatcher host.
 
     - name: "aggregate_type"
@@ -215,14 +215,14 @@ envelope:
   # HTTP headers the dispatcher sends with every POST
   # ---------------------------------------------------------------
   headers:
-    - name: "X-Sentry-Signature"
+    - name: "X-SEA-Signature"
       example: "sha256=8c4e1bb1f0d9..."
       description: |
-        HMAC-SHA256 of `f"{X-Sentry-Timestamp}.{body}"` keyed on the
-        shared secret matching X-Sentry-Signature-Generation. Hex
+        HMAC-SHA256 of `f"{X-SEA-Timestamp}.{body}"` keyed on the
+        shared secret matching X-SEA-Signature-Generation. Hex
         digest, lowercase. Verify with constant-time comparison.
 
-    - name: "X-Sentry-Signature-Generation"
+    - name: "X-SEA-Signature-Generation"
       example: "1"
       description: |
         `1` (primary, what the dispatcher signs with) or `2` (previous,
@@ -230,20 +230,20 @@ envelope:
         both generations are valid; outside the window only generation
         1 verifies. See "dual-accept rotation" in docs/api/webhooks.md.
 
-    - name: "X-Sentry-Delivery-Id"
+    - name: "X-SEA-Delivery-Id"
       example: "48213906:1744042927"
       description: |
-        Per-attempt identifier of the form `<event_id>:<X-Sentry-Timestamp>`.
+        Per-attempt identifier of the form `<event_id>:<X-SEA-Timestamp>`.
         Replays of the same event get a fresh delivery_id. Useful for
         log correlation; NEVER use for dedupe.
 
-    - name: "X-Sentry-Event-Type"
+    - name: "X-SEA-Event-Type"
       example: "ship.confirmed"
       description: |
         The `event_type` field from the body, hoisted to a header so a
         router can dispatch without parsing JSON.
 
-    - name: "X-Sentry-Timestamp"
+    - name: "X-SEA-Timestamp"
       example: "1744042927"
       description: |
         Unix epoch seconds at dispatch time. Used in the signature
@@ -564,7 +564,7 @@ event_types:
 #    Specifics about why your endpoint failed live in YOUR endpoint's
 #    logs, not in SEA's. Plan operator escalation accordingly.
 #
-# 9. Replays carry a fresh X-Sentry-Timestamp (signature recomputed
+# 9. Replays carry a fresh X-SEA-Timestamp (signature recomputed
 #    against the new value) but the ORIGINAL event_timestamp from the
 #    envelope body, unchanged. If your dedupe is keyed correctly on
 #    event_id, replays are no-ops for already-applied events.

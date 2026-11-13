@@ -61,7 +61,7 @@ class SnapshotKeeper:
         # deployments that set up a dedicated least-privilege role
         # (SELECT on integration_events, SELECT/UPDATE/DELETE on
         # snapshot_scans, EXECUTE on pg_export_snapshot) point the
-        # keeper at that role rather than the full sentry user.
+        # keeper at that role rather than the full sea user.
         # Falls back to DATABASE_URL when the dedicated var is unset
         # so dev and single-role deployments keep working unchanged.
         self.database_url = (

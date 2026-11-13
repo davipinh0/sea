@@ -17,16 +17,16 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 # These tests exercise the HTTP client against in-process servers
 # bound to 127.0.0.1. The dispatch-time SSRF guard rejects loopback
 # by design; enable the dev/CI opt-out for the duration of this
 # module so the network behavior under test is reachable. The
 # SSRF guard itself is exercised in test_webhook_dispatcher_ssrf_guard.
-os.environ["SENTRY_ALLOW_INTERNAL_WEBHOOKS"] = "true"
+os.environ["SEA_ALLOW_INTERNAL_WEBHOOKS"] = "true"
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -564,11 +564,11 @@ class TestDispatchTimeDnsBounded:
     def test_hung_getaddrinfo_returns_timeout_within_budget(self, monkeypatch):
         from services.webhook_dispatcher import ssrf_guard
 
-        # The module enables SENTRY_ALLOW_INTERNAL_WEBHOOKS globally so
+        # The module enables SEA_ALLOW_INTERNAL_WEBHOOKS globally so
         # the other tests can reach 127.0.0.1 servers; that bypass skips
         # resolution entirely. Turn it OFF here so assert_url_safe
         # actually calls getaddrinfo and we exercise the hang path.
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "false")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "false")
 
         release = threading.Event()
 
@@ -606,7 +606,7 @@ class TestDispatchTimeDnsBounded:
         """The SSRF check moved inside the watchdog thread but its
         verdict is unchanged: a private/loopback resolution rejects the
         send with error_kind='ssrf_rejected', the request never leaves."""
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "false")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "false")
         client = http_client_module.HttpClient(timeout_s=2.0)
         # 127.0.0.1 is loopback -> assert_url_safe raises SsrfRejected,
         # which the in-thread path routes to the documented bucket.
@@ -759,11 +759,11 @@ class TestHeaderShape:
             server.shutdown()
 
         h = captured["headers"]
-        assert h["X-Sentry-Signature"] == "sha256=abc123"
-        assert h["X-Sentry-Signature-Generation"] == "1"
-        assert h["X-Sentry-Delivery-Id"] == "42:1700000000"
-        assert h["X-Sentry-Event-Type"] == "ship.confirmed"
-        assert h["X-Sentry-Timestamp"] == "1700000000"
+        assert h["X-SEA-Signature"] == "sha256=abc123"
+        assert h["X-SEA-Signature-Generation"] == "1"
+        assert h["X-SEA-Delivery-Id"] == "42:1700000000"
+        assert h["X-SEA-Event-Type"] == "ship.confirmed"
+        assert h["X-SEA-Timestamp"] == "1700000000"
         assert h["Content-Type"] == "application/json"
         assert captured["body"] == b'{"event_id":1}'
 

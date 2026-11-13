@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/receipt.cancelled/1.json",
+  "$id": "https://sea.example/events/receipt.cancelled/1.json",
   "title": "receipt.cancelled v1",
   "description": "A previously-completed PO receipt has been reversed by an admin. Emitted by the admin unreceive route. Aggregate: item_receipt. Mirrors receipt.completed but with quantity_reversed in place of quantity_received and a cancelled_at instant.",
   "type": "object",

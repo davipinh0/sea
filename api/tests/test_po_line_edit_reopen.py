@@ -1,6 +1,6 @@
 """PO line-edit reopen + purchaseorderedit.completed outbound event.
 
-Covers stikman28/sentry-wms#55: bumping quantity_ordered on a RECEIVED
+Covers stikman28/sea#55: bumping quantity_ordered on a RECEIVED
 line must reopen it (RECEIVED -> PARTIAL) so the over-receipt becomes
 receivable, and every admin PO edit emits purchaseorderedit.completed so
 the ERP can reverse-sync the change.

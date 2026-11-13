@@ -54,14 +54,14 @@ from services.webhook_dispatcher.teams_adapter import (
 LOGGER = logging.getLogger("webhook_dispatcher.backorder_notifier")
 
 
-_SENTRY_BASE_URL_ENV = "SENTRY_ADMIN_BASE_URL"
+_SEA_BASE_URL_ENV = "SEA_ADMIN_BASE_URL"
 
 
 def _resolve_base_url() -> str:
     """Optional. The MessageCard "Open in SEA" link falls back to
     a relative URL when this is unset; relative still resolves
     inside Teams desktop / web clients."""
-    return os.environ.get(_SENTRY_BASE_URL_ENV, "")
+    return os.environ.get(_SEA_BASE_URL_ENV, "")
 
 
 def dispatch_backorder_notification(
@@ -90,7 +90,7 @@ def dispatch_backorder_notification(
             "payload":      payload,
             "warehouse_id": warehouse_id,
             "database_url": database_url,
-            "sentry_base_url": _resolve_base_url(),
+            "sea_base_url": _resolve_base_url(),
         },
         daemon=True,
         name=f"backorder-notifier-{event_type}-{warehouse_id}",
@@ -105,7 +105,7 @@ def _dispatch(
     payload: Dict[str, Any],
     warehouse_id: int,
     database_url: str,
-    sentry_base_url: str,
+    sea_base_url: str,
 ) -> None:
     """Thread body. Wrapped in a broad try/except so a thread-side
     surprise (DB unreachable, malformed row, etc.) is logged and
@@ -134,7 +134,7 @@ def _dispatch(
             return
 
         card = build_adaptive_card(
-            event_type, payload, sentry_base_url=sentry_base_url
+            event_type, payload, sea_base_url=sea_base_url
         )
         for webhook in webhooks:
             # Per-webhook isolation: a raise inside _send_one (e.g. a

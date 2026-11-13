@@ -230,11 +230,11 @@ HandlerResult = HandlerOK | HandlerError
 
 
 def get_max_body_kb() -> int:
-    """SENTRY_INBOUND_MAX_BODY_KB env var (16..4096; default 256).
+    """SEA_INBOUND_MAX_BODY_KB env var (16..4096; default 256).
     Boot validates the range in app.create_app() (#273); this helper
     is the read-side path the handler uses on each request and trusts
     the boot guard rather than re-clamping silently."""
-    return int(os.getenv("SENTRY_INBOUND_MAX_BODY_KB", "256"))
+    return int(os.getenv("SEA_INBOUND_MAX_BODY_KB", "256"))
 
 
 # ============================================================

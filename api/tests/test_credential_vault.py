@@ -13,9 +13,9 @@ Covers:
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -75,7 +75,7 @@ class TestEncryption:
         assert _decrypt(a) == _decrypt(b)
 
     def test_requires_key_env_var(self, monkeypatch):
-        """_get_fernet raises RuntimeError when SENTRY_ENCRYPTION_KEY is unset.
+        """_get_fernet raises RuntimeError when SEA_ENCRYPTION_KEY is unset.
 
         The vault deliberately refuses to auto-generate a key: doing so would
         rotate the key on every process restart (silently orphaning existing
@@ -83,8 +83,8 @@ class TestEncryption:
         """
         import services.credential_vault as vault
         monkeypatch.setattr(vault, "_fernet", None)
-        monkeypatch.delenv("SENTRY_ENCRYPTION_KEY", raising=False)
-        with pytest.raises(RuntimeError, match="SENTRY_ENCRYPTION_KEY"):
+        monkeypatch.delenv("SEA_ENCRYPTION_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="SEA_ENCRYPTION_KEY"):
             vault._get_fernet()
 
 

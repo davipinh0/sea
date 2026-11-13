@@ -2,7 +2,7 @@
 
 The api container reads dispatcher env vars
 (DISPATCHER_MAX_PENDING_HARD_CAP, DISPATCHER_MAX_DLQ_HARD_CAP,
-DISPATCHER_REPLAY_BATCH_HARD_CAP, SENTRY_PUBSUB_HMAC_KEY, etc.)
+DISPATCHER_REPLAY_BATCH_HARD_CAP, SEA_PUBSUB_HMAC_KEY, etc.)
 for admin-endpoint enforcement and for the cross-worker pubsub
 publisher. Pre-#238 those values were never validated at boot
 in the api container -- only in the dispatcher container. Both
@@ -14,10 +14,10 @@ defaults.
 import os
 import sys
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -52,15 +52,15 @@ class TestApiBootValidatesDispatcherEnv:
         """The HTTP + INTERNAL combination guard in
         validate_or_die now fires from the api boot path too."""
         monkeypatch.setenv("API_BIND_HOST", "127.0.0.1")
-        monkeypatch.setenv("SENTRY_ALLOW_HTTP_WEBHOOKS", "true")
-        monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_HTTP_WEBHOOKS", "true")
+        monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
 
         from services.webhook_dispatcher import env_validator
         with pytest.raises(env_validator.DispatcherEnvError) as excinfo:
             _build_app()
         msg = str(excinfo.value)
-        assert "SENTRY_ALLOW_HTTP_WEBHOOKS" in msg
-        assert "SENTRY_ALLOW_INTERNAL_WEBHOOKS" in msg
+        assert "SEA_ALLOW_HTTP_WEBHOOKS" in msg
+        assert "SEA_ALLOW_INTERNAL_WEBHOOKS" in msg
 
     def test_default_environment_boots_cleanly(self, monkeypatch):
         """Sanity: a clean default env (test conftest's baseline)
@@ -76,7 +76,7 @@ class TestApiBootValidatesDispatcherEnv:
     def test_kill_switch_skips_required_env_check(self, monkeypatch):
         """DISPATCHER_ENABLED=false bypasses the required-env
         guard so an api container can boot even on a deployment
-        that has not yet wired REDIS_URL or SENTRY_PUBSUB_HMAC_KEY.
+        that has not yet wired REDIS_URL or SEA_PUBSUB_HMAC_KEY.
         The admin-endpoint replay-batch / PATCH publish paths
         will silently no-op publishes (a documented #212 / #227
         soft-fail), which is acceptable for a deliberately
@@ -84,6 +84,6 @@ class TestApiBootValidatesDispatcherEnv:
         monkeypatch.setenv("API_BIND_HOST", "127.0.0.1")
         monkeypatch.setenv("DISPATCHER_ENABLED", "false")
         monkeypatch.delenv("REDIS_URL", raising=False)
-        monkeypatch.delenv("SENTRY_PUBSUB_HMAC_KEY", raising=False)
+        monkeypatch.delenv("SEA_PUBSUB_HMAC_KEY", raising=False)
         app = _build_app()
         assert app is not None

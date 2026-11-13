@@ -19,7 +19,7 @@ FROM nginx:1.27-alpine
 # /docker-entrypoint.d/20-envsubst-on-templates.sh substitutes ${VAR}
 # placeholders at container start and writes the result into
 # /etc/nginx/conf.d/. Default API_UPSTREAM keeps docker-compose deploys
-# working unchanged; override per-environment (e.g. ACA: sentry-api:5000).
+# working unchanged; override per-environment (e.g. ACA: sea-api:5000).
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 

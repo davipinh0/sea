@@ -159,7 +159,7 @@ describe('Erro de permissão', () => {
         <Routes><Route element={<Layout />}><Route path="*" element={<Where />} /></Route></Routes>
       </MemoryRouter>,
     );
-    act(() => { window.dispatchEvent(new CustomEvent('sentry:permission-denied', { detail: { page_key: 'zones' } })); });
+    act(() => { window.dispatchEvent(new CustomEvent('sea:permission-denied', { detail: { page_key: 'zones' } })); });
     // The permission is named as the operator knows it, not by its key.
     expect(await screen.findByText(/Estoque > Endereços/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('OK'));

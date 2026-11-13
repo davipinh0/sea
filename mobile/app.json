@@ -35,12 +35,6 @@
       "expo-splash-screen",
       "./plugins/chainway-scanner",
       "./plugins/with-cleartext-traffic"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "8df87216-03e6-4715-acbc-33f9fd23582d"
-      }
-    },
-    "owner": "mhightower932"
+    ]
   }
 }

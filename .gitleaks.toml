@@ -1,4 +1,4 @@
-# gitleaks configuration for sentry-wms.
+# gitleaks configuration for sea.
 #
 # Extends the gitleaks default ruleset and allowlists ONLY the known-benign
 # placeholder secrets that the default rules flag in the test suite and CI.
@@ -10,11 +10,11 @@
 #   gitleaks detect --source .
 #
 # Note: the AWS doc example key AKIAIOSFODNN7EXAMPLE and the local dev
-# creds postgresql://sentry:sentry@... are NOT listed here because the
+# creds postgresql://sea:sea@... are NOT listed here because the
 # default ruleset does not flag them (the former is in gitleaks' own
 # built-in allowlist), so adding them would be dead config.
 
-title = "sentry-wms gitleaks config"
+title = "sea gitleaks config"
 
 [extend]
 useDefault = true

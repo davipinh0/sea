@@ -15,10 +15,10 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -168,16 +168,16 @@ class TestRequireWmsTokenAcceptance:
 
 class TestBootGuard:
     def test_create_app_raises_without_pepper(self):
-        """app.create_app must reject deployments missing SENTRY_TOKEN_PEPPER."""
+        """app.create_app must reject deployments missing SEA_TOKEN_PEPPER."""
         from app import create_app
 
-        original = os.environ.pop("SENTRY_TOKEN_PEPPER", None)
+        original = os.environ.pop("SEA_TOKEN_PEPPER", None)
         try:
-            with pytest.raises(RuntimeError, match="SENTRY_TOKEN_PEPPER"):
+            with pytest.raises(RuntimeError, match="SEA_TOKEN_PEPPER"):
                 create_app()
         finally:
             if original is not None:
-                os.environ["SENTRY_TOKEN_PEPPER"] = original
+                os.environ["SEA_TOKEN_PEPPER"] = original
 
 
 class TestPepperValidation:
@@ -242,36 +242,36 @@ class TestPepperValidation:
         """End-to-end: the boot guard in app.py calls the validator."""
         from app import create_app
 
-        original = os.environ.get("SENTRY_TOKEN_PEPPER")
-        os.environ["SENTRY_TOKEN_PEPPER"] = "replace-me-with-secrets-token-hex-32"
+        original = os.environ.get("SEA_TOKEN_PEPPER")
+        os.environ["SEA_TOKEN_PEPPER"] = "replace-me-with-secrets-token-hex-32"
         try:
             with pytest.raises(RuntimeError, match="placeholder"):
                 create_app()
         finally:
             if original is not None:
-                os.environ["SENTRY_TOKEN_PEPPER"] = original
+                os.environ["SEA_TOKEN_PEPPER"] = original
             else:
-                os.environ.pop("SENTRY_TOKEN_PEPPER", None)
+                os.environ.pop("SEA_TOKEN_PEPPER", None)
 
     def test_create_app_rejects_short_pepper(self):
         from app import create_app
 
-        original = os.environ.get("SENTRY_TOKEN_PEPPER")
-        os.environ["SENTRY_TOKEN_PEPPER"] = "x"
+        original = os.environ.get("SEA_TOKEN_PEPPER")
+        os.environ["SEA_TOKEN_PEPPER"] = "x"
         try:
             with pytest.raises(RuntimeError, match="at least 32"):
                 create_app()
         finally:
             if original is not None:
-                os.environ["SENTRY_TOKEN_PEPPER"] = original
+                os.environ["SEA_TOKEN_PEPPER"] = original
             else:
-                os.environ.pop("SENTRY_TOKEN_PEPPER", None)
+                os.environ.pop("SEA_TOKEN_PEPPER", None)
 
 
 class TestUnsafeBindBootGuard:
     """v1.5.1 V-206 (#147): create_app refuses to boot when
     TRUST_PROXY=true is combined with API_BIND_HOST=0.0.0.0.
-    SENTRY_ALLOW_OPEN_BIND=1 is the documented escape hatch.
+    SEA_ALLOW_OPEN_BIND=1 is the documented escape hatch.
     """
 
     def _with_env(self, **overrides):
@@ -299,7 +299,7 @@ class TestUnsafeBindBootGuard:
         restore = self._with_env(
             TRUST_PROXY="true",
             API_BIND_HOST="0.0.0.0",
-            SENTRY_ALLOW_OPEN_BIND=None,
+            SEA_ALLOW_OPEN_BIND=None,
         )
         try:
             with pytest.raises(RuntimeError, match="Unsafe deployment"):
@@ -313,7 +313,7 @@ class TestUnsafeBindBootGuard:
         restore = self._with_env(
             TRUST_PROXY="true",
             API_BIND_HOST="127.0.0.1",
-            SENTRY_ALLOW_OPEN_BIND=None,
+            SEA_ALLOW_OPEN_BIND=None,
         )
         try:
             # Must not raise.
@@ -330,7 +330,7 @@ class TestUnsafeBindBootGuard:
         restore = self._with_env(
             TRUST_PROXY="false",
             API_BIND_HOST="0.0.0.0",
-            SENTRY_ALLOW_OPEN_BIND=None,
+            SEA_ALLOW_OPEN_BIND=None,
         )
         try:
             create_app()
@@ -338,7 +338,7 @@ class TestUnsafeBindBootGuard:
             restore()
 
     def test_opt_in_override_allows_unsafe_combo(self):
-        """SENTRY_ALLOW_OPEN_BIND=1 lets the operator acknowledge the
+        """SEA_ALLOW_OPEN_BIND=1 lets the operator acknowledge the
         risk for deployments that apply network-level protection
         elsewhere (e.g. a VPC lock-down)."""
         from app import create_app
@@ -346,7 +346,7 @@ class TestUnsafeBindBootGuard:
         restore = self._with_env(
             TRUST_PROXY="true",
             API_BIND_HOST="0.0.0.0",
-            SENTRY_ALLOW_OPEN_BIND="1",
+            SEA_ALLOW_OPEN_BIND="1",
         )
         try:
             # Must not raise even though the combo is the unsafe one.

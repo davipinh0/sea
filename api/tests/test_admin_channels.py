@@ -11,10 +11,10 @@ import os
 import sys
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -30,7 +30,7 @@ def _allow_internal_sink(monkeypatch):
     # The create/update endpoints run the dispatch-time SSRF guard; a fake sink
     # hostname would fail DNS. Bypass via the documented dev/CI flag (the guard's
     # real behavior is covered in the publish tests).
-    monkeypatch.setenv("SENTRY_ALLOW_INTERNAL_WEBHOOKS", "true")
+    monkeypatch.setenv("SEA_ALLOW_INTERNAL_WEBHOOKS", "true")
 
 
 # ---------------------------------------------------------------- helpers

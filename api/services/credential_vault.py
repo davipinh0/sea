@@ -2,7 +2,7 @@
 
 Credentials (API keys, OAuth tokens, consumer secrets) are encrypted at
 rest using Fernet symmetric encryption. The master key comes from the
-SENTRY_ENCRYPTION_KEY environment variable and MUST be set explicitly;
+SEA_ENCRYPTION_KEY environment variable and MUST be set explicitly;
 a missing key is a fatal startup error.
 
 Credentials are scoped per connector + warehouse so that multi-warehouse
@@ -25,7 +25,7 @@ _fernet = None
 def _get_fernet():
     """Get or create the Fernet cipher instance.
 
-    Reads SENTRY_ENCRYPTION_KEY from the environment. Raises RuntimeError
+    Reads SEA_ENCRYPTION_KEY from the environment. Raises RuntimeError
     if the variable is unset or empty. We deliberately do NOT auto-generate
     a key: a silently-generated key would rotate on every process restart,
     silently making previously-stored credentials undecryptable, and would
@@ -35,10 +35,10 @@ def _get_fernet():
     if _fernet is not None:
         return _fernet
 
-    key = os.environ.get("SENTRY_ENCRYPTION_KEY")
+    key = os.environ.get("SEA_ENCRYPTION_KEY")
     if not key:
         raise RuntimeError(
-            "SENTRY_ENCRYPTION_KEY environment variable is required. "
+            "SEA_ENCRYPTION_KEY environment variable is required. "
             "Generate with: python -c \"from cryptography.fernet import Fernet; "
             "print(Fernet.generate_key().decode())\""
         )
@@ -59,7 +59,7 @@ def _decrypt(ciphertext: str) -> str:
 
 def encrypt_string(plaintext: str) -> str:
     """Public wrapper around the Fernet encrypt used for the
-    notification_webhooks.url column. Reuses SENTRY_ENCRYPTION_KEY so
+    notification_webhooks.url column. Reuses SEA_ENCRYPTION_KEY so
     a single key rotation re-encrypts both connector secrets and
     notification URLs in lock-step. Inputs of non-string or empty
     string are treated as caller bugs and raise."""

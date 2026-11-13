@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentry-wms.example/events/inventoryadjusted.completed/1.json",
+  "$id": "https://sea.example/events/inventoryadjusted.completed/1.json",
   "title": "inventoryadjusted.completed v1",
   "description": "An inventory adjustment has completed. Emitted wherever an inventory_adjustments row is finalised: admin review approval, direct adjustment, CSV import, the Pipe B inbound inventory-sync path, and alongside cycle_count.adjusted on the cycle-count branch. The entity-prefixed name connectors filter on; replaces the retired adjustment.applied/1 event. Cycle-count variance details still ride on cycle_count.adjusted/1; this event carries the canonical adjustment shape regardless of source. Aggregate: inventory_adjustment.",
   "type": "object",

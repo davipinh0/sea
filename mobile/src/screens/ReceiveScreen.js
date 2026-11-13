@@ -13,7 +13,7 @@ import client from '../api/client';
 import ScreenHeader from '../components/ScreenHeader';
 import { colors, fonts, radii, screenStyles, buttonStyles, listStyles, doneStyles } from '../theme/styles';
 
-const MODE_KEY = 'sentry_receive_mode';
+const MODE_KEY = 'sea_receive_mode';
 
 // Cap how many PO lines render at once. A React Native ScrollView mounts every
 // child and keeps it mounted, so a 700-line PO otherwise re-renders all 700

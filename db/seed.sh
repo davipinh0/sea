@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# SENTRY WMS - Database Seed Wrapper
+# SEA - Database Seed Wrapper
 # ============================================================
 # When SKIP_SEED=true: only creates admin user + default warehouse + bin types
 # When SKIP_SEED is unset/false: runs full demo seed (items, POs, SOs, etc.)
@@ -76,13 +76,13 @@ fi
 echo ""
 if [ "$MUST_CHANGE" = "true" ]; then
   echo "================================================="
-  echo "  SENTRY WMS INITIAL SETUP COMPLETE"
+  echo "  SEA INITIAL SETUP COMPLETE"
   echo "  Fresh install: admin credentials are admin/admin."
   echo "  Forced password change required on first login."
   echo "================================================="
 else
   echo "================================================="
-  echo "  SENTRY WMS INITIAL SETUP COMPLETE"
+  echo "  SEA INITIAL SETUP COMPLETE"
   echo "  Admin username: admin"
   echo "  Admin password: $ADMIN_PW"
   echo "  >>> CHANGE THIS PASSWORD AFTER FIRST LOGIN <<<"

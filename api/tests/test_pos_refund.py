@@ -25,10 +25,10 @@ import sys
 import uuid
 from decimal import Decimal
 
-os.environ.setdefault("DATABASE_URL", "postgresql://sentry:sentry@localhost:5432/sentry")
+os.environ.setdefault("DATABASE_URL", "postgresql://sea:sea@localhost:5432/sea")
 os.environ.setdefault("JWT_SECRET", "NEVER_USE_THIS_IN_PRODUCTION_32!")
-os.environ.setdefault("SENTRY_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
-os.environ.setdefault("SENTRY_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
+os.environ.setdefault("SEA_ENCRYPTION_KEY", "t5hPIEVn_O41qfiMqAiPEnwzQh68o3Es46YfSOBvEK8=")
+os.environ.setdefault("SEA_TOKEN_PEPPER", "NEVER_USE_THIS_PEPPER_IN_PRODUCTION")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -302,7 +302,7 @@ class TestAuthAndHeader:
             },
         })
         assert resp.status_code == 404
-        assert resp.headers["X-Sentry-Canonical-Model"] == "DRAFT-v1"
+        assert resp.headers["X-SEA-Canonical-Model"] == "DRAFT-v1"
 
 
 # ----------------------------------------------------------------------
@@ -372,7 +372,7 @@ class TestHappyPath:
         # in full. The receiver's shipping persistence/negation is order-type
         # agnostic, so this uses a counter sale (SHIPPED) -- the only state the
         # refund path accepts today; refunding an unshipped phone order (OPEN) is
-        # gated separately (see stikman28/sentry-wms#47).
+        # gated separately (see stikman28/sea#47).
         sale_body = _checkout_card_body(qty=1)
         ps = sale_body["payment_summary"]
         ps["shipping_cents"] = 995

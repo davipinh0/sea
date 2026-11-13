@@ -52,11 +52,11 @@ _BLOCKED_HOSTNAMES = frozenset({
     "api",
     "admin",
     "celery-worker",
-    "sentry-redis",
-    "sentry-db",
-    "sentry-api",
-    "sentry-admin",
-    "sentry-celery",
+    "sea-redis",
+    "sea-db",
+    "sea-api",
+    "sea-admin",
+    "sea-celery",
 })
 
 

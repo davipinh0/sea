@@ -24,17 +24,18 @@ import { formatQuantity, readError } from '../utils/sea.js';
 const POLL_MS = 3000;
 const RESET_AFTER_MS = 12000;
 
-// A material kept in KG with a box weight is chosen in boxes; everything
-// else unit by unit (1 = 1 PC, 1 PAR ...). ``qty`` holds what the picker
-// counts; ``stockQuantity`` turns it into the quantity of the stock.
+// A material kept in KG with a box weight goes box by box: each press adds
+// the weight of one box (0 > 18 KG > 36 KG). Everything else goes unit by
+// unit (1 = 1 PC, 1 PAR ...). ``qty`` holds the number of presses;
+// ``stockQuantity`` turns it into the quantity of the stock.
 const stockQuantity = (s, count) => count * (s.pack_weight_kg || 1);
 const maxCount = (s) => Math.floor(s.available / (s.pack_weight_kg || 1));
 
-function QtyPicker({ value, max, onChange, label, unit }) {
+function QtyPicker({ value, max, onChange, label, unit, step = 1 }) {
   return (
     <div className="terminal-qty" role="group" aria-label={label}>
       <button type="button" aria-label={`Diminuir ${label}`} onClick={() => onChange(Math.max(0, value - 1))} disabled={value <= 0}>−</button>
-      <output aria-live="polite">{value}{unit ? ` ${unit}` : ''}</output>
+      <output aria-live="polite">{value * step}{unit ? ` ${unit}` : ''}</output>
       <button type="button" aria-label={`Aumentar ${label}`} onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}>+</button>
     </div>
   );
@@ -263,7 +264,7 @@ export default function TerminalRetirada() {
                         </div>
                       )}
                     </div>
-                    <QtyPicker label={s.sku} value={qty[s.inventory_id] || 0} max={maxCount(s)} unit={s.pack_weight_kg ? 'cx' : s.uom}
+                    <QtyPicker label={s.sku} value={qty[s.inventory_id] || 0} max={maxCount(s)} unit={s.uom} step={s.pack_weight_kg || 1}
                       onChange={(n) => setQty((q) => ({ ...q, [s.inventory_id]: n }))} />
                   </div>
                 ))}

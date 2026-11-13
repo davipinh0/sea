@@ -217,14 +217,19 @@ describe('Material em KG retirado por caixa', () => {
     await screen.findByText('Arame de soldagem');
     expect(screen.getByText(/disponível: 2 cx \(36 KG\)/)).toBeInTheDocument();
 
+    // The picker goes by the weight of the box: 0 > 18 KG > 36 KG.
+    const wire = () => screen.getByRole('group', { name: 'ARAME' }).querySelector('output').textContent;
     const plus = screen.getByLabelText('Aumentar ARAME');
+    expect(wire()).toBe('0 KG');
     fireEvent.click(plus);
-    expect(screen.getByRole('group', { name: 'ARAME' }).querySelector('output').textContent).toBe('1 cx');
+    expect(wire()).toBe('18 KG');
     expect(screen.getByText(/Retirando 1 cx \(18 KG\); ficam 18 KG\./)).toBeInTheDocument();
     // Only whole boxes: 36 KG holds two.
     fireEvent.click(plus);
+    expect(wire()).toBe('36 KG');
     expect(plus).toBeDisabled();
     fireEvent.click(screen.getByLabelText('Diminuir ARAME'));
+    expect(wire()).toBe('18 KG');
 
     fireEvent.click(screen.getByLabelText('Aumentar LUVA'));
     fireEvent.click(screen.getByText('Solicitar retirada'));

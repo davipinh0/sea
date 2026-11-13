@@ -7,7 +7,11 @@ from flask import g, jsonify, request
 from sqlalchemy import text
 
 from constants import ACTION_TRANSFER
-from middleware.auth_middleware import require_admin_or_page_permission, require_auth
+from middleware.auth_middleware import (
+    require_admin_or_page_permission,
+    require_any_page_permission,
+    require_auth,
+)
 from middleware.db import with_db
 from routes.admin import VALID_BIN_TYPES, VALID_ZONE_TYPES, admin_bp
 from schemas.bins import CreateBinRequest, UpdateBinRequest
@@ -30,7 +34,8 @@ from utils.validation import validate_body
 
 @admin_bp.route("/warehouses", methods=["GET"])
 @require_auth
-@require_admin_or_page_permission("warehouses")
+# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+@require_any_page_permission("warehouses", "settings", "users")
 @with_db
 def list_warehouses():
     page = request.args.get("page", 1, type=int)
@@ -180,7 +185,9 @@ def delete_warehouse(warehouse_id):
 
 @admin_bp.route("/zones", methods=["GET"])
 @require_auth
-@require_admin_or_page_permission("zones")
+# SEA: the Endereços page lists the zones to fill its form, so reading
+# them comes with the 'bins' page. Creating / editing zones stays 'zones'.
+@require_any_page_permission("zones", "bins")
 @with_db
 def list_zones():
     page = request.args.get("page", 1, type=int)
@@ -299,7 +306,8 @@ def delete_zone(zone_id):
 
 @admin_bp.route("/bins", methods=["GET"])
 @require_auth
-@require_admin_or_page_permission("bins")
+# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+@require_any_page_permission("bins", "settings")
 @with_db
 def list_bins():
     page = request.args.get("page", 1, type=int)

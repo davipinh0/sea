@@ -189,3 +189,25 @@ class TestExportCsvGrant:
             json={"page_keys": ["export-tudo"]},
         )
         assert resp.status_code == 400
+
+
+class TestListsSharedBetweenPages:
+    """A page reads the lists it needs to fill its own forms without the
+    permission of the page that manages them; writing stays closed."""
+
+    def test_addresses_page_reads_zones(self, client, sp12):
+        headers = _user(client, sp12["conn"], "sea.acesso.z1", ["bins"], [WAREHOUSE])
+        assert client.get(f"/api/admin/zones?warehouse_id={WAREHOUSE}", headers=headers).status_code == 200
+        created = client.post(
+            "/api/admin/zones", headers=headers,
+            json={"warehouse_id": WAREHOUSE, "zone_code": "ZX", "zone_name": "X", "zone_type": "STORAGE"},
+        )
+        assert created.status_code == 403
+
+    def test_orders_page_reads_materials_and_users_page_reads_locations(self, client, sp12):
+        orders = _user(client, sp12["conn"], "sea.acesso.z2", ["purchase-orders"], [WAREHOUSE])
+        assert client.get("/api/admin/items?per_page=5", headers=orders).status_code == 200
+        assert client.get("/api/admin/warehouses", headers=orders).status_code == 403
+        users = _user(client, sp12["conn"], "sea.acesso.z3", ["users"], [WAREHOUSE])
+        assert client.get("/api/admin/warehouses", headers=users).status_code == 200
+        assert client.get(f"/api/admin/zones?warehouse_id={WAREHOUSE}", headers=users).status_code == 403

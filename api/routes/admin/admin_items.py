@@ -8,7 +8,11 @@ from sqlalchemy import text
 
 from pydantic import ValidationError
 
-from middleware.auth_middleware import require_admin_or_page_permission, require_auth
+from middleware.auth_middleware import (
+    require_admin_or_page_permission,
+    require_any_page_permission,
+    require_auth,
+)
 from middleware.db import with_db
 from routes.admin import admin_bp
 from datetime import timezone
@@ -40,7 +44,8 @@ from utils.validation import validate_body
 
 @admin_bp.route("/items", methods=["GET"])
 @require_auth
-@require_admin_or_page_permission("items")
+# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+@require_any_page_permission("items", "purchase-orders")
 @with_db
 def list_items():
     page = request.args.get("page", 1, type=int)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TopBar from './TopBar.jsx';
 import Sidebar from './Sidebar.jsx';
 import Modal from './Modal.jsx';
@@ -8,11 +8,25 @@ import { reloadIfNewVersion } from '../utils/newVersion.js';
 
 const PERM_POPUP_COOLDOWN_MS = 5000;
 
+// Sections with tabs: their root opens the first tab the user may see.
+const SECTIONS = ['/estoque', '/expedicao'];
+
+// Names of the permissions as the operator sees them in Sistema > Usuários.
+const PAGE_LABELS = {
+  inventory: 'Estoque > Visão Geral', items: 'Estoque > Materiais', bins: 'Estoque > Endereços',
+  zones: 'Estoque > Endereços', 'audit-log': 'Estoque > Histórico',
+  receiving: 'Expedição > Recebimento de Ordem', putaway: 'Expedição > Armazenagem',
+  'purchase-orders': 'Expedição > Ordens', retirada: 'Retirada', users: 'Sistema > Usuários',
+  settings: 'Sistema > Configurações', imports: 'Sistema > Importação de dados',
+  warehouses: 'Sistema > Configurações',
+};
+
 export default function Layout() {
   const { user } = useAuth();
   // A tab left open after an update keeps the old screens: on each
   // navigation, reload once when the server has a newer build.
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   useEffect(() => { reloadIfNewVersion(); }, [pathname]);
   // Page permissions (mig 061): catch global permission-denied events from
   // api.js and surface a "Permissions Error" modal. Lives on Layout so
@@ -44,6 +58,10 @@ export default function Layout() {
   function dismissPermError() {
     dismissedAt.current = Date.now();
     setPermError(null);
+    // Leave the screen that was refused: back to the first option of the
+    // section the user is in (or to the Painel outside the sections).
+    const section = SECTIONS.find((s) => pathname === s || pathname.startsWith(`${s}/`));
+    navigate(section || '/', { replace: true });
   }
 
   // When the user is stuck in a forced-change flow the only available
@@ -72,7 +90,7 @@ export default function Layout() {
           </p>
           {permError.page_key && (
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
-              Página: <span className="mono">{permError.page_key}</span>
+              Página: {PAGE_LABELS[permError.page_key] || permError.page_key}
             </p>
           )}
           <p style={{ fontSize: 13 }}>

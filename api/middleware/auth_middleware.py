@@ -257,6 +257,23 @@ def has_override(override_key: str) -> bool:
     return override_key in allowed
 
 
+def require_any_page_permission(*page_keys):
+    """Like require_admin_or_page_permission, for data several pages
+    need: ADMIN passes, other users need at least one of ``page_keys``.
+    The 403 names the first key."""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            allowed = g.current_user.get("allowed_pages")
+            if allowed is None or any(k in allowed for k in page_keys):
+                return f(*args, **kwargs)
+            return jsonify({"error": "Permission denied", "page_key": page_keys[0]}), 403
+
+        return decorated
+
+    return decorator
+
+
 def require_admin_or_page_permission(page_key):
     """Web-admin permission gate (mig 061).
 

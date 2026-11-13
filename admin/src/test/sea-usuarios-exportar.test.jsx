@@ -4,7 +4,8 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 const apiGet = vi.fn();
 const apiPost = vi.fn();
@@ -24,6 +25,11 @@ vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
 import DataTable from '../components/DataTable.jsx';
 import Users from '../pages/Users.jsx';
 import { canExportCsv } from '../utils/permissions.js';
+import Layout from '../components/Layout.jsx';
+
+vi.mock('../components/TopBar.jsx', () => ({ default: () => null }));
+vi.mock('../components/Sidebar.jsx', () => ({ default: () => null }));
+vi.mock('../utils/newVersion.js', () => ({ reloadIfNewVersion: () => {} }));
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const fail = (status, body) => Promise.resolve({ ok: false, status, json: () => Promise.resolve(body) });
@@ -138,5 +144,35 @@ describe('Cadastro de usuário', () => {
     fireEvent.click(screen.getByLabelText('Visão Geral'));
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(screen.getAllByText(/Já existe um usuário com esse nome/).length).toBeGreaterThan(0));
+  });
+});
+
+describe('Erro de permissão', () => {
+  function Where() {
+    return <div data-testid="where">{useLocation().pathname}</div>;
+  }
+
+  async function denyAt(path) {
+    currentUser = { role: 'USER', allowed_pages: ['inventory'] };
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes><Route element={<Layout />}><Route path="*" element={<Where />} /></Route></Routes>
+      </MemoryRouter>,
+    );
+    act(() => { window.dispatchEvent(new CustomEvent('sentry:permission-denied', { detail: { page_key: 'zones' } })); });
+    // The permission is named as the operator knows it, not by its key.
+    expect(await screen.findByText(/Estoque > Endereços/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('OK'));
+  }
+
+  it('OK takes the user to the first option of the section they are in', async () => {
+    await denyAt('/estoque/enderecos');
+    expect(screen.getByTestId('where')).toHaveTextContent('/estoque');
+    expect(screen.getByTestId('where')).not.toHaveTextContent('enderecos');
+  });
+
+  it('OK takes the user to the Painel outside the sections', async () => {
+    await denyAt('/settings');
+    expect(screen.getByTestId('where').textContent).toBe('/');
   });
 });

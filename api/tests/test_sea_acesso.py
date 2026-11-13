@@ -154,3 +154,38 @@ class TestOperatorMessages:
         stored = next(r for r in recent if r["action_type"] == "PUTAWAY")
         assert stored["details"]["sku"] == "SEA-SMALL"
         assert stored["details"]["lot_number"] == "OT-MSG-2"
+
+
+class TestExportCsvGrant:
+    def test_grant_is_accepted_and_reported_apart_from_the_pages(self, client, auth_headers, sp12):
+        conn = sp12["conn"]
+        headers = _user(client, conn, "sea.acesso.csv", ["inventory"], [WAREHOUSE])
+        user_id = conn.execute(
+            text("SELECT user_id FROM users WHERE username = 'sea.acesso.csv'")
+        ).scalar()
+        me = client.get("/api/auth/me", headers=headers).get_json()
+        assert me["allowed_overrides"] == []
+
+        resp = client.put(
+            f"/api/admin/users/{user_id}/permissions", headers=auth_headers,
+            json={"page_keys": ["inventory", "export-csv"]},
+        )
+        assert resp.status_code == 200, resp.get_json()
+        me = client.get("/api/auth/me", headers=headers).get_json()
+        assert me["allowed_overrides"] == ["export-csv"]
+        assert me["allowed_pages"] == ["inventory"]
+        # Administrators hold it implicitly.
+        admin = client.get("/api/auth/me", headers=auth_headers).get_json()
+        assert "export-csv" in admin["allowed_overrides"]
+
+    def test_unknown_grant_is_refused(self, client, auth_headers, sp12):
+        headers_user = _user(client, sp12["conn"], "sea.acesso.csv2", ["inventory"], [WAREHOUSE])
+        assert headers_user
+        user_id = sp12["conn"].execute(
+            text("SELECT user_id FROM users WHERE username = 'sea.acesso.csv2'")
+        ).scalar()
+        resp = client.put(
+            f"/api/admin/users/{user_id}/permissions", headers=auth_headers,
+            json={"page_keys": ["export-tudo"]},
+        )
+        assert resp.status_code == 400

@@ -1,3 +1,6 @@
+import { useAuth } from '../auth.jsx';
+import { canExportCsv } from '../utils/permissions.js';
+
 function sanitizeCsvValue(val) {
   if (typeof val !== 'string') return val ?? '';
   const escaped = `"${val.replace(/"/g, '""')}"`;
@@ -97,6 +100,9 @@ export default function DataTable({
   sortDir,
   onSort,
 }) {
+  // Rendered without a session in a few places (and in tests): no export then.
+  const canExport = canExportCsv(useAuth()?.user);
+
   function exportCSV() {
     if (!data || data.length === 0) return;
     const headers = columns.map((c) => c.label);
@@ -189,9 +195,11 @@ export default function DataTable({
             Página {pagination.page} de {pagination.pages} ({pagination.total} no total)
           </span>
           <div className="pagination-buttons">
-            <button className="btn-sm btn" onClick={exportCSV} style={{ marginRight: 8 }}>
-              Exportar CSV
-            </button>
+            {canExport && (
+              <button className="btn-sm btn" onClick={exportCSV} style={{ marginRight: 8 }}>
+                Exportar CSV
+              </button>
+            )}
             <button
               className="pagination-btn"
               disabled={pagination.page <= 1}

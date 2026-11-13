@@ -17,6 +17,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
+// The export button is shown to whoever holds the export grant (ADMIN here).
+vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: { role: 'ADMIN' } }) }));
 import DataTable from '../components/DataTable.jsx';
 
 function StatusTag({ status }) {

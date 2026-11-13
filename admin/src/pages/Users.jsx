@@ -49,7 +49,83 @@ const PAGE_GROUPS = [
       { key: 'imports', label: 'Importação de dados' },
     ],
   },
+  {
+    // Grants that are not pages (api/constants.py ALL_OVERRIDE_KEYS).
+    label: 'Permissões extras',
+    isOverride: true,
+    pages: [
+      { key: 'export-csv', label: 'Exportar CSV' },
+    ],
+  },
 ];
+
+// Same rules as the API (services/auth_service.validate_password).
+const PASSWORD_RULES = 'A senha precisa ter pelo menos 8 caracteres, com ao menos uma letra e um número.';
+
+function passwordProblem(password) {
+  if (password.trim().toLowerCase() === 'admin') return "A senha não pode ser 'admin'.";
+  if (password.length < 8) return `Senha muito fraca: tem ${password.length} caractere(s) e precisa de pelo menos 8.`;
+  if (!/\p{L}/u.test(password)) return 'Senha muito fraca: falta pelo menos uma letra.';
+  if (!/\d/.test(password)) return 'Senha muito fraca: falta pelo menos um número.';
+  return null;
+}
+
+// What is missing or wrong on the form, by field. Empty = ready to save.
+function userFormProblems(form, { creating, pagePermissions = [] }) {
+  const problems = {};
+  const text = (v) => (v || '').trim();
+  if (creating && !text(form.username)) problems.username = 'Informe o nome de usuário.';
+  else if (creating && /\s/.test(text(form.username))) problems.username = 'O nome de usuário não pode ter espaços.';
+  if (!text(form.full_name)) problems.full_name = 'Informe o nome completo.';
+  if (text(form.email) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text(form.email))) {
+    problems.email = 'E-mail inválido. Use o formato nome@empresa.com.';
+  }
+  const password = form.password || '';
+  if (creating && !password) problems.password = `Informe a senha. ${PASSWORD_RULES}`;
+  else if (password && passwordProblem(password)) problems.password = passwordProblem(password);
+  if (!(form.warehouse_ids || []).length) problems.warehouses = 'Selecione pelo menos um local.';
+  if (form.role !== 'ADMIN' && !pagePermissions.length && !(form.allowed_functions || []).length) {
+    problems.access = 'Selecione pelo menos uma página do painel ou um módulo do app: sem isso o usuário entra e não vê nada.';
+  }
+  return problems;
+}
+
+const FIELD_LABELS = {
+  username: 'Usuário', full_name: 'Nome completo', email: 'E-mail', password: 'Senha',
+  warehouses: 'Locais', access: 'Acessos',
+};
+const API_FIELDS = { username: 'username', full_name: 'full_name', email: 'email', password: 'password', warehouse_ids: 'warehouses', role: 'role' };
+const API_PASSWORD_ERRORS = {
+  "Password cannot be 'admin'": "A senha não pode ser 'admin'.",
+  'Password must be at least 8 characters': 'Senha muito fraca: precisa de pelo menos 8 caracteres.',
+  'Password must contain at least one letter': 'Senha muito fraca: falta pelo menos uma letra.',
+  'Password must contain at least one digit': 'Senha muito fraca: falta pelo menos um número.',
+};
+
+// Turn a refusal from the API into field messages the operator can act on.
+function apiProblems(data) {
+  const error = data?.error;
+  if (API_PASSWORD_ERRORS[error]) return { password: API_PASSWORD_ERRORS[error] };
+  if (typeof error === 'string' && error.startsWith('Nome de usuário duplicado')) {
+    return { username: 'Já existe um usuário com esse nome. Escolha outro.' };
+  }
+  if (typeof error === 'string' && error.startsWith('E-mail já cadastrado')) {
+    return { email: 'Esse e-mail já está cadastrado para outro usuário.' };
+  }
+  if (error === 'validation_error' && Array.isArray(data.details)) {
+    const problems = {};
+    for (const d of data.details) {
+      const field = API_FIELDS[d.loc?.[0]];
+      if (field && FIELD_LABELS[field]) problems[field] = `O campo ${FIELD_LABELS[field]} está vazio ou com valor inválido.`;
+    }
+    if (Object.keys(problems).length) return problems;
+  }
+  return { form: typeof error === 'string' && error !== 'validation_error' ? error : 'Não foi possível salvar. Confira os campos e tente novamente.' };
+}
+
+function FieldError({ message }) {
+  return message ? <div className="form-error" role="alert">{message}</div> : null;
+}
 
 const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 
@@ -61,6 +137,8 @@ export default function Users() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({});
   const [error, setError] = useState('');
+  // Field key -> message, shown under each field of the form.
+  const [problems, setProblems] = useState({});
   // mig 061: per-page web-admin grants. Edited inline alongside
   // the rest of the user form and saved via a follow-up PUT once the
   // user record itself lands.
@@ -92,6 +170,7 @@ export default function Users() {
     setForm({ role: 'USER', warehouse_ids: [], allowed_functions: [], is_active: true });
     setPagePermissions([]);
     setError('');
+    setProblems({});
     setShowModal(true);
   }
 
@@ -104,6 +183,7 @@ export default function Users() {
       allowed_functions: user.allowed_functions || [],
     });
     setError('');
+    setProblems({});
     setShowModal(true);
     // Fetch the user's existing per-page grants so the modal can
     // populate the checkboxes. ADMINs return is_full_access=true
@@ -148,11 +228,14 @@ export default function Users() {
 
   async function save() {
     setError('');
+    const found = userFormProblems(form, { creating: !editId, pagePermissions });
+    setProblems(found);
+    if (Object.keys(found).length) return;
     // UpdateUserRequest does not accept `username` (the user_id is in the
     // URL path, and V-017 extras=forbid rejects unknown fields). Only
     // include it on the create path where CreateUserRequest expects it.
     const body = {
-      full_name: form.full_name,
+      full_name: (form.full_name || '').trim(),
       role: form.role,
       warehouse_ids: form.warehouse_ids || [],
       allowed_functions: form.allowed_functions || [],
@@ -161,7 +244,7 @@ export default function Users() {
     };
     if (!editId && !body.email) delete body.email;
     if (!editId) {
-      body.username = form.username;
+      body.username = (form.username || '').trim();
       body.password = form.password;
     } else if (form.password) {
       body.password = form.password;
@@ -169,9 +252,10 @@ export default function Users() {
     const res = editId
       ? await api.put(`/admin/users/${editId}`, body)
       : await api.post('/admin/users', body);
-    if (!res?.ok) {
-      const data = await res?.json();
-      setError(data?.error || 'Falha ao salvar');
+    if (!res) return;
+    if (!res.ok) {
+      const refused = apiProblems(await res.json().catch(() => null));
+      setProblems(refused);
       return;
     }
     // Persist per-page grants in a follow-up PUT. The endpoint is a
@@ -300,25 +384,40 @@ export default function Users() {
           }
         >
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
+          {Object.keys(problems).length > 0 && (
+            <div className="form-problems" role="alert">
+              <strong>O usuário não foi salvo. Corrija:</strong>
+              <ul>
+                {Object.entries(problems).map(([field, message]) => (
+                  <li key={field}>{FIELD_LABELS[field] ? `${FIELD_LABELS[field]}: ` : ''}{message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
-              <label>Usuário</label>
-              <input className="form-input" value={form.username || ''} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+              <label htmlFor="user-username">Usuário *</label>
+              <input id="user-username" className={`form-input${problems.username ? ' input-invalid' : ''}`} disabled={!!editId} value={form.username || ''} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+              <FieldError message={problems.username} />
             </div>
             <div className="form-group">
-              <label>Nome completo</label>
-              <input className="form-input" value={form.full_name || ''} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+              <label htmlFor="user-full-name">Nome completo *</label>
+              <input id="user-full-name" className={`form-input${problems.full_name ? ' input-invalid' : ''}`} value={form.full_name || ''} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+              <FieldError message={problems.full_name} />
             </div>
             <div className="form-group">
               <label htmlFor="user-email">E-mail corporativo</label>
-              <input id="user-email" className="form-input" type="email" value={form.email || ''} placeholder="nome@empresa.com"
+              <input id="user-email" className={`form-input${problems.email ? ' input-invalid' : ''}`} type="email" value={form.email || ''} placeholder="nome@empresa.com"
                 onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <FieldError message={problems.email} />
               <div className="settings-note">Serve para entrar no terminal de retirada. Administradores recebem neste e-mail os avisos de retirada, recebimento e armazenamento.</div>
             </div>
           </div>
           <div className="form-group">
-            <label>{editId ? 'Nova senha (deixe em branco para manter a atual)' : 'Senha'}</label>
-            <input className="form-input" type="password" value={form.password || ''} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <label htmlFor="user-password">{editId ? 'Nova senha (deixe em branco para manter a atual)' : 'Senha *'}</label>
+            <input id="user-password" className={`form-input${problems.password ? ' input-invalid' : ''}`} type="password" value={form.password || ''} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <div className="settings-note">{PASSWORD_RULES}</div>
+            <FieldError message={problems.password} />
           </div>
           <div className="form-group">
             <label>Função</label>
@@ -328,7 +427,7 @@ export default function Users() {
           </div>
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label>Locais</label>
+              <label>Locais *</label>
               {warehouses.length > 0 && (
                 <span style={{ fontSize: 12 }}>
                   <button
@@ -363,6 +462,7 @@ export default function Users() {
               ))}
               {warehouses.length === 0 && <span style={{ color: 'var(--text-secondary)' }}>Nenhum local encontrado</span>}
             </div>
+            <FieldError message={problems.warehouses} />
           </div>
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -402,6 +502,7 @@ export default function Users() {
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <label>Acesso às páginas do painel web</label>
+              <FieldError message={problems.access} />
               <span style={{ fontSize: 12 }}>
                 <button
                   type="button"

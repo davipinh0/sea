@@ -153,6 +153,12 @@ Limites conhecidos do protótipo:
   excluída junto. O histórico de auditoria registra o que foi removido e por quem
   (`DELETE /api/sea/ots/<id>`, `DELETE /api/sea/materiais/<id>`).
 
+* **Exportar CSV**: os botões "Exportar CSV" das listas aparecem para o administrador e para o
+  usuário com a permissão extra `export-csv` (Sistema > Usuários > Permissões extras). O arquivo é
+  montado no navegador com os dados que o usuário já vê na tela; a permissão controla o botão.
+* **Cadastro de usuário**: o formulário lista o que falta ou está errado (campos obrigatórios,
+  e-mail inválido, senha fraca com o motivo, local e acessos) antes de enviar.
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):

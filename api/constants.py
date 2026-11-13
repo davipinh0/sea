@@ -367,8 +367,13 @@ ALL_PAGE_KEYS = (
 # override key. Kept out of ALL_PAGE_KEYS so the sidebar permission
 # grid renders them in a separate "Overrides" group.
 OVERRIDE_SO_FULL_EDIT = "so-full-edit"
+# SEA: who may download the lists of the web panel as CSV files. The
+# export is built in the browser from data the user can already see, so
+# this grant controls the "Exportar CSV" buttons, not access to the data.
+OVERRIDE_EXPORT_CSV = "export-csv"
 ALL_OVERRIDE_KEYS = (
     OVERRIDE_SO_FULL_EDIT,
+    OVERRIDE_EXPORT_CSV,
 )
 
 # SO mutation audit actions (mig 062). Mirror the PO line

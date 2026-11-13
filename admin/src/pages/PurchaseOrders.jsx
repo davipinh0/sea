@@ -11,6 +11,7 @@ import NovaOtModal from '../components/NovaOtModal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { useAuth } from '../auth.jsx';
 import { readError } from '../utils/sea.js';
+import { canExportCsv } from '../utils/permissions.js';
 
 const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 const ALL_PO_STATUSES = ['OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
@@ -433,7 +434,7 @@ export default function PurchaseOrders() {
           onClose={() => { setSelectedPO(null); setPOLines([]); }}
           footer={
             <>
-              <button className="btn" onClick={exportPOCsv} disabled={poLines.length === 0}>Exportar CSV</button>
+              {canExportCsv(user) && <button className="btn" onClick={exportPOCsv} disabled={poLines.length === 0}>Exportar CSV</button>}
               <button className="btn" onClick={() => { setSelectedPO(null); setPOLines([]); }}>Fechar</button>
             </>
           }

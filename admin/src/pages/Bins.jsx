@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
+import { useAuth } from '../auth.jsx';
+import { canExportCsv } from '../utils/permissions.js';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
@@ -50,6 +52,8 @@ export default function Bins() {
   // BinImportRow schema (bin_code, bin_barcode, zone, warehouse_id,
   // bin_type, aisle, pick_sequence, putaway_sequence, description) so
   // an exported file is round-trip-importable via /admin/import/bins.
+  const canExport = canExportCsv(useAuth()?.user);
+
   async function exportCsv() {
     setExporting(true);
     try {
@@ -262,15 +266,17 @@ export default function Bins() {
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
-        <button
-          className="btn"
-          onClick={exportCsv}
-          disabled={exporting || !pagination?.total}
-          style={{ marginRight: 8 }}
-          title="Exportar filtro atual para CSV"
-        >
-          {exporting ? 'Exportando…' : 'Exportar CSV'}
-        </button>
+        {canExport && (
+          <button
+            className="btn"
+            onClick={exportCsv}
+            disabled={exporting || !pagination?.total}
+            style={{ marginRight: 8 }}
+            title="Exportar filtro atual para CSV"
+          >
+            {exporting ? 'Exportando…' : 'Exportar CSV'}
+          </button>
+        )}
         <button className="btn btn-primary" onClick={() => { setForm({ is_active: true }); setShowCreate(true); setError(''); }}>Novo endereço</button>
       </PageHeader>
       <DataTable rowKey="bin_id" columns={columns} data={bins} pagination={pagination} onPageChange={setPage} onRowClick={viewBin} />

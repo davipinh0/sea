@@ -26,6 +26,7 @@ import DataTable from '../components/DataTable.jsx';
 import Users from '../pages/Users.jsx';
 import { canExportCsv } from '../utils/permissions.js';
 import Layout from '../components/Layout.jsx';
+import TransferirEstoque from '../components/TransferirEstoque.jsx';
 
 vi.mock('../components/TopBar.jsx', () => ({ default: () => null }));
 vi.mock('../components/Sidebar.jsx', () => ({ default: () => null }));
@@ -174,5 +175,58 @@ describe('Erro de permissão', () => {
   it('OK takes the user to the Painel outside the sections', async () => {
     await denyAt('/settings');
     expect(screen.getByTestId('where').textContent).toBe('/');
+  });
+});
+
+describe('Transferência entre endereços (Estoque > Materiais)', () => {
+  const STOCK = [
+    { inventory_id: 31, bin_id: 4, bin_code: 'A1', warehouse_id: 7, warehouse_code: 'SP12', stored: true, ot: 'OT-1', quantity_on_hand: 10, quantity_allocated: 2, available: 8, uom: 'PC', pack_weight_kg: null },
+    { inventory_id: 32, bin_id: 9, bin_code: 'SP12-RECEB', warehouse_id: 7, warehouse_code: 'SP12', stored: false, ot: 'OT-1', quantity_on_hand: 3, quantity_allocated: 0, available: 3, uom: 'PC', pack_weight_kg: null },
+  ];
+  const BINS = [
+    { bin_id: 4, bin_code: 'A1', warehouse_id: 7, warehouse_code: 'SP12', warehouse_name: 'SP12' },
+    { bin_id: 5, bin_code: 'B2', warehouse_id: 7, warehouse_code: 'SP12', warehouse_name: 'SP12' },
+    { bin_id: 6, bin_code: 'SOLDA', warehouse_id: 8, warehouse_code: 'Solda', warehouse_name: 'Contêiner de Solda' },
+  ];
+
+  beforeEach(() => {
+    apiGet.mockReset();
+    apiPost.mockReset();
+    apiGet.mockImplementation((path) => (path.startsWith('/sea/armazenagem/destinos') ? ok({ bins: BINS }) : ok({ stock: STOCK })));
+  });
+
+  it('moves stored material to another shelf or another location', async () => {
+    apiPost.mockImplementation(() => ok({ sku: 'MAT-1', quantity: 5, from: 'SP12 · A1', to: 'Solda · SOLDA' }));
+    render(<TransferirEstoque itemId={21} />);
+    // Material still in the receiving area is not transferred from here.
+    fireEvent.click(await screen.findByLabelText('Transferir de SP12 · A1'));
+    expect(screen.queryByLabelText('Transferir de SP12 · SP12-RECEB')).toBeNull();
+
+    // Destinations of every location, without the address the stock is in.
+    const options = Array.from(screen.getByLabelText('Destino').querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toEqual(['Escolha o endereço', 'SP12 · B2', 'Solda · SOLDA']);
+    expect(screen.getByText(/2 reservado\(s\) para retirada não podem ser movidos/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Confirmar transferência'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Escolha o endereço de destino.');
+    fireEvent.change(screen.getByLabelText('Destino'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Quantidade (PC)'), { target: { value: '9' } });
+    fireEvent.click(screen.getByText('Confirmar transferência'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('maior que o saldo livre (8)');
+    expect(apiPost).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Quantidade (PC)'), { target: { value: '5' } });
+    fireEvent.click(screen.getByText('Confirmar transferência'));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/transferencias', { inventory_id: 31, to_bin_id: 6, quantity: 5 }));
+    expect(await screen.findByRole('status')).toHaveTextContent('transferido(s) de SP12 · A1 para Solda · SOLDA');
+  });
+
+  it('shows the reason when the API refuses the move', async () => {
+    apiPost.mockImplementation(() => fail(409, { error: 'O endereço A2 é reservado a materiais de tamanho GRANDE.', user_facing: true }));
+    render(<TransferirEstoque itemId={21} />);
+    fireEvent.click(await screen.findByLabelText('Transferir de SP12 · A1'));
+    fireEvent.change(screen.getByLabelText('Destino'), { target: { value: '5' } });
+    fireEvent.click(screen.getByText('Confirmar transferência'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('reservado a materiais de tamanho GRANDE');
   });
 });

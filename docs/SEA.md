@@ -167,6 +167,12 @@ Limites conhecidos do protótipo:
   2 caixas; retirar 1 caixa baixa 18 KG. No terminal o seletor anda pelo peso da caixa
   (0 > 18 KG > 36 KG). A API recusa quantidade que não seja de caixas inteiras.
 
+* **Transferência entre endereços**: em Estoque > Materiais, ao abrir um material, "Localizações
+  no estoque" traz o botão **Transferir** em cada endereço. O destino pode ser outra prateleira
+  do mesmo local (A1 para B2) ou outro local (SP12 para o Contêiner de Solda). Só o saldo livre
+  se move (o que está reservado para retirada fica); valem as regras de armazenagem e, para
+  material com peso por caixa, caixas inteiras (`POST /api/sea/transferencias`).
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):

@@ -8,6 +8,7 @@ import { OtTypeTag } from '../components/sea.jsx';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
+import TransferirEstoque from '../components/TransferirEstoque.jsx';
 
 // Units offered for a material. A unit read from a label that is not in
 // this list is kept as it is.
@@ -191,11 +192,6 @@ export default function Items() {
     )},
   ];
 
-  const invCols = [
-    { key: 'bin_code', label: 'Endereço', mono: true },
-    { key: 'quantity_on_hand', label: 'Em estoque' },
-    { key: 'quantity_allocated', label: 'Alocado' },
-  ];
 
   return (
     <div>
@@ -219,7 +215,7 @@ export default function Items() {
       <DataTable rowKey="row_id" columns={columns} data={items} pagination={pagination} onPageChange={setPage} onRowClick={viewItem} />
 
       {detail && !showModal && (
-        <Modal title={detail.item_name || detail.sku} onClose={() => setDetail(null)}
+        <Modal title={detail.item_name || detail.sku} onClose={() => setDetail(null)} size="wide"
           footer={<button className="btn" onClick={() => setDetail(null)}>Fechar</button>}
         >
           <div className="detail-grid">
@@ -242,12 +238,7 @@ export default function Items() {
               ]} data={detail.preferred_bins} />
             </>
           )}
-          {detail.inventory && detail.inventory.length > 0 && (
-            <>
-              <div className="section-title">Localizações no estoque</div>
-              <DataTable rowKey="inventory_id" columns={invCols} data={detail.inventory} />
-            </>
-          )}
+          <TransferirEstoque itemId={detail.id} />
         </Modal>
       )}
 

@@ -23,6 +23,7 @@ from schemas.sea import (
     InterpretLabelRequest,
     RegisterFromBaseRequest,
     RegisterOtRequest,
+    TransferStockRequest,
     UpdateOtDataRequest,
     UpdateOtMaterialRequest,
 )
@@ -893,9 +894,42 @@ def sugestao(inventory_id):
         return _sea_error(exc)
 
 
+TRANSFER_PAGE_KEYS = ("items", "inventory", "putaway")
+
+
+@sea_bp.route("/materiais/<int:item_id>/estoque")
+@require_auth
+@require_any_page(*TRANSFER_PAGE_KEYS)
+@with_db
+def estoque_do_material(item_id):
+    """Where a material is, address by address."""
+    return jsonify({"stock": sea.item_stock(g.db, item_id, _user_warehouse_ids())})
+
+
+@sea_bp.route("/transferencias", methods=["POST"])
+@require_auth
+@require_any_page(*TRANSFER_PAGE_KEYS)
+@validate_body(TransferStockRequest)
+@with_db
+def transferir_estoque(validated):
+    """Move stored material between addresses, in the same location or to
+    another one."""
+    try:
+        result = sea.transfer_stock(
+            g.db, inventory_id=validated.inventory_id, to_bin_id=validated.to_bin_id,
+            quantity=validated.quantity, reason=validated.reason,
+            username=g.current_user["username"], warehouse_ids=_user_warehouse_ids(),
+        )
+    except sea.SeaError as exc:
+        g.db.rollback()
+        return _sea_error(exc)
+    g.db.commit()
+    return jsonify({"message": "Transferência concluída", **result})
+
+
 @sea_bp.route("/armazenagem/destinos")
 @require_auth
-@require_any_page("putaway", "receiving")
+@require_any_page("putaway", "receiving", *TRANSFER_PAGE_KEYS)
 @with_db
 def destinos():
     """Storage addresses of every location the user can use, for the

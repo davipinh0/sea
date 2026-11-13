@@ -39,6 +39,7 @@ from sqlalchemy import bindparam, text
 
 from services import notification_service as notifications
 from services.audit_service import write_audit_log
+from services.inventory_service import move_inventory
 
 OT_TYPES = ("PM11", "PM12")
 STAGING_TYPES = (BIN_STAGING, BIN_PICKABLE_STAGING)
@@ -1095,6 +1096,160 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
                  f"{places}."),
         ot=ot.po_number, username=username,
     )
+
+
+# ------------------------------------------------- Stock transfers
+#
+# Moving stored material between addresses, in the same location (A1 to
+# B2) or to another one (SP12 to the Contêiner de Solda).
+
+ACTION_STOCK_TRANSFERRED = "STOCK_TRANSFERRED"
+
+
+def item_stock(db, item_id, warehouse_ids=None):
+    """Where a material is, address by address, in the locations the user
+    may use (``warehouse_ids``; None = all)."""
+    rows = db.execute(
+        text(
+            """
+            SELECT inv.inventory_id, inv.bin_id, b.bin_code, b.bin_type, inv.warehouse_id,
+                   w.warehouse_code, inv.lot_number, inv.quantity_on_hand,
+                   inv.quantity_allocated, i.uom, i.pack_weight_kg
+            FROM inventory inv
+            JOIN items i ON i.item_id = inv.item_id
+            JOIN bins b ON b.bin_id = inv.bin_id
+            JOIN warehouses w ON w.warehouse_id = inv.warehouse_id
+            WHERE inv.item_id = :item AND inv.quantity_on_hand > 0
+              AND (CAST(:wids AS INT[]) IS NULL OR inv.warehouse_id = ANY(:wids))
+            ORDER BY w.warehouse_code, b.bin_code, inv.lot_number
+            """
+        ),
+        {"item": item_id,
+         "wids": list(warehouse_ids) if warehouse_ids is not None else None},
+    ).fetchall()
+    return [
+        {"inventory_id": r.inventory_id, "bin_id": r.bin_id, "bin_code": r.bin_code,
+         "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code,
+         "stored": r.bin_type not in STAGING_TYPES, "ot": r.lot_number,
+         "quantity_on_hand": r.quantity_on_hand, "quantity_allocated": r.quantity_allocated,
+         "available": max(0, r.quantity_on_hand - r.quantity_allocated),
+         "uom": r.uom, "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg)}
+        for r in rows
+    ]
+
+
+def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=None,
+                   warehouse_ids=None):
+    """Move ``quantity`` of a stored stock row to another storage address.
+
+    Only what is not reserved for a withdrawal moves. The destination
+    follows the storage rules (size class, capacity, compatibility) and
+    both locations must be among the user's (``warehouse_ids``; None =
+    all). Returns a summary of the move.
+    """
+    src = db.execute(
+        text(
+            """
+            SELECT inv.inventory_id, inv.item_id, inv.bin_id, inv.warehouse_id, inv.lot_number,
+                   inv.quantity_on_hand, inv.quantity_allocated, b.bin_code, b.bin_type,
+                   w.warehouse_code, i.sku, i.uom, i.pack_weight_kg
+            FROM inventory inv
+            JOIN bins b ON b.bin_id = inv.bin_id
+            JOIN warehouses w ON w.warehouse_id = inv.warehouse_id
+            JOIN items i ON i.item_id = inv.item_id
+            WHERE inv.inventory_id = :id
+            FOR UPDATE OF inv
+            """
+        ),
+        {"id": inventory_id},
+    ).fetchone()
+    if src is None:
+        raise SeaError("Registro de estoque não encontrado.", status=404)
+    dest = db.execute(
+        text(
+            """
+            SELECT b.bin_id, b.bin_code, b.bin_type, b.is_active, b.warehouse_id,
+                   w.warehouse_code
+            FROM bins b JOIN warehouses w ON w.warehouse_id = b.warehouse_id
+            WHERE b.bin_id = :id
+            """
+        ),
+        {"id": to_bin_id},
+    ).fetchone()
+    if dest is None:
+        raise SeaError("Endereço de destino não encontrado.", status=404)
+    if warehouse_ids is not None and not {src.warehouse_id, dest.warehouse_id} <= set(warehouse_ids):
+        raise SeaError("Você não tem acesso a um dos locais desta transferência.", status=403)
+    if src.bin_type in STAGING_TYPES:
+        raise SeaError(
+            f"{src.sku} ainda está na área de recebimento ({src.bin_code}); "
+            "use Expedição > Armazenagem para armazená-lo.",
+            status=409,
+        )
+    if dest.bin_id == src.bin_id:
+        raise SeaError("O destino é o próprio endereço de origem.", status=400)
+
+    available = src.quantity_on_hand - src.quantity_allocated
+    if quantity > available:
+        reserved = (f" ({src.quantity_allocated} reservado(s) para retirada)"
+                    if src.quantity_allocated else "")
+        raise SeaError(
+            f"Quantidade ({quantity}) maior que o saldo livre de {src.sku} em "
+            f"{src.warehouse_code} · {src.bin_code}: {max(0, available)}{reserved}.",
+            status=409, available=max(0, available),
+        )
+    pack = pack_weight(src.uom, src.pack_weight_kg)
+    if pack and quantity % pack:
+        raise SeaError(
+            f"{src.sku} é movimentado por caixa de {pack} KG: a quantidade ({quantity} KG) "
+            "precisa ser de caixas inteiras.",
+            status=400, pack_weight_kg=pack,
+        )
+
+    # Same rules as a put-away (also refuses receiving areas and inactive
+    # addresses), with the same lock on the destination.
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, :bin)"),
+        {"ns": _LOCK_NS_BIN, "bin": int(dest.bin_id)},
+    )
+    problems = storage_problems(
+        db, item=_item(db, src.item_id), target_bin=_bin(db, dest.bin_id), quantity=quantity
+    )
+    if problems:
+        raise SeaError(problems[0], status=409, problems=problems)
+
+    try:
+        move_inventory(db, src.item_id, src.bin_id, dest.bin_id, dest.warehouse_id, quantity,
+                       src.lot_number)
+    except ValueError:
+        raise SeaError(
+            f"Saldo insuficiente de {src.sku} em {src.warehouse_code} · {src.bin_code}.",
+            status=409,
+        ) from None
+    transfer_id = db.execute(
+        text(
+            """
+            INSERT INTO bin_transfers (item_id, from_bin_id, to_bin_id, warehouse_id, quantity,
+                                       transfer_type, lot_number, reason, transferred_by,
+                                       external_id)
+            VALUES (:item, :from_bin, :to_bin, :wid, :qty, 'MOVE', :lot, :reason, :user, :ext)
+            RETURNING transfer_id
+            """
+        ),
+        {"item": src.item_id, "from_bin": src.bin_id, "to_bin": dest.bin_id,
+         "wid": dest.warehouse_id, "qty": quantity, "lot": src.lot_number, "reason": reason,
+         "user": username, "ext": str(uuid.uuid4())},
+    ).scalar()
+    summary = {
+        "transfer_id": transfer_id, "sku": src.sku, "quantity": quantity,
+        "lot_number": src.lot_number,
+        "from": f"{src.warehouse_code} · {src.bin_code}",
+        "to": f"{dest.warehouse_code} · {dest.bin_code}",
+    }
+    write_audit_log(db, ACTION_STOCK_TRANSFERRED, "ITEM", src.item_id, username,
+                    dest.warehouse_id,
+                    details={**summary, "to_bin_code": dest.bin_code, "reason": reason})
+    return summary
 
 
 def order_stock(db, order_number, warehouse_ids=None):

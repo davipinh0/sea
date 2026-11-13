@@ -105,6 +105,17 @@ class CreateWithdrawalRequest(BaseModel):
     note: Optional[str] = Field(None, max_length=500)
 
 
+class TransferStockRequest(BaseModel):
+    """Move stored material to another address (any location)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    inventory_id: int = Field(..., gt=0)
+    to_bin_id: int = Field(..., gt=0)
+    quantity: int = Field(..., gt=0, le=1000000)
+    reason: Optional[str] = Field(None, max_length=500)
+
+
 class CancelWithdrawalRequest(BaseModel):
     """A cancellation always carries its reason (never blank)."""
 

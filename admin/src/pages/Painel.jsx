@@ -14,6 +14,7 @@ const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   PUTAWAY: 'Armazenagem',
+  STOCK_TRANSFERRED: 'Transferência entre endereços',
   PO_STATUS_CHANGED: 'Status da ordem alterado',
   WITHDRAWAL_REQUESTED: 'Retirada solicitada',
   WITHDRAWAL_PICKING: 'Separação iniciada',

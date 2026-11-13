@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import { useAuth } from '../auth.jsx';
-import { readError } from '../utils/sea.js';
+import { formatQuantity, readError } from '../utils/sea.js';
 import { OtTypeTag } from '../components/sea.jsx';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -117,6 +117,8 @@ export default function Items() {
       size_class: form.size_class || null,
       compat_group: (form.compat_group || '').trim() || null,
       uom: (form.uom || '').trim().toUpperCase() || null,
+      // Box weight only makes sense for a material kept in KG.
+      pack_weight_kg: (form.uom || '').trim().toUpperCase() === 'KG' && form.pack_weight_kg ? Number(form.pack_weight_kg) : null,
       weight_lbs: (form.weight_lbs || form.weight) ? Number(form.weight_lbs || form.weight) : null,
       default_bin_id: form.default_bin_id ? Number(form.default_bin_id) : null,
     };
@@ -174,8 +176,9 @@ export default function Items() {
     { key: 'order_type', label: 'Tipo Ordem', render: (r) => (r.order_type ? <OtTypeTag type={r.order_type} /> : '-') },
     { key: 'sku', label: 'Código', mono: true },
     { key: 'item_name', label: 'Descrição' },
-    { key: 'quantity', label: 'Quantidade', render: (r) => r.quantity ?? '-' },
+    { key: 'quantity', label: 'Quantidade', render: (r) => (r.quantity == null ? '-' : (r.uom === 'KG' && r.pack_weight_kg ? formatQuantity(r.quantity, r.uom, r.pack_weight_kg) : r.quantity)), csvValue: (r) => r.quantity ?? '' },
     { key: 'uom', label: 'Unidade', render: (r) => r.uom || '-' },
+    { key: 'pack_weight_kg', label: 'Peso por caixa', render: (r) => (r.item_uom === 'KG' && r.pack_weight_kg ? `${r.pack_weight_kg} kg` : '-') },
     { key: 'category', label: 'Categoria', render: (r) => r.category || '-' },
     { key: 'size_class', label: 'Tamanho', render: (r) => r.size_class || '-' },
     { key: 'weight_lbs', label: 'Peso', render: (r) => r.weight_lbs ? `${r.weight_lbs} kg` : '-' },
@@ -302,7 +305,16 @@ export default function Items() {
               {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
               {form.uom && !UNITS.includes(form.uom) && <option value={form.uom}>{form.uom}</option>}
             </select>
+            <div className="settings-note">PC e PAR: retirar 1 baixa 1 unidade do estoque. KG: o estoque fica em quilos; informe o peso da caixa para a retirada ser feita por caixa.</div>
           </div>
+          {form.uom === 'KG' && (
+            <div className="form-group">
+              <label htmlFor="item-pack">Peso por caixa (kg)</label>
+              <input id="item-pack" className="form-input" type="number" min="1" step="1" placeholder="ex.: 18"
+                value={form.pack_weight_kg ?? ''} onChange={(e) => setForm({ ...form, pack_weight_kg: e.target.value })} />
+              <div className="settings-note">Ex.: arame de soldagem em caixas de 15 kg. Com 150 kg em estoque são 10 caixas, e retirar 1 caixa baixa 15 kg. Em branco: a retirada é por quilo.</div>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="item-size">Classe de tamanho (SP12)</label>

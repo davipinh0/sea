@@ -20,6 +20,8 @@ class CreateItemRequest(BaseModel):
     compat_group: Optional[str] = Field(None, max_length=50)
     # SEA: unit of measure of the material (PC, KG, PAR ...).
     uom: Optional[str] = Field(None, max_length=10)
+    # SEA: weight of one box, for materials kept in KG and withdrawn by box.
+    pack_weight_kg: Optional[int] = Field(None, gt=0, le=100000)
 
 
 class UpdateItemRequest(BaseModel):
@@ -39,6 +41,8 @@ class UpdateItemRequest(BaseModel):
     compat_group: Optional[str] = Field(None, max_length=50)
     # SEA: unit of measure of the material (PC, KG, PAR ...).
     uom: Optional[str] = Field(None, max_length=10)
+    # SEA: weight of one box, for materials kept in KG and withdrawn by box.
+    pack_weight_kg: Optional[int] = Field(None, gt=0, le=100000)
 
 
 class CreatePreferredBinRequest(BaseModel):

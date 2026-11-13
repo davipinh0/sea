@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { terminalApi, terminalLogin } from '../terminalApi.js';
 import SeaLogo from '../components/SeaLogo.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
-import { readError } from '../utils/sea.js';
+import { formatQuantity, readError } from '../utils/sea.js';
 
 // Touchscreen withdrawal terminal (kiosk). Flow:
 //   0. the employee identifies with the corporate login (e-mail or
@@ -24,11 +24,17 @@ import { readError } from '../utils/sea.js';
 const POLL_MS = 3000;
 const RESET_AFTER_MS = 12000;
 
-function QtyPicker({ value, max, onChange, label }) {
+// A material kept in KG with a box weight is chosen in boxes; everything
+// else unit by unit (1 = 1 PC, 1 PAR ...). ``qty`` holds what the picker
+// counts; ``stockQuantity`` turns it into the quantity of the stock.
+const stockQuantity = (s, count) => count * (s.pack_weight_kg || 1);
+const maxCount = (s) => Math.floor(s.available / (s.pack_weight_kg || 1));
+
+function QtyPicker({ value, max, onChange, label, unit }) {
   return (
     <div className="terminal-qty" role="group" aria-label={label}>
       <button type="button" aria-label={`Diminuir ${label}`} onClick={() => onChange(Math.max(0, value - 1))} disabled={value <= 0}>−</button>
-      <output aria-live="polite">{value}</output>
+      <output aria-live="polite">{value}{unit ? ` ${unit}` : ''}</output>
       <button type="button" aria-label={`Aumentar ${label}`} onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}>+</button>
     </div>
   );
@@ -119,7 +125,7 @@ export default function TerminalRetirada() {
       setError('Os materiais escolhidos estão em locais ou entregas diferentes. Solicite um grupo de cada vez.');
       return;
     }
-    const lines = chosen.map((s) => ({ inventory_id: s.inventory_id, quantity: qty[s.inventory_id] }));
+    const lines = chosen.map((s) => ({ inventory_id: s.inventory_id, quantity: stockQuantity(s, qty[s.inventory_id]) }));
     setBusy(true); setError('');
     const res = await api.post('/sea/retiradas', { ot: chosen[0].ot, lines });
     setBusy(false);
@@ -248,10 +254,16 @@ export default function TerminalRetirada() {
                     <div>
                       <div style={{ fontSize: 20, fontWeight: 700 }}>{s.item_name}</div>
                       <div className="settings-note" style={{ fontSize: 15 }}>
-                        Código {s.sku} · endereço {s.warehouse_code ? `${s.warehouse_code} · ` : ''}{s.bin_code} · disponível: {s.available}
+                        Código {s.sku} · endereço {s.warehouse_code ? `${s.warehouse_code} · ` : ''}{s.bin_code} · disponível: {formatQuantity(s.available, s.uom, s.pack_weight_kg)}
+                        {s.pack_weight_kg ? ` · caixa de ${s.pack_weight_kg} KG` : ''}
                       </div>
+                      {qty[s.inventory_id] > 0 && s.pack_weight_kg && (
+                        <div style={{ fontSize: 15, fontWeight: 600 }}>
+                          Retirando {formatQuantity(stockQuantity(s, qty[s.inventory_id]), s.uom, s.pack_weight_kg)}; ficam {s.available - stockQuantity(s, qty[s.inventory_id])} KG.
+                        </div>
+                      )}
                     </div>
-                    <QtyPicker label={s.sku} value={qty[s.inventory_id] || 0} max={s.available}
+                    <QtyPicker label={s.sku} value={qty[s.inventory_id] || 0} max={maxCount(s)} unit={s.pack_weight_kg ? 'cx' : s.uom}
                       onChange={(n) => setQty((q) => ({ ...q, [s.inventory_id]: n }))} />
                   </div>
                 ))}
@@ -272,7 +284,7 @@ export default function TerminalRetirada() {
               <p style={{ fontSize: 20 }}>
                 {withdrawal.status === 'PICKING' ? 'O responsável pelo estoque está separando os materiais…' : 'Aguardando o responsável pelo estoque iniciar a separação…'}
               </p>
-              {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 17 }}>{l.quantity} × {l.item_name} ({l.bin_code})</div>)}
+              {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 17 }}>{formatQuantity(l.quantity, l.uom, l.pack_weight_kg)} · {l.item_name} ({l.bin_code})</div>)}
             </div>
             <div className="terminal-actions">
               <button type="button" className="terminal-btn secondary" disabled={busy} onClick={cancelRequest}>Cancelar solicitação</button>
@@ -285,7 +297,7 @@ export default function TerminalRetirada() {
             <div className="terminal-step">Passo 4 de 4</div>
             <div className="terminal-title">Materiais separados. {employee?.full_name || employee?.username}, confirme o recebimento</div>
             <div className="terminal-card">
-              {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 20, padding: '6px 0' }}>{l.quantity} × {l.item_name}</div>)}
+              {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 20, padding: '6px 0' }}>{formatQuantity(l.quantity, l.uom, l.pack_weight_kg)} · {l.item_name}</div>)}
             </div>
             <div className="terminal-actions">
               <button type="button" className="terminal-btn" disabled={busy} onClick={confirm}>{busy ? 'Confirmando…' : 'Confirmo que recebi os materiais'}</button>

@@ -161,6 +161,11 @@ Limites conhecidos do protótipo:
 * **Notificações**: clicar em uma notificação abre a tela relacionada; "Limpar notificações"
   esvazia a lista do próprio usuário (migração `086`; os registros continuam no banco).
 
+* **Unidade e peso por caixa** (migração `087`): com unidade PC ou PAR, retirar 1 baixa 1 unidade.
+  Um material em KG pode ter o **peso por caixa** no cadastro (Estoque > Materiais): o estoque
+  continua em quilos e a retirada é feita por caixa inteira. Ex.: 36 KG em caixas de 18 KG são
+  2 caixas; retirar 1 caixa baixa 18 KG. A API recusa quantidade que não seja de caixas inteiras.
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):

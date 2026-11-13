@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import Modal from '../components/Modal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
-import { formatDateTime, readError } from '../utils/sea.js';
+import { formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 
 // Retirada: the stock keeper's queue. Requests made at the touchscreen
 // terminal arrive here (polled), are separated and marked ready; the
@@ -117,7 +117,7 @@ export default function Retirada() {
               {w.lines.map((l) => (
                 <tr key={l.inventory_id}>
                   <td className="mono"><strong>{w.warehouse_code ? `${w.warehouse_code} · ` : ''}{l.bin_code}</strong></td><td className="mono">{l.sku}</td>
-                  <td>{l.item_name}</td><td>{l.quantity}</td>
+                  <td>{l.item_name}</td><td>{formatQuantity(l.quantity, l.uom, l.pack_weight_kg)}</td>
                 </tr>
               ))}
             </tbody>

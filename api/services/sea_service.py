@@ -57,6 +57,18 @@ ACTION_WITHDRAWAL_DELIVERED = "WITHDRAWAL_DELIVERED"
 ACTION_WITHDRAWAL_CANCELLED = "WITHDRAWAL_CANCELLED"
 
 
+UOM_KG = "KG"
+
+
+def pack_weight(uom, pack_weight_kg):
+    """Weight of one box when the material is withdrawn by box: only
+    materials whose unit is KG and that have a box weight. None = the
+    material is withdrawn unit by unit (1 = 1 PC, 1 PAR, 1 KG ...)."""
+    if pack_weight_kg and (uom or "").strip().upper() == UOM_KG:
+        return int(pack_weight_kg)
+    return None
+
+
 class SeaError(Exception):
     """Business-rule violation. ``status`` is the HTTP status to return."""
 
@@ -1099,7 +1111,7 @@ def order_stock(db, order_number, warehouse_ids=None):
     rows = db.execute(
         text(
             """
-            SELECT p.po_number, l.item_id, i.sku, i.item_name,
+            SELECT p.po_number, l.item_id, i.sku, i.item_name, i.uom, i.pack_weight_kg,
                    COALESCE(l.service_order_type, p.order_type) AS order_type,
                    inv.inventory_id, inv.bin_id, b.bin_code, inv.warehouse_id,
                    w.warehouse_code,
@@ -1129,7 +1141,8 @@ def order_stock(db, order_number, warehouse_ids=None):
             {"inventory_id": r.inventory_id, "ot": r.po_number, "item_id": r.item_id,
              "sku": r.sku, "item_name": r.item_name, "bin_id": r.bin_id,
              "bin_code": r.bin_code, "warehouse_id": r.warehouse_id,
-             "warehouse_code": r.warehouse_code, "available": int(r.available)}
+             "warehouse_code": r.warehouse_code, "available": int(r.available),
+             "uom": r.uom, "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg)}
             for r in rows if r.inventory_id is not None
         ],
     }
@@ -1158,7 +1171,7 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
                 """
                 SELECT inv.inventory_id, inv.item_id, inv.bin_id, inv.warehouse_id,
                        inv.lot_number, inv.quantity_on_hand, inv.quantity_allocated,
-                       b.bin_type, b.bin_code, i.sku
+                       b.bin_type, b.bin_code, i.sku, i.uom, i.pack_weight_kg
                 FROM inventory inv
                 JOIN bins b ON b.bin_id = inv.bin_id
                 JOIN items i ON i.item_id = inv.item_id
@@ -1189,6 +1202,13 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
     for line in lines:
         row = locked[line["inventory_id"]]
         available = row.quantity_on_hand - row.quantity_allocated
+        pack = pack_weight(row.uom, row.pack_weight_kg)
+        if pack and line["quantity"] % pack:
+            raise SeaError(
+                f"{row.sku} é retirado por caixa de {pack} KG: a quantidade ({line['quantity']} KG) "
+                f"precisa ser de caixas inteiras.",
+                status=400, inventory_id=row.inventory_id, pack_weight_kg=pack,
+            )
         if line["quantity"] > available:
             raise SeaError(
                 f"Quantidade solicitada de {row.sku} ({line['quantity']}) maior que o saldo "

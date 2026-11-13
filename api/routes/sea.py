@@ -349,7 +349,7 @@ def list_materiais():
             f"""
             SELECT i.item_id, i.sku, i.item_name, i.upc, i.mpn, i.category, i.size_class,
                    i.compat_group, i.weight_lbs, i.default_bin_id, i.is_active,
-                   i.uom AS item_uom, l.po_line_id, l.quantity_ordered, l.uom AS line_uom,
+                   i.uom AS item_uom, i.pack_weight_kg, l.po_line_id, l.quantity_ordered, l.uom AS line_uom,
                    p.po_number,
                    COALESCE(l.service_order_type, p.order_type) AS order_type,
                    COALESCE(l.service_order_number, p.service_order_number)
@@ -369,6 +369,8 @@ def list_materiais():
              "weight_lbs": float(r.weight_lbs) if r.weight_lbs is not None else None,
              "default_bin_id": r.default_bin_id, "is_active": r.is_active,
              "uom": r.line_uom or r.item_uom, "item_uom": r.item_uom,
+             # Box weight of the material (applies when its unit is KG).
+             "pack_weight_kg": r.pack_weight_kg,
              "quantity": r.quantity_ordered,
              # The PM order when the label informed it; otherwise the OT number.
              "order": r.service_order_number or r.po_number,
@@ -1005,7 +1007,7 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             text(
                 """
                 SELECT wl.withdrawal_id, wl.inventory_id, wl.quantity, i.sku, i.item_name,
-                       b.bin_code
+                       i.uom, i.pack_weight_kg, b.bin_code
                 FROM withdrawal_lines wl
                 JOIN items i ON i.item_id = wl.item_id
                 JOIN bins b ON b.bin_id = wl.bin_id
@@ -1017,7 +1019,8 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
         ).fetchall():
             lines.setdefault(ln.withdrawal_id, []).append({
                 "inventory_id": ln.inventory_id, "sku": ln.sku, "item_name": ln.item_name,
-                "bin_code": ln.bin_code, "quantity": ln.quantity,
+                "bin_code": ln.bin_code, "quantity": ln.quantity, "uom": ln.uom,
+                "pack_weight_kg": sea.pack_weight(ln.uom, ln.pack_weight_kg),
             })
     return [
         {

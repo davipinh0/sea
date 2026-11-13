@@ -41,6 +41,18 @@ export const OT_HEADER_FORM = OT_HEADER_FIELDS.filter((f) => !f.readOnly);
 // (receiving, storage, orders, SAP) is only offered while it is selected.
 export const EXPEDICAO_CODE = 'Expedição';
 
+// Quantity as the operator reads it. A material kept in KG with a box
+// weight is counted in boxes: 36 KG in boxes of 18 KG = "2 cx (36 KG)".
+export function formatQuantity(quantity, uom, packWeightKg) {
+  if (quantity == null) return '-';
+  if (packWeightKg) {
+    const boxes = quantity / packWeightKg;
+    const count = Number.isInteger(boxes) ? boxes : boxes.toFixed(1).replace('.', ',');
+    return `${count} cx (${quantity} KG)`;
+  }
+  return uom ? `${quantity} ${uom}` : String(quantity);
+}
+
 export const OT_MATERIAL_FIELDS = [
   { key: 'material_code', label: 'Código do material' },
   { key: 'description', label: 'Descrição' },

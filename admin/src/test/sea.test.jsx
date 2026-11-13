@@ -48,7 +48,7 @@ import Notificacoes from '../components/Notificacoes.jsx';
 import RecebimentoOT from '../pages/RecebimentoOT.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import PurchaseOrders from '../pages/PurchaseOrders.jsx';
-import { errorMessage } from '../utils/sea.js';
+import { errorMessage, formatQuantity } from '../utils/sea.js';
 
 const OT = { ot: 'OT-1', order_type: 'PM11', status: 'RECEIVED', warehouse_id: 7 };
 const STOCK = [
@@ -187,6 +187,57 @@ describe('Terminal de retirada', () => {
   });
 });
 
+describe('Material em KG retirado por caixa', () => {
+  const WIRE = {
+    order_number: '2000000011', order_type: 'PM11',
+    stock: [
+      { inventory_id: 21, ot: 'OT-1', sku: 'ARAME', item_name: 'Arame de soldagem', bin_code: 'A3', warehouse_id: 7, warehouse_code: 'SP12', available: 36, uom: 'KG', pack_weight_kg: 18 },
+      { inventory_id: 22, ot: 'OT-1', sku: 'LUVA', item_name: 'Luva', bin_code: 'A3', warehouse_id: 7, warehouse_code: 'SP12', available: 4, uom: 'PC', pack_weight_kg: null },
+    ],
+  };
+
+  it('formats quantities by box only when the material has a box weight', () => {
+    expect(formatQuantity(36, 'KG', 18)).toBe('2 cx (36 KG)');
+    expect(formatQuantity(150, 'KG', 15)).toBe('10 cx (150 KG)');
+    expect(formatQuantity(40, 'KG', 18)).toBe('2,2 cx (40 KG)');
+    expect(formatQuantity(7, 'KG', null)).toBe('7 KG');
+    expect(formatQuantity(3, 'PC', null)).toBe('3 PC');
+    expect(formatQuantity(3, null, null)).toBe('3');
+  });
+
+  it('1 box of 18 KG out of 36 KG requests 18 KG; 1 PC requests 1', async () => {
+    apiGet.mockImplementation(() => ok(WIRE));
+    apiPost.mockImplementation(() => ok({ withdrawal: { withdrawal_id: 4, status: 'REQUESTED', lines: [
+      { inventory_id: 21, item_name: 'Arame de soldagem', bin_code: 'A3', quantity: 18, uom: 'KG', pack_weight_kg: 18 },
+      { inventory_id: 22, item_name: 'Luva', bin_code: 'A3', quantity: 1, uom: 'PC', pack_weight_kg: null },
+    ] } }));
+    await terminalSignIn();
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
+    fireEvent.click(screen.getByText('Consultar ordem'));
+    await screen.findByText('Arame de soldagem');
+    expect(screen.getByText(/disponível: 2 cx \(36 KG\)/)).toBeInTheDocument();
+
+    const plus = screen.getByLabelText('Aumentar ARAME');
+    fireEvent.click(plus);
+    expect(screen.getByRole('group', { name: 'ARAME' }).querySelector('output').textContent).toBe('1 cx');
+    expect(screen.getByText(/Retirando 1 cx \(18 KG\); ficam 18 KG\./)).toBeInTheDocument();
+    // Only whole boxes: 36 KG holds two.
+    fireEvent.click(plus);
+    expect(plus).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Diminuir ARAME'));
+
+    fireEvent.click(screen.getByLabelText('Aumentar LUVA'));
+    fireEvent.click(screen.getByText('Solicitar retirada'));
+    await screen.findByText(/Solicitação nº 4 enviada/);
+    expect(apiPost).toHaveBeenCalledWith('/sea/retiradas', { ot: 'OT-1', lines: [
+      { inventory_id: 21, quantity: 18 },
+      { inventory_id: 22, quantity: 1 },
+    ] });
+    expect(screen.getByText(/1 cx \(18 KG\) · Arame de soldagem/)).toBeInTheDocument();
+    expect(screen.getByText(/1 PC · Luva/)).toBeInTheDocument();
+  });
+});
+
 describe('Retirada: cancelamento', () => {
   it('does not accept a blank reason', async () => {
     const open = { withdrawal_id: 5, ot: 'OT-1', order_type: 'PM11', status: 'REQUESTED', requested_by: 'retirada', lines: [] };
@@ -257,7 +308,7 @@ describe('Materiais', () => {
     render(<MemoryRouter><Items /></MemoryRouter>);
     expect(await screen.findByText('2005113840')).toBeInTheDocument();
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent.trim()).filter(Boolean);
-    expect(headers).toEqual(['Ordem', 'Tipo Ordem', 'Código', 'Descrição', 'Quantidade', 'Unidade', 'Categoria', 'Tamanho', 'Peso', 'Ativo']);
+    expect(headers).toEqual(['Ordem', 'Tipo Ordem', 'Código', 'Descrição', 'Quantidade', 'Unidade', 'Peso por caixa', 'Categoria', 'Tamanho', 'Peso', 'Ativo']);
     expect(apiGet.mock.calls[0][0]).toMatch(/^\/sea\/materiais\?.*warehouse_id=7/);
     expect(screen.getByText('54')).toBeInTheDocument();
     expect(screen.getByText('KG')).toBeInTheDocument();

@@ -107,3 +107,76 @@ class TestOrderLookup:
         _receive_all(client, auth_headers, sp12["conn"], po_id)
         first = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"][0]
         assert first["kind"] == "RECEBIMENTO" and first["warehouse_id"] == WAREHOUSE
+
+
+class TestBoxWeight:
+    """A material kept in KG with a box weight is withdrawn by whole boxes."""
+
+    def _wire(self, client, headers, sp12, ot, order, qty=36, pack=18):
+        po_id = _register(client, headers, ot, [
+            {"material_code": f"ARAME-{ot}", "description": "Arame de soldagem", "quantity": qty,
+             "uom": "KG", "service_order_number": order}])
+        (item,) = _receive_all(client, headers, sp12["conn"], po_id)
+        resp = client.put(f"/api/admin/items/{item}", headers=headers,
+                          json={"uom": "KG", "pack_weight_kg": pack})
+        assert resp.status_code == 200, resp.get_json()
+        assert _putaway(client, headers, item, sp12["c0"], qty, ot).status_code == 200
+        return item
+
+    def test_one_box_of_18_out_of_36_leaves_18(self, client, auth_headers, sp12):
+        conn = sp12["conn"]
+        self._wire(client, auth_headers, sp12, "OT-CX-1", "2000000951")
+        (row,) = client.get("/api/sea/ordens/2000000951", headers=auth_headers).get_json()["stock"]
+        assert (row["available"], row["uom"], row["pack_weight_kg"]) == (36, "KG", 18)
+
+        resp = _request(client, auth_headers, row["inventory_id"], 18, ot="OT-CX-1")
+        assert resp.status_code == 201, resp.get_json()
+        withdrawal = resp.get_json()["withdrawal"]
+        assert withdrawal["lines"][0]["quantity"] == 18
+        assert withdrawal["lines"][0]["pack_weight_kg"] == 18
+        wid = withdrawal["withdrawal_id"]
+        for action in ("separar", "pronta", "entregar"):
+            step = client.post(f"/api/sea/retiradas/{wid}/{action}", headers=auth_headers, json={})
+            assert step.status_code == 200, step.get_json()
+        assert conn.execute(
+            text("SELECT quantity_on_hand FROM inventory WHERE inventory_id = :i"),
+            {"i": row["inventory_id"]},
+        ).scalar() == 18
+        (left,) = client.get("/api/sea/ordens/2000000951", headers=auth_headers).get_json()["stock"]
+        assert left["available"] == 18
+
+    def test_part_of_a_box_is_refused(self, client, auth_headers, sp12):
+        self._wire(client, auth_headers, sp12, "OT-CX-2", "2000000952")
+        (row,) = client.get("/api/sea/ordens/2000000952", headers=auth_headers).get_json()["stock"]
+        resp = _request(client, auth_headers, row["inventory_id"], 10, ot="OT-CX-2")
+        assert resp.status_code == 400
+        body = resp.get_json()
+        assert body["user_facing"] is True and "caixa de 18 KG" in body["error"]
+        assert sp12["conn"].execute(
+            text("SELECT quantity_allocated FROM inventory WHERE inventory_id = :i"),
+            {"i": row["inventory_id"]},
+        ).scalar() == 0
+
+    def test_box_weight_only_applies_to_kg(self, client, auth_headers, sp12):
+        """PC: withdrawing 1 takes 1, whatever number sits in the box-weight field."""
+        conn = sp12["conn"]
+        po_id = _register(client, auth_headers, "OT-CX-3", [
+            {"material_code": "PECA-CX", "description": "Peça", "quantity": 5, "uom": "PC",
+             "service_order_number": "2000000953"}])
+        (item,) = _receive_all(client, auth_headers, conn, po_id)
+        conn.execute(text("UPDATE items SET pack_weight_kg = 4 WHERE item_id = :i"), {"i": item})
+        assert _putaway(client, auth_headers, item, sp12["c0"], 5, "OT-CX-3").status_code == 200
+        (row,) = client.get("/api/sea/ordens/2000000953", headers=auth_headers).get_json()["stock"]
+        assert row["uom"] == "PC" and row["pack_weight_kg"] is None
+        assert _request(client, auth_headers, row["inventory_id"], 1, ot="OT-CX-3").status_code == 201
+
+    def test_materials_list_shows_the_box_weight_and_it_must_be_positive(
+        self, client, auth_headers, sp12
+    ):
+        item = self._wire(client, auth_headers, sp12, "OT-CX-4", "2000000954", qty=150, pack=15)
+        rows = client.get(
+            f"/api/sea/materiais?warehouse_id={WAREHOUSE}&q=ARAME-OT-CX-4", headers=auth_headers
+        ).get_json()["items"]
+        assert (rows[0]["quantity"], rows[0]["uom"], rows[0]["pack_weight_kg"]) == (150, "KG", 15)
+        bad = client.put(f"/api/admin/items/{item}", headers=auth_headers, json={"pack_weight_kg": 0})
+        assert bad.status_code == 400

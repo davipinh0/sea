@@ -207,14 +207,15 @@ def create_item(validated):
 
     result = g.db.execute(
         text("""
-            INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, uom, external_id)
-            VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :uom, :ext_id)
+            INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, uom, pack_weight_kg, external_id)
+            VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :uom, :pack, :ext_id)
             RETURNING item_id, sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, is_active, created_at, size_class, compat_group
         """),
         {
             "sku": data["sku"], "name": data["item_name"], "desc": data.get("description"),
             "upc": data.get("upc"), "mpn": data.get("mpn"), "cat": data.get("category"), "size": data.get("size_class"), "compat": data.get("compat_group"),
             "uom": (data.get("uom") or "").strip().upper() or None,
+            "pack": data.get("pack_weight_kg"),
             "weight": float(data["weight_lbs"]) if data.get("weight_lbs") is not None else None,
             "bin": data.get("default_bin_id"),
             "ext_id": str(uuid.uuid4()),
@@ -244,7 +245,7 @@ def update_item(item_id, validated):
     if not existing:
         return jsonify({"error": "Material não encontrado"}), 404
 
-    ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active", "size_class", "compat_group", "uom"}
+    ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active", "size_class", "compat_group", "uom", "pack_weight_kg"}
     fields, params = [], {"iid": item_id}
     for col in ALLOWED_FIELDS:
         if col in data:

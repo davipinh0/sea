@@ -1,7 +1,7 @@
 -- ============================================================
 -- 082_sea.sql - SEA (Sistema de Expedição e Armazenamento)
 -- ============================================================
--- Adapts the Sentry WMS schema for the SEA prototype:
+-- Adapts the SEA schema for the SEA prototype:
 --   * Ordem de Transferência (OT) = purchase_orders row with an
 --     order_type of PM11 or PM12. Received stock carries the OT number
 --     as inventory.lot_number, which links every unit back to its OT.

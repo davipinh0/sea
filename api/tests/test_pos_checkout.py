@@ -287,7 +287,7 @@ class TestHappyPath:
         assert row[13] == Decimal("0.00")   # customer_shipping_paid
 
     def test_phone_order_persists_customer_shipping_paid(self, client, pos_token):
-        # A phone order carries a rep-entered shipping charge; Sentry stores it
+        # A phone order carries a rep-entered shipping charge; SEA stores it
         # (cents->dollars) on customer_shipping_paid and the full total on
         # order_total, and archives the cents in the audit details.
         body = _card_body()
@@ -451,7 +451,7 @@ class TestBodyValidation:
     def test_card_pan_field_rejected_at_pydantic(self, client, pos_token):
         """PCI-scope guard: a tender carrying card_pan or any field
         outside the {brand, last4, auth_code, external_ref} allowlist
-        fails extra='forbid' at the schema boundary so Sentry never
+        fails extra='forbid' at the schema boundary so SEA never
         sees PAN-shaped data on the wire."""
         body = _card_body()
         body["payment_summary"]["tenders"][0]["card_pan"] = "4111111111111111"

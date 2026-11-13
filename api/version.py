@@ -1,3 +1,3 @@
-"""Sentry WMS version."""
+"""SEA version."""
 
 __version__ = "1.30.0"

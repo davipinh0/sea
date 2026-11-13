@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sentry-wms.example/events/pack.confirmed/1.json",
   "title": "pack.confirmed v1",
-  "description": "A sales order has been packed. Emitted by api/routes/packing.py::complete_packing. Aggregate: sales_order. Sentry ships single-package today; packages[] carries a synthesized entry keyed {sales_order_external_id}-pkg-1. Multi-package support is v1.5.x+.",
+  "description": "A sales order has been packed. Emitted by api/routes/packing.py::complete_packing. Aggregate: sales_order. SEA ships single-package today; packages[] carries a synthesized entry keyed {sales_order_external_id}-pkg-1. Multi-package support is v1.5.x+.",
   "type": "object",
   "required": [
     "sales_order_external_id",
@@ -25,7 +25,7 @@
           "weight_lb": { "type": ["number", "null"] },
           "dimensions_in": {
             "type": ["object", "null"],
-            "description": "Not tracked in Sentry today; always null. See plan section 1.7.1 pack.confirmed notes."
+            "description": "Not tracked in SEA today; always null. See plan section 1.7.1 pack.confirmed notes."
           },
           "lines": {
             "type": "array",

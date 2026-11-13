@@ -2,7 +2,7 @@
 -- Migration 038: cross_system_mappings + audit (v1.7.0)
 -- ============================================================
 -- Bidirectional mapping between external entities (source_system,
--- source_type, source_id) and Sentry canonical entities
+-- source_type, source_id) and SEA canonical entities
 -- (canonical_type, canonical_id). One row per (external entity ->
 -- canonical entity) edge. Each external ID maps to exactly one
 -- canonical entity (UNIQUE on the source side); a single canonical

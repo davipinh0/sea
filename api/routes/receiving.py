@@ -339,7 +339,7 @@ def receive_items(validated):
 
         # 6. v1.5.0 #112: emit receipt.completed on the integration_events
         # outbox. One event per item_receipts row; lines[] is a
-        # single-element array in v1.5.0 (Sentry does not batch items
+        # single-element array in v1.5.0 (SEA does not batch items
         # into one receipt). Visible_at is set at COMMIT by the deferred
         # trigger so readers see events in commit order.
         emit_event(
@@ -353,7 +353,7 @@ def receive_items(validated):
             source_txn_id=g.source_txn_id,
             payload={
                 # receipt_external_id stays canonical (no upstream system
-                # creates receipts; they originate inside Sentry).
+                # creates receipts; they originate inside SEA).
                 "receipt_external_id": str(receipt_external_id),
                 # po_external_id resolves to the source-system PO identifier
                 # (e.g. our PO number) when one was Pipe-B'd in. Resolved

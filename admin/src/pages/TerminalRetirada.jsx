@@ -10,7 +10,7 @@ import { readError } from '../utils/sea.js';
 //      ends the session after each withdrawal.
 //      The terminal session is its own (terminalApi.js): it does not
 //      replace or end a panel session open in the same browser.
-//   1. reads the OT barcode of the order
+//   1. types the number of the order (PM11 / PM12)
 //   2. picks the materials/quantities available in storage
 //   3. waits while the stock keeper separates the request
 //   4. confirms receipt -> stock is decremented by the API
@@ -42,7 +42,7 @@ export default function TerminalRetirada() {
   const [password, setPassword] = useState('');
   const [step, setStep] = useState('login');
   const [code, setCode] = useState('');
-  const [ot, setOt] = useState(null);
+  const [order, setOrder] = useState(null);
   const [stock, setStock] = useState([]);
   const [qty, setQty] = useState({});
   const [withdrawal, setWithdrawal] = useState(null);
@@ -50,7 +50,7 @@ export default function TerminalRetirada() {
   const [busy, setBusy] = useState(false);
 
   const clearRequest = useCallback(() => {
-    setCode(''); setOt(null); setStock([]); setQty({}); setWithdrawal(null); setError(''); setBusy(false);
+    setCode(''); setOrder(null); setStock([]); setQty({}); setWithdrawal(null); setError(''); setBusy(false);
   }, []);
 
   // End the session: the next employee always starts at the login.
@@ -93,30 +93,35 @@ export default function TerminalRetirada() {
     return true;
   }
 
-  // 1 -> 2: look up the OT and its available stock in storage addresses.
+  // 1 -> 2: look up the order and its available stock in storage addresses.
   async function lookup(e) {
     e.preventDefault();
     const clean = code.trim();
     if (!clean) return;
     setBusy(true); setError('');
-    const res = await api.get(`/sea/ots/${encodeURIComponent(clean)}`);
+    const res = await api.get(`/sea/ordens/${encodeURIComponent(clean)}`);
     setBusy(false);
     if (expired(res)) return;
-    if (!res.ok) { setError(res.status === 404 ? `Ordem não encontrada para a OT ${clean}.` : await readError(res, 'Não foi possível consultar a ordem.')); return; }
+    if (!res.ok) { setError(res.status === 404 ? `Ordem ${clean} não encontrada.` : await readError(res, 'Não foi possível consultar a ordem.')); return; }
     const data = await res.json();
-    const available = data.stock.filter((s) => s.stored && s.available > 0);
-    setOt(data.ot);
-    setStock(available);
-    setQty(Object.fromEntries(available.map((s) => [s.inventory_id, 0])));
+    setOrder(data);
+    setStock(data.stock);
+    setQty(Object.fromEntries(data.stock.map((s) => [s.inventory_id, 0])));
     setStep('materials');
   }
 
   // 2 -> 3: request the withdrawal (stock is reserved by the API).
   async function request() {
-    const lines = stock.filter((s) => qty[s.inventory_id] > 0).map((s) => ({ inventory_id: s.inventory_id, quantity: qty[s.inventory_id] }));
-    if (lines.length === 0) { setError('Escolha a quantidade de pelo menos um material.'); return; }
+    const chosen = stock.filter((s) => qty[s.inventory_id] > 0);
+    if (chosen.length === 0) { setError('Escolha a quantidade de pelo menos um material.'); return; }
+    // One request covers one delivery in one location (who separates it).
+    if (new Set(chosen.map((s) => `${s.ot}|${s.warehouse_id}`)).size > 1) {
+      setError('Os materiais escolhidos estão em locais ou entregas diferentes. Solicite um grupo de cada vez.');
+      return;
+    }
+    const lines = chosen.map((s) => ({ inventory_id: s.inventory_id, quantity: qty[s.inventory_id] }));
     setBusy(true); setError('');
-    const res = await api.post('/sea/retiradas', { ot: ot.ot, lines });
+    const res = await api.post('/sea/retiradas', { ot: chosen[0].ot, lines });
     setBusy(false);
     if (expired(res)) return;
     if (!res.ok) { setError(await readError(res, 'Não foi possível solicitar a retirada.')); return; }
@@ -216,10 +221,10 @@ export default function TerminalRetirada() {
         {step === 'ot' && (
           <form onSubmit={lookup}>
             <div className="terminal-step">Passo 1 de 4</div>
-            <div className="terminal-title">Informe a ordem (código de barras da OT)</div>
+            <div className="terminal-title">Informe a ordem</div>
             <input
-              autoFocus className="terminal-input" aria-label="Código de barras da OT"
-              placeholder="Leia o código de barras da OT ou digite o número"
+              autoFocus className="terminal-input" aria-label="Ordem"
+              placeholder="Digite o número da ordem"
               value={code} onChange={(e) => setCode(e.target.value)}
             />
             <div className="terminal-actions">
@@ -228,11 +233,11 @@ export default function TerminalRetirada() {
           </form>
         )}
 
-        {step === 'materials' && ot && (
+        {step === 'materials' && order && (
           <div>
             <div className="terminal-step">Passo 2 de 4</div>
             <div className="terminal-title">
-              Ordem <OtTypeTag type={ot.order_type} /> {ot.service_order_number || ot.ot} · materiais disponíveis
+              Ordem <OtTypeTag type={order.order_type} /> {order.order_number} · materiais disponíveis
             </div>
             {stock.length === 0 ? (
               <div className="terminal-card">Nenhum material desta ordem está disponível no estoque no momento.</div>

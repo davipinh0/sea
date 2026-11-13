@@ -168,7 +168,7 @@ class TestReceiptCompletedEmission:
     def test_multi_item_receive_emits_one_event_per_receipt_row(
         self, client, auth_headers, seed_data
     ):
-        """Sentry creates one item_receipts row per item in the call, so
+        """SEA creates one item_receipts row per item in the call, so
         the emit site fires one receipt.completed per row. Confirmed by
         counting events after a 3-item receive."""
         request_id = str(uuid.uuid4())
@@ -619,13 +619,13 @@ class TestPackConfirmedEmission:
         assert uuid.UUID(payload["sales_order_external_id"])
         assert uuid.UUID(payload["completed_by_user_external_id"])
 
-        # Sentry ships single-package today; packages[] is array of one.
+        # SEA ships single-package today; packages[] is array of one.
         assert isinstance(payload["packages"], list)
         assert len(payload["packages"]) == 1
         pkg = payload["packages"][0]
         # Synthetic package_external_id keyed to the SO external id.
         assert pkg["package_external_id"] == f"{payload['sales_order_external_id']}-pkg-1"
-        # dimensions_in is null: Sentry does not track package dimensions.
+        # dimensions_in is null: SEA does not track package dimensions.
         assert pkg["dimensions_in"] is None
         assert isinstance(pkg["weight_lb"], (int, float))
 
@@ -678,11 +678,11 @@ class TestShipConfirmedEmission:
         assert row["aggregate_id"] == so_id
         payload = row["payload"]
         assert uuid.UUID(payload["sales_order_external_id"])
-        # tracking_numbers[] is array-shaped even though Sentry emits
+        # tracking_numbers[] is array-shaped even though SEA emits
         # exactly one fulfillment per SO today.
         assert payload["tracking_numbers"] == ["1Z999AA10123456784"]
         assert payload["carrier"] == "UPS"
-        # service_level on the wire = Sentry's ship_method column
+        # service_level on the wire = SEA's ship_method column
         # (documented rename in the JSON Schema).
         assert payload["service_level"] == "GROUND"
         assert uuid.UUID(payload["completed_by_user_external_id"])
@@ -742,7 +742,7 @@ class TestInventoryTransferCompletedEmission:
         assert payload["from_warehouse_id"] == seed_data["warehouse_id"]
         assert payload["to_warehouse_id"] == seed_data["warehouse_id"]
 
-        # lines[] must be array-shaped even though Sentry is single-line.
+        # lines[] must be array-shaped even though SEA is single-line.
         assert isinstance(payload["lines"], list)
         assert len(payload["lines"]) == 1
         line = payload["lines"][0]

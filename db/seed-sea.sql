@@ -136,7 +136,7 @@ WHERE username = 'admin';
 -- ============================================================
 -- Requer db/migrations/084_sea_notificacoes.sql (users.email).
 
--- O armazém padrão do Sentry (WH-01 / My Warehouse) passa a ser a
+-- O armazém padrão do SEA (WH-01 / My Warehouse) passa a ser a
 -- Expedição, com um único endereço.
 UPDATE warehouses SET warehouse_code = 'Expedição', warehouse_name = 'Área da Expedição'
 WHERE warehouse_code = 'WH-01';
@@ -150,7 +150,7 @@ UPDATE zones SET zone_name = 'Área da Expedição'
 WHERE zone_code = 'RCV' AND zone_name = 'Receiving'
   AND warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'Expedição');
 
--- Os outros endereços de exemplo do Sentry saem da Expedição: são
+-- Os outros endereços de exemplo do SEA saem da Expedição: são
 -- excluídos quando nunca foram usados; se já têm histórico, ficam
 -- inativos (o histórico não é apagado).
 DO $$

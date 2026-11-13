@@ -219,7 +219,7 @@ class TestSp12Rules:
         assert resp.get_json()["bin_code"] == "T-C0"
 
     def test_non_ot_putaway_is_unaffected(self, client, auth_headers, sp12):
-        # Plain stock (no OT lot) ignores SP12 rules, as in Sentry.
+        # Plain stock (no OT lot) ignores SP12 rules, as in SEA.
         conn = sp12["conn"]
         conn.execute(
             text(

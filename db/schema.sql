@@ -225,7 +225,7 @@ CREATE TABLE sales_orders (
     shipping_address_country     VARCHAR(64),
     shipping_address_phone       VARCHAR(64),
     -- v1.8.0 (#282): values from the source ERP. Currency implied per
-    -- Sentry instance (no per-order currency in v1.8). Wire-level
+    -- SEA instance (no per-order currency in v1.8). Wire-level
     -- range / precision validation lives in the Pydantic inbound
     -- schema; the column itself is permissive.
     order_total            NUMERIC(12,2),
@@ -2207,7 +2207,7 @@ ON CONFLICT (only_row) DO NOTHING;
 -- ============================================================
 -- 082_sea.sql - SEA (Sistema de Expedição e Armazenamento)
 -- ============================================================
--- Adapts the Sentry WMS schema for the SEA prototype:
+-- Adapts the SEA schema for the SEA prototype:
 --   * Ordem de Transferência (OT) = purchase_orders row with an
 --     order_type of PM11 or PM12. Received stock carries the OT number
 --     as inventory.lot_number, which links every unit back to its OT.
@@ -2291,7 +2291,7 @@ CREATE INDEX IF NOT EXISTS ix_withdrawal_lines_withdrawal ON withdrawal_lines(wi
 -- Stores the data printed on the label that travels with each material
 -- (OT, reserva, material, lote, solicitante, recebedor, ordem de serviço).
 --
--- Mapping onto the existing Sentry tables (no parallel model):
+-- Mapping onto the existing SEA tables (no parallel model):
 --   * Recebimento / OT  = purchase_orders
 --       codigo_ot            -> po_number          (existing)
 --       codigo_barras        -> po_barcode         (existing)

@@ -1,5 +1,5 @@
 """
-Status constants used across the Sentry WMS API.
+Status constants used across the SEA API.
 """
 
 import os

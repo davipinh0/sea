@@ -1015,7 +1015,7 @@ def review_adjustments(validated):
                 # Resolve item canonical UUID to source-system external_id
                 # (the SKU upstream pusher used at Pipe B time). Adjustment +
                 # bin + cycle_count entities stay canonical -- they originate
-                # inside Sentry, no upstream identity.
+                # inside SEA, no upstream identity.
                 item_source_external_id = (
                     resolve_source_external_id(g.db, "item", item_ext.external_id)
                     or str(item_ext.external_id)

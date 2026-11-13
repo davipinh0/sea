@@ -362,7 +362,7 @@ class TestHappyPath:
         """When a line was short-picked, qty (tote count) is less than
         qty_ordered (original order). Both fields appear in the payload
         so dockd can render `Verify N of M ordered` without the
-        operator cross-referencing Sentry's admin UI."""
+        operator cross-referencing SEA's admin UI."""
         item_id = _insert_item()
         so_id, so_number = _insert_so(status="PICKED")
         _insert_so_line(

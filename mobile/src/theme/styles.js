@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 
 export const colors = {
-  // Brand (SEA: orange + graphite). Key names kept from Sentry so every
+  // Brand (SEA: orange + graphite). Key names kept from SEA so every
   // screen picks up the new palette without further changes.
   accentRed: '#C2410C',
   copper: '#F26522',

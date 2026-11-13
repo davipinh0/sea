@@ -1,5 +1,5 @@
 # =====================================================================
-# Sentry WMS v1.7.0 inbound mapping document -- annotated template
+# SEA v1.7.0 inbound mapping document -- annotated template
 # =====================================================================
 #
 # This is a starting-point template for operators writing their first
@@ -48,7 +48,7 @@
 mapping_version: "1.0"
 # `mapping_version` is a free-form label so the operator can track
 # revisions of THIS document. It rolls forward independently of
-# Sentry's own canonical model version (which is pinned in the
+# SEA's own canonical model version (which is pinned in the
 # X-Sentry-Canonical-Model response header).
 
 source_system: "your-source-system"
@@ -374,7 +374,7 @@ resources:
         # order_source (the web/pos enum): order_origin records where
         # the order came from in the upstream's own vocabulary. No
         # allowlist / enum, so any value the connector hands us lands
-        # without a Sentry-side change; the 64-char column cap is the
+        # without a SEA-side change; the 64-char column cap is the
         # only bound. Map it to whatever channel / origin field your
         # source emits, or omit it to leave the column NULL.
         source_path: "$.order_origin"
@@ -405,7 +405,7 @@ resources:
 
     # ----- v1.8.0 (#289) line_items write-through -----
     # Each line below the source_path resolves into a row in
-    # sales_order_lines. Items must already exist in Sentry +
+    # sales_order_lines. Items must already exist in SEA +
     # cross_system_mappings (via prior /api/v1/inbound/items POSTs OR
     # admin UI item create) so the cross_system_lookup on `item_id`
     # resolves the source SKU to the canonical UUID. Required canonical
@@ -617,7 +617,7 @@ resources:
 
     # ----- v1.8.0 (#289) line_items write-through -----
     # Each line below the source_path resolves into a row in
-    # purchase_order_lines. Items must already exist in Sentry +
+    # purchase_order_lines. Items must already exist in SEA +
     # cross_system_mappings (via prior /api/v1/inbound/items POSTs OR
     # admin UI item create) so the cross_system_lookup on `item_id`
     # resolves the source SKU to the canonical UUID. Required canonical
@@ -682,7 +682,7 @@ resources:
 #
 # 6. `line_items` write through to the relational *_lines tables
 #    for purchase_orders + sales_orders (v1.8.0 #289). Items must be
-#    pre-loaded into Sentry first (via inbound POST or admin UI) so
+#    pre-loaded into SEA first (via inbound POST or admin UI) so
 #    the line's `cross_system_lookup` on item_id resolves. Required
 #    canonical fields per line: `item_id` (UUID via cross_system_lookup)
 #    and `quantity_ordered` (integer). `line_number` is auto-assigned
@@ -694,7 +694,7 @@ resources:
 #    `lines_in_flight` so the warehouse-floor state is preserved.
 #    items / customers / vendors resources do not have line_items
 #    wiring (no relational *_lines table). item_fulfillment_lines
-#    sync stays Sentry-internal (the ship action creates them).
+#    sync stays SEA-internal (the ship action creates them).
 #
 # 7. Optional advanced mapping-loader features not shown above:
 #

@@ -23,7 +23,7 @@
     "applied_by_user_external_id": {
       "type": ["string", "null"],
       "format": "uuid",
-      "description": "Actor who effectuated the change. Null on the Pipe B inbound inventory-sync path, which is system-driven and carries no Sentry user identity. At admin review_adjustments this is the approver; at direct_adjustment / cycle-count approval / CSV import it is the caller."
+      "description": "Actor who effectuated the change. Null on the Pipe B inbound inventory-sync path, which is system-driven and carries no SEA user identity. At admin review_adjustments this is the approver; at direct_adjustment / cycle-count approval / CSV import it is the caller."
     },
     "applied_at": { "type": "string", "format": "date-time" }
   }

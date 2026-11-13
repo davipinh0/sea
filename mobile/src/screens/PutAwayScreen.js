@@ -140,7 +140,7 @@ export default function PutAwayScreen({ navigation }) {
     // SEA: stock received from an OT carries the OT number as lot; ask the
     // SP12 rules engine for the address (size class, capacity,
     // compatibility). Other stock keeps the preferred-bin
-    // suggestion from Sentry.
+    // suggestion from SEA.
     if (entry.lot_number) {
       try {
         const params = `item_id=${entry.item_id}&bin_id=${entry.from_bin_id}&lot=${encodeURIComponent(entry.lot_number)}`;

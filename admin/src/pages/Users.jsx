@@ -8,7 +8,7 @@ import Modal from '../components/Modal.jsx';
 const ROLES = ['ADMIN', 'USER'];
 
 // Mobile app modules used by SEA (Expedição area): receiving and
-// put-away. The other Sentry handheld modules are not part of SEA.
+// put-away. The other SEA handheld modules are not part of SEA.
 const ALL_FUNCTIONS = [
   { key: 'receive', label: 'Receber' },
   { key: 'putaway', label: 'Armazenagem' },

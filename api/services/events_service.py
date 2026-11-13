@@ -130,14 +130,14 @@ def resolve_source_external_id(
     canonical_id,
     source_system: Optional[str] = None,
 ) -> Optional[str]:
-    """Resolve a Sentry canonical UUID back to its source-system external_id.
+    """Resolve a SEA canonical UUID back to its source-system external_id.
 
     Looks up the cross_system_mappings table for the (source_type, canonical_id)
     pair and returns the source_id -- the identifier the upstream source system
-    (e.g., "erp-connector") used when it Pipe-B pushed the entity to Sentry.
+    (e.g., "erp-connector") used when it Pipe-B pushed the entity to SEA.
 
     Returns None when:
-      * No mapping row exists (entity created directly in Sentry without a
+      * No mapping row exists (entity created directly in SEA without a
         Pipe-B push, e.g., warehouse-floor manual entry).
       * canonical_id is None / empty.
 
@@ -148,7 +148,7 @@ def resolve_source_external_id(
         payload["sales_order_external_id"] = source_id or str(so.external_id)
 
     The canonical UUID stays available on `aggregate_id` (which is what
-    Sentry consumers should use for cross-system idempotency anyway), so the
+    SEA consumers should use for cross-system idempotency anyway), so the
     fallback never strands the consumer with no identifier at all.
 
     source_system filter:
@@ -158,14 +158,14 @@ def resolve_source_external_id(
       Multi-source deployments should pass source_system explicitly to
       pick the right upstream identifier.
 
-    NOTE on field naming: pre-this-change the Sentry event payload's
-    *_external_id fields carried the canonical UUID ("the external id Sentry
+    NOTE on field naming: pre-this-change the SEA event payload's
+    *_external_id fields carried the canonical UUID ("the external id SEA
     exposes externally"), forcing every consumer to do this same lookup
-    against Sentry's API on every event. After this change those fields
+    against SEA's API on every event. After this change those fields
     carry the source-system external_id ("the external id from the system
     that owns the data"), which matches the field-name convention used by
     every other event-integration system the maintainer knows of, and
-    lets consumers process events without an out-of-band Sentry call.
+    lets consumers process events without an out-of-band SEA call.
     """
     if canonical_id is None or canonical_id == "":
         return None

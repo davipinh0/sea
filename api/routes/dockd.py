@@ -144,7 +144,7 @@ def get_order(so_number):
     # quantity. They diverge only when a line was short-picked or
     # partial-fulfilled (the BO child carries the residual). Surfacing
     # both lets dockd render "Verify N of M ordered" without the
-    # operator cross-referencing Sentry's admin UI to spot a short.
+    # operator cross-referencing SEA's admin UI to spot a short.
     items = g.db.execute(
         text(
             """
@@ -473,7 +473,7 @@ def ship_order(so_number):
     if operator_external_id is None:
         return _err(
             "unknown_operator",
-            "operator_username does not resolve to a Sentry users row",
+            "operator_username does not resolve to a SEA users row",
             422,
             {"field": "operator_username"},
         )
@@ -779,7 +779,7 @@ def void_ship(so_number):
     if operator_external_id is None:
         return _err(
             "unknown_operator",
-            "operator_username does not resolve to a Sentry users row",
+            "operator_username does not resolve to a SEA users row",
             422,
             {"field": "operator_username"},
         )
@@ -879,7 +879,7 @@ def void_ship(so_number):
             {"current_status": so.status},
         )
 
-    # Pick the SHIPPED fulfillment to void. Sentry creates one fulfillment
+    # Pick the SHIPPED fulfillment to void. SEA creates one fulfillment
     # per SO today; if a future split-shipment lands, this query keeps the
     # latest-by-shipped_at semantic.
     ff = g.db.execute(

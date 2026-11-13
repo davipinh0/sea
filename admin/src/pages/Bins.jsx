@@ -9,7 +9,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 
 const BIN_TYPES = ['Staging', 'PickableStaging', 'Pickable'];
-// The stored values are the Sentry ones; the operator sees these names.
+// The stored values are the SEA ones; the operator sees these names.
 const BIN_TYPE_LABELS = {
   Staging: 'Recebimento',
   PickableStaging: 'Recebimento (permite retirada)',
@@ -46,7 +46,7 @@ export default function Bins() {
     }
   }
 
-  // Walks all pages and downloads the full result set as CSV. Sentry's
+  // Walks all pages and downloads the full result set as CSV. SEA's
   // admin/bins endpoint caps page_size at 50 regardless of `per_page`,
   // so we paginate server-side and concat client-side. CSV mirrors the
   // BinImportRow schema (bin_code, bin_barcode, zone, warehouse_id,

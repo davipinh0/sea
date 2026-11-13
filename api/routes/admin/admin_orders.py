@@ -279,14 +279,14 @@ PO_EDIT_BLOCKED_STATUSES = {PO_CLOSED, PO_ARCHIVED}
 def _emit_po_edit(db, *, po_id, po_external_id, po_number, warehouse_id,
                   status, changes, username):
     """Emit purchaseorderedit.completed carrying the per-field diff so the
-    ERP can reverse-sync a PO edit made in Sentry -- the outbound half of
+    ERP can reverse-sync a PO edit made in SEA -- the outbound half of
     the both-ways PO-edit flow. Mirrors salesorderedit.completed.
 
     No-op when ``changes`` is empty: the event schema requires at least
     one change, and a re-PATCH that lands the same values is not an edit
     worth shipping. purchase_order_external_id carries the source-system
     id when one exists (cross_system_mappings), falling back to the
-    Sentry canonical UUID so the consumer always has a key to act on.
+    SEA canonical UUID so the consumer always has a key to act on.
     """
     if not changes:
         return

@@ -106,14 +106,14 @@ _GET_ORDER_ITEM_SCHEMA: Dict[str, Any] = {
             "description": (
                 "Units physically in the tote awaiting scan-verify. "
                 "Equals sales_order_lines.quantity_picked on the "
-                "Sentry side. Use this as the verify-target on dockd."
+                "SEA side. Use this as the verify-target on dockd."
             ),
         },
         "qty_ordered": {
             "type": "integer",
             "description": (
                 "Units the customer originally ordered. Equals "
-                "sales_order_lines.quantity_ordered on the Sentry "
+                "sales_order_lines.quantity_ordered on the SEA "
                 "side. qty < qty_ordered means the line was short-"
                 "picked or partial-fulfilled; the difference will "
                 "not ship on this SO (a backorder child SO carries "

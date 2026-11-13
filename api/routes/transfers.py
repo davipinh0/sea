@@ -128,13 +128,13 @@ def move(validated):
     )
 
     # 5. v1.5.0 #115: emit inventorytransfer.completed on the integration_events
-    # outbox. lines[] is array-shaped even though Sentry is single-line
+    # outbox. lines[] is array-shaped even though SEA is single-line
     # per transfer today, so a future multi-line expansion does not
     # break consumer parsers. Decision K: putaway.confirm does NOT
     # emit, only transfers.move does.
     # Resolve item canonical UUID to source-system external_id (the SKU
     # the upstream pusher used at Pipe B time). transfer_external_id stays
-    # canonical: transfers originate inside Sentry -- there's no upstream
+    # canonical: transfers originate inside SEA -- there's no upstream
     # source identity to resolve.
     item_source_external_id = (
         resolve_source_external_id(g.db, "item", item.external_id)

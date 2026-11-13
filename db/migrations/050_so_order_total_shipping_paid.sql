@@ -6,7 +6,7 @@
 --
 --   order_total            -- total order value as reported by the
 --                             source ERP. Currency is implied per
---                             Sentry instance (no per-order currency
+--                             SEA instance (no per-order currency
 --                             in v1.8).
 --   customer_shipping_paid -- shipping amount the customer paid at
 --                             checkout. Consumed by dockd's carrier

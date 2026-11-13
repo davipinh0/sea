@@ -1,5 +1,5 @@
 """
-Sentry WMS - Flask API Entry Point
+SEA - Flask API Entry Point
 """
 
 import logging
@@ -102,14 +102,14 @@ def create_app():
     if proxy_fix_active:
         # One proxy hop is the standard nginx / Caddy / Traefik / ALB
         # shape. Deployments that terminate TLS at multiple proxies in
-        # front of Sentry (e.g. CDN -> nginx -> Sentry) increase the
+        # front of SEA (e.g. CDN -> nginx -> SEA) increase the
         # x_for / x_proto / x_host counts accordingly.
         #
         # v1.5.1 V-219 (umbrella #156): x_prefix=0 is the intentional
         # value and takes precedence over the audit plan's
         # x_prefix=1. Honouring X-Forwarded-Prefix makes sense only
         # for sub-path deploys like `/app` behind a single origin
-        # serving many apps, which Sentry does not support today.
+        # serving many apps, which SEA does not support today.
         # Turning x_prefix on without that shape gives a remote
         # caller (via a trusted proxy) the ability to steer
         # request.script_root without a functional benefit. The
@@ -402,7 +402,7 @@ def create_app():
         # mint a fresh one.
         #
         # v1.5.1 V-211 (#155) -- contract: source_txn_id is a
-        # Sentry-internal idempotency key exposed on the wire for
+        # SEA-internal idempotency key exposed on the wire for
         # tracing, NOT a safe consumer dedupe key. Authenticated
         # callers can set it to an arbitrary UUID via X-Request-ID;
         # consumers MUST dedupe on event_id (server-side BIGSERIAL)

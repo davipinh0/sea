@@ -1,4 +1,4 @@
-"""SEA business rules on top of the Sentry WMS core.
+"""SEA business rules on top of the SEA core.
 
 Two concerns live here, both scoped to SEA Ordens de Transferência (OT):
 a purchase_orders row with order_type PM11/PM12 whose received stock
@@ -149,7 +149,7 @@ def ot_stock(db, ot):
 # ------------------------------------------- Label receiving (etiqueta)
 #
 # The label that travels with a material is registered onto the existing
-# Sentry tables: the OT is a purchase_orders row, each material of the OT
+# SEA tables: the OT is a purchase_orders row, each material of the OT
 # is a purchase_order_lines row pointing at the material master (items).
 # The same function serves data typed by the operator, read from a label
 # and, later, returned by services.ot_source.
@@ -581,7 +581,7 @@ def remove_ot_material(db, po_id, po_line_id, username, scope=("", None)):
 ACTION_OT_DELETED = "OT_DELETED"
 ACTION_MATERIAL_DELETED = "MATERIAL_DELETED"
 
-# Sentry tables the SEA does not use. A material referenced there is
+# SEA tables the SEA does not use. A material referenced there is
 # left alone instead of having unrelated records removed.
 _FOREIGN_ITEM_TABLES = (
     "sales_order_lines", "pick_tasks", "item_fulfillment_lines", "transfer_order_lines",
@@ -913,7 +913,7 @@ _LOCK_NS_BIN = 8202
 def check_putaway(db, *, item_id, to_bin_id, quantity, lot_number):
     """Raise SeaError when a put-away of an OT lot breaks a storage rule.
 
-    No-op for stock that is not an SEA OT lot, so plain Sentry put-aways
+    No-op for stock that is not an SEA OT lot, so plain SEA put-aways
     keep their original behaviour.
     """
     if ot_for_lot(db, lot_number) is None:
@@ -1083,6 +1083,56 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
                  f"{places}."),
         ot=ot.po_number, username=username,
     )
+
+
+def order_stock(db, order_number, warehouse_ids=None):
+    """Materials of a PM order that can be withdrawn now: what is stored
+    (not in a receiving area) with unreserved quantity, in the locations
+    the user may use (``warehouse_ids``; None = all).
+
+    The order of a material is the one registered on it; an OT registered
+    without an order number answers by its own number. Returns None when
+    no material belongs to ``order_number``; otherwise
+    {"order_number", "order_type", "stock": [...]} where each stock row
+    carries the OT (``ot``) it was received with.
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT p.po_number, l.item_id, i.sku, i.item_name,
+                   COALESCE(l.service_order_type, p.order_type) AS order_type,
+                   inv.inventory_id, inv.bin_id, b.bin_code, inv.warehouse_id,
+                   w.warehouse_code,
+                   GREATEST(0, inv.quantity_on_hand - inv.quantity_allocated) AS available
+            FROM purchase_order_lines l
+            JOIN purchase_orders p ON p.po_id = l.po_id AND p.order_type IS NOT NULL
+            JOIN items i ON i.item_id = l.item_id
+            LEFT JOIN (inventory inv
+                       JOIN bins b ON b.bin_id = inv.bin_id AND b.bin_type NOT IN :staging
+                       JOIN warehouses w ON w.warehouse_id = inv.warehouse_id)
+              ON inv.item_id = l.item_id AND inv.lot_number = p.po_number
+             AND inv.quantity_on_hand > inv.quantity_allocated
+             AND (CAST(:wids AS INT[]) IS NULL OR inv.warehouse_id = ANY(:wids))
+            WHERE COALESCE(l.service_order_number, p.service_order_number, p.po_number) = :n
+            ORDER BY w.warehouse_code, b.bin_code, i.sku
+            """
+        ).bindparams(_staging_param()),
+        {"n": order_number, "staging": list(STAGING_TYPES),
+         "wids": list(warehouse_ids) if warehouse_ids is not None else None},
+    ).fetchall()
+    if not rows:
+        return None
+    return {
+        "order_number": order_number,
+        "order_type": rows[0].order_type,
+        "stock": [
+            {"inventory_id": r.inventory_id, "ot": r.po_number, "item_id": r.item_id,
+             "sku": r.sku, "item_name": r.item_name, "bin_id": r.bin_id,
+             "bin_code": r.bin_code, "warehouse_id": r.warehouse_id,
+             "warehouse_code": r.warehouse_code, "available": int(r.available)}
+            for r in rows if r.inventory_id is not None
+        ],
+    }
 
 
 def create_withdrawal(db, *, ot, lines, username, note=None):

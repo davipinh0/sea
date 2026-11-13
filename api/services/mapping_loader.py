@@ -2,7 +2,7 @@
 
 Pydantic-strict (extra="forbid") schema for the per-source_system mapping
 documents that translate `source_payload` (consumer-shaped) into
-`canonical_payload` (Sentry's draft canonical model). Documents live at
+`canonical_payload` (SEA's draft canonical model). Documents live at
 db/mappings/<source_system>.yaml and are loaded once at process boot.
 
 Locks for v1.7 (see plan §3):

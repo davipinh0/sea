@@ -198,7 +198,7 @@ class TestInboundInventorySetRetainsZeroRow:
         # Pin schema validation off for this request: test_events_service
         # leaks SENTRY_VALIDATE_EVENT_SCHEMAS=true into the session, and
         # this endpoint's adjustment.applied payload carries
-        # applied_by_user_external_id=None (Pipe B has no Sentry user)
+        # applied_by_user_external_id=None (Pipe B has no SEA user)
         # while the schema requires a uuid string -- a pre-existing
         # mismatch unrelated to zero retention.
         monkeypatch.setenv("SENTRY_VALIDATE_EVENT_SCHEMAS", "false")

@@ -1,7 +1,6 @@
 # SEA — Sistema de Expedição e Armazenamento
 
-Protótipo construído sobre o [Sentry WMS](https://github.com/hightower-systems/sentry-wms)
-(licença Apache 2.0). Usa somente **dados fictícios**.
+Protótipo. Usa somente **dados fictícios**. Licença Apache 2.0 (arquivos `LICENSE` e `NOTICE`).
 
 ## Executar localmente
 
@@ -21,7 +20,7 @@ docker compose restart admin   # evita 502 no login quando a API sobe depois do 
 | API | http://localhost:5000/api/health |
 | E-mails enviados (Mailpit) | http://localhost:8025 |
 
-Os serviços de integração do Sentry (webhooks, publisher, snapshot) ficam desligados.
+Os serviços de integração do SEA (webhooks, publisher, snapshot) ficam desligados.
 Para ligá-los: `docker compose --profile integracoes up -d`.
 
 ### Banco de dados
@@ -77,7 +76,7 @@ armazenamento concluído) com aviso sonoro.
 
 ## Regras implementadas
 
-* **OT** = pedido de compra do Sentry com `order_type` PM11 ou PM12. O estoque recebido de uma
+* **OT** = pedido de compra do SEA com `order_type` PM11 ou PM12. O estoque recebido de uma
   OT recebe o número da OT como lote (`inventory.lot_number`), o que permite consultar o estoque
   por OT e rastrear cada unidade.
 * **Armazenagem SP12** (validada na API em toda armazenagem de OT):
@@ -105,7 +104,7 @@ armazenamento concluído) com aviso sonoro.
 
 ## Recebimento por etiqueta da OT
 
-A etiqueta que acompanha o material é registrada sobre as tabelas do Sentry (migração `083`):
+A etiqueta que acompanha o material é registrada sobre as tabelas do SEA (migração `083`):
 
 | Entidade | Tabela | Observação |
 |---|---|---|
@@ -136,7 +135,7 @@ Fluxo em **Expedição > Recebimento**:
 Limites conhecidos do protótipo:
 
 * a entrada da etiqueta é **texto** (colado ou digitado); não há OCR de foto;
-* quantidades são **inteiras** (herdado do Sentry); etiqueta com quantidade fracionada fica pendente;
+* quantidades são **inteiras** (limite atual); etiqueta com quantidade fracionada fica pendente;
 * cada OT tem **um registro por código de material**; o mesmo material com outro lote na mesma OT
   é recusado e sinalizado para conferência;
 * o tipo da ordem de serviço (PM11/PM12) é obrigatório para criar a OT.

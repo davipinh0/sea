@@ -648,7 +648,7 @@ def _two_line_card_body():
 
 def _partial_refund_body(sale_body, sale_so_number, lines, total_cents,
                           idempotency_key=None):
-    """A refund body that names specific lines (partial refund). Sentry trusts
+    """A refund body that names specific lines (partial refund). SEA trusts
     the caller for the money total; the lines drive restock + the over-refund
     guard."""
     rb = _refund_body_for(sale_body, sale_so_number,

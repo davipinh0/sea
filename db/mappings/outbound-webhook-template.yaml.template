@@ -1,11 +1,11 @@
 # =====================================================================
-# Sentry WMS v1.6.1 outbound WEBHOOK envelope -- annotated reference
+# SEA v1.6.1 outbound WEBHOOK envelope -- annotated reference
 # =====================================================================
 #
 # Companion to example-template.yaml.template (the inbound mapping
 # doc). Where the inbound template tells the OPERATOR how to translate
-# their source-system payload into Sentry's canonical model, this file
-# tells the CONSUMER what the wire shape looks like when Sentry POSTs
+# their source-system payload into SEA's canonical model, this file
+# tells the CONSUMER what the wire shape looks like when SEA POSTs
 # events outbound to a registered webhook subscription.
 #
 # Unlike the inbound template, this file is NOT a configuration the
@@ -30,7 +30,7 @@
 #                                            shared with the polling
 #                                            surface.
 #
-# Setup before Sentry will POST to your endpoint:
+# Setup before SEA will POST to your endpoint:
 #
 #   1. Admin registers the subscription via the admin panel:
 #      `/webhooks` page -> Add subscription. Operator picks the URL,
@@ -39,7 +39,7 @@
 #      is shown ONCE at create time; persist it to your secret store
 #      immediately.
 #
-#   2. Your endpoint must reach the public internet. Sentry's
+#   2. Your endpoint must reach the public internet. SEA's
 #      dispatcher runs an SSRF guard before every dispatch and will
 #      refuse RFC 1918 / loopback / link-local hosts at runtime
 #      (error_kind=ssrf_rejected).
@@ -56,7 +56,7 @@ mapping_version: "reference-v1.6.1"
 # carried for parity with the inbound template's frontmatter.
 
 source_system: "sentry-wms"
-# The wire is emitted BY Sentry, so source_system here names Sentry
+# The wire is emitted BY SEA, so source_system here names SEA
 # itself rather than an external connector.
 
 # =====================================================================
@@ -124,7 +124,7 @@ transport:
 #
 # The body is a single-event JSON object. Field-by-field shape is
 # byte-for-byte identical to one element of the polling endpoint's
-# `events` array, so a consumer that already polls Sentry can reuse
+# `events` array, so a consumer that already polls SEA can reuse
 # its event-handling code path under the webhook entry point.
 
 envelope:
@@ -157,7 +157,7 @@ envelope:
       description: |
         Schema version. The full JSON Schema is at
         api/schemas_v1/events/<event_type>/<version>.json in the
-        Sentry repo, and served at
+        SEA repo, and served at
         GET /api/v1/events/schema/<type>/<version> for runtime fetches.
         v1 is the only version shipped through v1.8.0.
 
@@ -198,11 +198,11 @@ envelope:
       type: "string"
       format: "uuid"
       description: |
-        Sentry-internal idempotency key. Set from the X-Request-ID
+        SEA-internal idempotency key. Set from the X-Request-ID
         header on the inbound HTTP request that produced the event.
         Exposed on the wire for distributed-tracing correlation.
         NOT SAFE AS A DEDUPE KEY -- any authenticated caller inside
-        Sentry can steer it via X-Request-ID.
+        SEA can steer it via X-Request-ID.
 
     - name: "data"
       type: "object"
@@ -259,7 +259,7 @@ envelope:
     always carry the same event_id; two different events always carry
     different event_ids.
 
-    source_txn_id is steerable by any authenticated Sentry caller via
+    source_txn_id is steerable by any authenticated SEA caller via
     X-Request-ID; one legitimate caller with a deterministic header
     pattern is enough to poison downstream dedupe.
 
@@ -398,10 +398,10 @@ event_types:
     aggregate_type: "sales_order"
     emitted_by: "api/routes/packing.py::complete_packing"
     notes: |
-      Sentry ships single-package today; the packages array carries a
+      SEA ships single-package today; the packages array carries a
       synthesized entry keyed `{sales_order_external_id}-pkg-1`.
       Multi-package support is reserved for a v1.5.x+ schema bump.
-      dimensions_in is always null today (not tracked in Sentry).
+      dimensions_in is always null today (not tracked in SEA).
     sample_envelope:
       event_id: 48213925
       event_type: "pack.confirmed"
@@ -431,7 +431,7 @@ event_types:
     aggregate_type: "sales_order"
     emitted_by: "api/routes/shipping.py::fulfill"
     notes: |
-      Sentry's internal column is item_fulfillments.ship_method;
+      SEA's internal column is item_fulfillments.ship_method;
       renamed on the wire to service_level. service_level is nullable
       because the FulfillRequest schema makes it optional. Address
       detail (carrier-side ship-to) is NOT in v1; v1.9 may extend.
@@ -542,14 +542,14 @@ event_types:
 #    past the cap and classifies as `timeout`. Ship the ack and close.
 #
 # 5. Keep your response body small (<= 64 KB) and free of secrets.
-#    Sentry never persists the response body, but a misconfigured
+#    SEA never persists the response body, but a misconfigured
 #    consumer can echo upstream credentials into a 5xx error page; a
 #    proxy or APM tool in front of either side may capture them.
 #
 # 6. Update both secret slots within the 24-hour dual-accept window
 #    after rotation. After the window, gen=2 is reaped and only gen=1
 #    verifies. Build a job into your secret manager that mirrors
-#    Sentry's rotation -> store.put(slot=2, store.get(slot=1)) ->
+#    SEA's rotation -> store.put(slot=2, store.get(slot=1)) ->
 #    store.put(slot=1, new_plaintext).
 #
 # 7. The 2-second visibility floor is non-negotiable. If your SLA
@@ -562,7 +562,7 @@ event_types:
 #    error_kind values (`timeout`, `connection`, `tls`, `4xx`, `5xx`,
 #    `ssrf_rejected`, `unknown`); your response body is never stored.
 #    Specifics about why your endpoint failed live in YOUR endpoint's
-#    logs, not in Sentry's. Plan operator escalation accordingly.
+#    logs, not in SEA's. Plan operator escalation accordingly.
 #
 # 9. Replays carry a fresh X-Sentry-Timestamp (signature recomputed
 #    against the new value) but the ORIGINAL event_timestamp from the

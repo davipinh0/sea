@@ -335,7 +335,7 @@ def complete_packing(validated):
     )
 
     # v1.5.0 #117: emit pack.confirmed on the integration_events outbox.
-    # Sentry ships single-package today so packages[] is a single
+    # SEA ships single-package today so packages[] is a single
     # synthesised entry keyed "<so_ext>-pkg-1"; dimensions_in is null
     # (not tracked). Multi-package support is v1.5.x+ once the packing
     # UI supports discrete packages.
@@ -363,7 +363,7 @@ def complete_packing(validated):
         resolve_source_external_id(g.db, "sales_order", so.external_id)
         or so_canonical_str
     )
-    # package_external_id stays Sentry-internal (synthesised, no upstream
+    # package_external_id stays SEA-internal (synthesised, no upstream
     # identity); uses canonical UUID stem for traceability.
     so_external_id_str = so_canonical_str
     emit_event(

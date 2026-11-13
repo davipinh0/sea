@@ -2,7 +2,7 @@
 Tests for V-007 credential scrubber used in Celery error paths.
 
 v1.8.0 (#52): extends scrub_secrets with a credential pattern catalog
-covering credential shapes that appear outside URLs (Sentry bearer
+covering credential shapes that appear outside URLs (SEA bearer
 tokens, AWS access keys, generic Bearer headers, key=value
 connection-string fragments, NetSuite OAuth fragments, JWT-shaped
 strings, plus a heuristic catch-all).

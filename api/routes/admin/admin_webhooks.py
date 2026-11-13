@@ -1619,7 +1619,7 @@ def replay_batch(validated, subscription_id):
     # pruned. The LEFT JOIN above filters those rows out
     # silently when an e.* predicate (event_type / warehouse_id)
     # is in play; without the breakdown a forensic query
-    # ("show me every event Sentry tried to send") gets a smaller
+    # ("show me every event SEA tried to send") gets a smaller
     # answer than the operator expects.
     impact_row = g.db.execute(
         text(

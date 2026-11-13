@@ -17,7 +17,7 @@ Backorders add two things on top:
 
 - Parent-cancel cascade: after the per-status unwind, any non-terminal
   child backorder (order_type='backorder') is recursively cancelled
-  with cancellation_reason='parent_cancelled'. Keeps Sentry from
+  with cancellation_reason='parent_cancelled'. Keeps SEA from
   stranding a BO when the parent is cancelled.
 - backorder.cancelled emit: when the SO being cancelled is itself a
   BO (order_type='backorder'), emit on the integration_events outbox

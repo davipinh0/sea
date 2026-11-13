@@ -1,6 +1,6 @@
 """#107: ProxyFix middleware wiring + Fruxh's CSRF-behind-nginx repro.
 
-Fruxh's production deployment runs Sentry behind an nginx TLS terminator
+Fruxh's production deployment runs SEA behind an nginx TLS terminator
 on http://127.0.0.1:8080. nginx forwards X-Forwarded-Proto: https,
 X-Forwarded-Host: sentry.fruxh.example, X-Forwarded-For: <client-ip>.
 Flask's request object, without ProxyFix wrapping app.wsgi_app, reported
@@ -10,7 +10,7 @@ and every POST / PUT / PATCH / DELETE 403'd on CSRF.
 
 These tests lock:
   - ProxyFix is opt-in (default off). Forging X-Forwarded-* at a
-    Sentry that is NOT behind a trusted proxy must not be honoured.
+    SEA that is NOT behind a trusted proxy must not be honoured.
   - TRUST_PROXY=true rewrites request.scheme / .host / .is_secure.
   - A full login + change-password cycle with proxy headers lands a
     Secure CSRF cookie and the change-password POST does NOT 403 on
@@ -95,7 +95,7 @@ class TestProxyFixOptIn:
     def test_default_does_not_trust_x_forwarded_headers(self, unproxied_app, unproxied_client):
         # No TRUST_PROXY -> ProxyFix not wired -> X-Forwarded-* headers
         # are just headers, nothing more. Critical security invariant:
-        # a Sentry running without a proxy in front must not let a
+        # a SEA running without a proxy in front must not let a
         # client claim its own origin or scheme.
         resp = unproxied_client.get("/_test_proxy_probe", headers=PROXY_HEADERS)
         assert resp.status_code == 204

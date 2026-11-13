@@ -108,7 +108,7 @@ export default function App() {
         <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />
         <Route path="/imports" element={page(<RequirePage pageKey="imports"><Imports /></RequirePage>, 'Não foi possível carregar a importação.')} />
 
-        {/* Old Sentry paths that still have a home in SEA. */}
+        {/* Old SEA paths that still have a home in SEA. */}
         <Route path="/inventory" element={<Navigate to="/estoque/sp12" replace />} />
         <Route path="/items" element={<Navigate to="/estoque/materiais" replace />} />
         <Route path="/bins" element={<Navigate to="/estoque/enderecos" replace />} />

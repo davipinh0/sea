@@ -2,7 +2,7 @@
 --
 -- Operators occasionally create a return SO (order_type='return', the
 -- <orig>-RMA goods-in record) by mistake and need to remove it from the
--- RMA page. Sentry has no order-level delete; the generic cancel
+-- RMA page. SEA has no order-level delete; the generic cancel
 -- (sales_order_service.cancel_sales_order) unwinds outbound
 -- allocation / picking, which is wrong for a goods-in return (see the
 -- standing note at the top of admin/src/pages/RMA.jsx). This adds a

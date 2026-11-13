@@ -140,13 +140,13 @@ def _emit_ship_confirmed(
     integration_events outbox. Shared by record_ship and record_admin_ship so
     both emit byte-identical payloads.
 
-    tracking_numbers[] is array-shaped (Sentry creates one fulfillment per SO,
-    so exactly one entry, or [] for local pickup). Sentry's internal column is
+    tracking_numbers[] is array-shaped (SEA creates one fulfillment per SO,
+    so exactly one entry, or [] for local pickup). SEA's internal column is
     ship_method; the wire contract renames it to service_level. packages[]
     mirrors the single synthesised package from pack.confirmed.
 
     The payload carries source-system external_ids (the identifiers the
-    upstream connector originally pushed to Pipe B), NOT Sentry's internal
+    upstream connector originally pushed to Pipe B), NOT SEA's internal
     canonical UUIDs, so a receiver can correlate ship.confirmed back to its own
     marketplace record without re-querying cross_system_mappings. Falls back to
     the canonical UUID when no mapping row exists."""
@@ -185,8 +185,8 @@ def _emit_ship_confirmed(
     ).fetchone()
     # Resolve the SO's source-system identifier for the outbound payload.
     # Falls back to the canonical UUID when no cross_system_mappings row exists
-    # (SO created directly in Sentry without a Pipe-B push). package_external_id
-    # stays Sentry-internal (one fulfillment per SO, synthesised, no upstream
+    # (SO created directly in SEA without a Pipe-B push). package_external_id
+    # stays SEA-internal (one fulfillment per SO, synthesised, no upstream
     # identity to map to); the canonical UUID is the stable stem for it.
     so_external_id_str = str(so_external_id)
     so_source_external_id = (

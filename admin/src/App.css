@@ -1428,7 +1428,11 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
   border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.3); font-size: 13px;
 }
 .sea-notif-list { max-height: 420px; overflow-y: auto; }
-.sea-notif-item { padding: 10px 12px; border-bottom: 1px solid var(--border-dark); }
+.sea-notif-item {
+  display: block; width: 100%; padding: 10px 12px; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; border-bottom: 1px solid var(--border-dark); cursor: pointer;
+}
+.sea-notif-item:hover, .sea-notif-item:focus-visible { background: var(--bg-hover, rgba(0, 0, 0, 0.06)); }
 .sea-notif-item:last-child { border-bottom: 0; }
 .sea-notif-toast { padding: 12px; border-left: 4px solid var(--brand-orange); cursor: pointer; }
 .sea-notif-kind { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }

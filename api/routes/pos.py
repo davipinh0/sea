@@ -354,9 +354,9 @@ def sales_order_lookup(so_number):
     (Replacement / Exchange / Refund). Returns the SO header plus its lines
     (sku, name, ordered + shipped qty) so the cashier can pick which items.
 
-    Sentry is the operational source of truth for every order since go-live;
+    SEA is the operational source of truth for every order since go-live;
     the POS Service calls this first and falls back to its upstream order
-    system only on a 404 (historical / marketplace orders that predate Sentry).
+    system only on a 404 (historical / marketplace orders that predate SEA).
 
     Scoped to the token's warehouses: an SO outside scope conflates to 404,
     the same anti-enumeration posture as /availability.
@@ -879,7 +879,7 @@ def checkout():
         datetime.now(timezone.utc) if is_backorder else None
     )
     # order_origin is wire-driven: POS sends the literal label ("POS" /
-    # "Phone Order") and Sentry stores it as-is. Older POS clients that
+    # "Phone Order") and SEA stores it as-is. Older POS clients that
     # do not send the field still land as NULL which is the pre-feature
     # behaviour.
     header_order_origin = body.order_origin
@@ -1044,7 +1044,7 @@ def checkout():
         # Emit backorder.opened so a POS create-without-stock backorder reaches
         # the notification path at parity with the admin partial-fulfill BO.
         # This SO has no parent (it IS the backorder, not a -BO child), so
-        # parent_so_* are null. The cashier is a real Sentry user via SSO, so
+        # parent_so_* are null. The cashier is a real SEA user via SSO, so
         # opened_by resolves from cashier_id the same way the admin flow
         # resolves its actor. Inside the checkout transaction; idempotent on
         # source_txn_id so a replay never double-emits. Teams delivery rides
@@ -2019,7 +2019,7 @@ def reference_orders():
     booked in the external source system). order_source = 'reference' marks it.
 
     Idempotent on so_number: a second call returns the existing SO with
-    created=False. SKUs not present in Sentry's items are skipped (returned in
+    created=False. SKUs not present in SEA's items are skipped (returned in
     skipped_skus) -- a discontinued original line still lets the child link.
     """
     cap_bytes = get_max_body_kb() * 1024

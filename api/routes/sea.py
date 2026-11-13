@@ -395,7 +395,7 @@ def list_notificacoes():
         text(
             f"""
             SELECT n.notification_id, n.kind, n.title, n.message, n.ot, n.created_by,
-                   n.created_at, n.email_status, w.warehouse_code
+                   n.created_at, n.email_status, n.warehouse_id, w.warehouse_code
             FROM sea_notifications n JOIN warehouses w ON w.warehouse_id = n.warehouse_id
             WHERE (CAST(:after AS INT) IS NULL OR n.notification_id > :after) {scope_clause}
             ORDER BY n.notification_id DESC
@@ -409,7 +409,7 @@ def list_notificacoes():
             {"notification_id": r.notification_id, "kind": r.kind, "title": r.title,
              "message": r.message, "ot": r.ot, "created_by": r.created_by,
              "created_at": _iso(r.created_at), "email_status": r.email_status,
-             "warehouse_code": r.warehouse_code}
+             "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code}
             for r in rows
         ],
         "email_configured": notifications.smtp_config() is not None,
@@ -573,6 +573,19 @@ def get_ot(code):
         "stock": sea.ot_stock(g.db, ot),
         "withdrawals": _withdrawals(po_id=ot.po_id),
     })
+
+
+@sea_bp.route("/ordens/<path:number>")
+@require_auth
+@require_any_page(*OT_PAGE_KEYS)
+@with_db
+def get_ordem(number):
+    """Withdrawal terminal: the materials of a PM order available now."""
+    number = number.strip()
+    found = sea.order_stock(g.db, number, _user_warehouse_ids()) if number else None
+    if found is None:
+        return _user_error(f"Ordem {number} não encontrada.", 404)
+    return jsonify(found)
 
 
 # ------------------------------------- Recebimento por etiqueta da OT

@@ -192,11 +192,8 @@ export default function Settings() {
         <h3>Sobre</h3>
         <div className="detail-grid">
           <span className="detail-label">Sistema</span><span>SEA · Sistema de Expedição e Armazenamento (protótipo, dados fictícios)</span>
-          <span className="detail-label">Baseado em</span>
-          <span>
-            Sentry WMS 1.37.0, licença Apache 2.0 —{' '}
-            <a href="https://github.com/hightower-systems/sentry-wms" target="_blank" rel="noopener noreferrer">github.com/hightower-systems/sentry-wms</a>
-          </span>
+          <span className="detail-label">Licença</span>
+          <span>Apache 2.0 (arquivos LICENSE e NOTICE do projeto)</span>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 
 const apiGet = vi.fn();
 const apiPost = vi.fn();
@@ -55,6 +55,12 @@ const STOCK = [
   { inventory_id: 11, sku: 'MAT-1', item_name: 'Parafuso', bin_code: 'A3', stored: true, available: 5 },
   { inventory_id: 12, sku: 'MAT-2', item_name: 'Porca', bin_code: 'SP12-RECEB', stored: false, available: 9 },
 ];
+// What the terminal gets for an order: only what is stored and available
+// (the API leaves the receiving area out), each row with its OT.
+const ORDER = {
+  order_number: '2000000011', order_type: 'PM11',
+  stock: [{ inventory_id: 11, ot: 'OT-1', sku: 'MAT-1', item_name: 'Parafuso', bin_code: 'A3', warehouse_id: 7, warehouse_code: 'SP12', available: 5 }],
+};
 
 beforeEach(() => {
   apiGet.mockReset();
@@ -68,19 +74,19 @@ beforeEach(() => {
 // The terminal always opens on its login screen.
 async function terminalSignIn() {
   render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
-  expect(screen.queryByLabelText('Código de barras da OT')).toBeNull();
+  expect(screen.queryByLabelText('Ordem')).toBeNull();
   fireEvent.change(screen.getByLabelText('E-mail corporativo ou usuário'), { target: { value: 'retirada@sea.example' } });
   fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Sea@2026' } });
   fireEvent.click(screen.getByText('Entrar'));
-  await screen.findByLabelText('Código de barras da OT');
+  await screen.findByLabelText('Ordem');
 }
 
 describe('Terminal de retirada', () => {
-  it('runs login -> OT -> materials -> request -> ready -> confirm, without a badge', async () => {
+  it('runs login -> order -> materials -> request -> ready -> confirm, without a badge', async () => {
     let status = 'REQUESTED';
     const withdrawal = () => ({ withdrawal_id: 3, status, delivered_to: 'Usuário de Retirada', lines: [{ inventory_id: 11, item_name: 'Parafuso', bin_code: 'A3', quantity: 2 }] });
     apiGet.mockImplementation((path) => {
-      if (path.startsWith('/sea/ots/')) return ok({ ot: OT, stock: STOCK });
+      if (path === '/sea/ordens/2000000011') return ok(ORDER);
       if (path === '/sea/retiradas/3') return ok({ withdrawal: withdrawal() });
       return ok({});
     });
@@ -93,12 +99,13 @@ describe('Terminal de retirada', () => {
     await terminalSignIn();
     expect(terminalLogin).toHaveBeenCalledWith('retirada@sea.example', 'Sea@2026');
     expect(screen.getByText(/Identificado: Usuário de Retirada/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Código de barras da OT'), { target: { value: 'OT-1' } });
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
     fireEvent.click(screen.getByText('Consultar ordem'));
 
-    // Only stock already stored in an address is offered.
+    // The employee is asked for the order only: no OT, no barcode.
     await screen.findByText('Parafuso');
-    expect(screen.queryByText('Porca')).toBeNull();
+    expect(screen.getByText(/2000000011 · materiais disponíveis/)).toBeInTheDocument();
+    expect(screen.queryByText(/código de barras/i)).toBeNull();
     fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
     fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
     fireEvent.click(screen.getByText('Solicitar retirada'));
@@ -131,18 +138,18 @@ describe('Terminal de retirada', () => {
     terminalLogin.mockResolvedValueOnce({ token: 't', user: { username: 'outro', role: 'USER', allowed_pages: ['items'], must_change_password: false } });
     fireEvent.click(screen.getByText('Entrar'));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('não tem permissão para retirar'));
-    expect(screen.queryByLabelText('Código de barras da OT')).toBeNull();
+    expect(screen.queryByLabelText('Ordem')).toBeNull();
 
     terminalLogin.mockResolvedValueOnce({ token: 't', user: { ...TERMINAL_USER, must_change_password: true } });
     fireEvent.click(screen.getByText('Entrar'));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('precisa trocar a senha'));
-    expect(screen.queryByLabelText('Código de barras da OT')).toBeNull();
+    expect(screen.queryByLabelText('Ordem')).toBeNull();
   });
 
   it('cannot request more than the available quantity', async () => {
-    apiGet.mockImplementation(() => ok({ ot: OT, stock: STOCK }));
+    apiGet.mockImplementation(() => ok(ORDER));
     await terminalSignIn();
-    fireEvent.change(screen.getByLabelText('Código de barras da OT'), { target: { value: 'OT-1' } });
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
     fireEvent.click(screen.getByText('Consultar ordem'));
     await screen.findByText('Parafuso');
     const plus = screen.getByLabelText('Aumentar MAT-1');
@@ -151,11 +158,27 @@ describe('Terminal de retirada', () => {
     expect(plus).toBeDisabled();
   });
 
+  it('does not mix deliveries or locations in one request', async () => {
+    apiGet.mockImplementation(() => ok({
+      ...ORDER,
+      stock: [...ORDER.stock, { inventory_id: 13, ot: 'OT-2', sku: 'MAT-3', item_name: 'Arruela', bin_code: 'SOLDA', warehouse_id: 9, warehouse_code: 'Solda', available: 2 }],
+    }));
+    await terminalSignIn();
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
+    fireEvent.click(screen.getByText('Consultar ordem'));
+    await screen.findByText('Arruela');
+    fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
+    fireEvent.click(screen.getByLabelText('Aumentar MAT-3'));
+    fireEvent.click(screen.getByText('Solicitar retirada'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Solicite um grupo de cada vez');
+    expect(apiPost).not.toHaveBeenCalled();
+  });
+
   it('shows the API rule message (user_facing) when the request is refused', async () => {
-    apiGet.mockImplementation(() => ok({ ot: OT, stock: STOCK }));
+    apiGet.mockImplementation(() => ok(ORDER));
     apiPost.mockImplementation(() => fail(409, { error: 'Quantidade solicitada maior que o saldo.', user_facing: true }));
     await terminalSignIn();
-    fireEvent.change(screen.getByLabelText('Código de barras da OT'), { target: { value: 'OT-1' } });
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
     fireEvent.click(screen.getByText('Consultar ordem'));
     await screen.findByText('Parafuso');
     fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
@@ -249,7 +272,7 @@ describe('Notificações do painel', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       apiGet.mockImplementation((path) => ok({ notifications: path.includes('after=4') ? [fresh] : [old] }));
-      render(<Notificacoes />);
+      render(<MemoryRouter><Notificacoes /></MemoryRouter>);
       await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/sea/notificacoes', expect.anything()));
       expect(screen.queryByRole('status')).toBeNull();
       expect(screen.getByLabelText('Notificações')).toBeInTheDocument();
@@ -264,6 +287,29 @@ describe('Notificações do painel', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Notificações clicáveis', () => {
+  function Where() {
+    return <div data-testid="where">{useLocation().pathname}</div>;
+  }
+
+  it.each([
+    ['RETIRADA_SOLICITADA', '/retirada'],
+    ['RECEBIMENTO', '/expedicao/armazenagem'],
+    ['ARMAZENAGEM_CONCLUIDA', '/estoque/sp12'],
+  ])('%s opens %s', async (kind, target) => {
+    currentUser = { username: 'admin', role: 'ADMIN' };
+    apiGet.mockImplementation(() => ok({ notifications: [
+      { notification_id: 8, kind, title: 'Aviso de teste', message: 'm', warehouse_id: 7, warehouse_code: 'SP12', email_status: 'ENVIADO', created_at: '2026-11-11T10:00:00Z' },
+    ] }));
+    render(<MemoryRouter><Notificacoes /><Where /></MemoryRouter>);
+    fireEvent.click(await screen.findByLabelText('Notificações'));
+    fireEvent.click(await screen.findByRole('button', { name: /Aviso de teste/ }));
+    expect(screen.getByTestId('where').textContent).toBe(target);
+    // The list closes once the notification is opened.
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 
@@ -422,7 +468,7 @@ describe('Navegação SEA', () => {
     expect(screen.queryByText('Usuários')).toBeNull();
   });
 
-  it('shows every SEA tab to ADMIN and nothing from the removed Sentry pages', () => {
+  it('shows every SEA tab to ADMIN and nothing from the removed SEA pages', () => {
     currentUser = { role: 'ADMIN', allowed_pages: null };
     apiGet.mockImplementation(() => ok({}));
     render(<MemoryRouter><Sidebar /></MemoryRouter>);

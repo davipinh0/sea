@@ -91,7 +91,7 @@ _AUTH_CODE_MAX        = 50
 # Per-cart cents bounds. ge=0 because zero-cents is meaningful for a
 # fully-discounted line; the upper bound matches NUMERIC(12,2) cents
 # (10**12 - 1) so an integer overflow in the POS Service cannot produce
-# a value Sentry silently truncates.
+# a value SEA silently truncates.
 _CENTS_MIN = 0
 _CENTS_MAX = 10**12 - 1
 
@@ -100,7 +100,7 @@ class CheckoutLine(BaseModel):
     """One line in a counter sale.
 
     unit_price_cents / tax_cents / line_total_cents are trust-the-caller
-    archival fields. Sentry stores them in audit_log.details (no per-
+    archival fields. SEA stores them in audit_log.details (no per-
     line price columns; mig 056 did not add them) and never recomputes
     or validates the total. Pricing is the POS Service's domain.
     """
@@ -109,7 +109,7 @@ class CheckoutLine(BaseModel):
 
     sku:               str           = Field(..., min_length=1, max_length=_SKU_MAX)
     # warehouse_id / bin_id are the stock LOCATION of the line. A backorder line
-    # has no stock, so the POS sends them empty and Sentry assigns the
+    # has no stock, so the POS sends them empty and SEA assigns the
     # order level; min_length=1 is therefore dropped here and the "non-backorder
     # lines must carry a location" invariant is enforced on CheckoutBody instead
     # (see _require_location_unless_backorder), so a normal sale is unchanged.
@@ -126,7 +126,7 @@ class CardTender(BaseModel):
     """Card payment tender. The accepted card-side fields are an
     explicit allowlist: brand, last4, auth_code, external_ref. Any
     other field (card_pan, full_track, expiry, cvv) fails the
-    extra='forbid' gate at the Pydantic boundary so Sentry never
+    extra='forbid' gate at the Pydantic boundary so SEA never
     accepts PAN-shaped data on the wire (PCI scope guard).
     """
 
@@ -163,7 +163,7 @@ Tender = Annotated[
 
 
 class PaymentSummary(BaseModel):
-    """Header-level totals + tender breakdown. Trust-the-caller; Sentry
+    """Header-level totals + tender breakdown. Trust-the-caller; SEA
     archives the structure in audit_log.details and never recomputes."""
 
     model_config = ConfigDict(extra="forbid")
@@ -204,7 +204,7 @@ class ShippingAddress(BaseModel):
 
 
 class ReturnedItem(BaseModel):
-    """One item being returned in an exchange. Sentry auto-creates the
+    """One item being returned in an exchange. SEA auto-creates the
     <orig>-RMA from these so the returned goods can be received back."""
 
     model_config = ConfigDict(extra="forbid")
@@ -219,7 +219,7 @@ class CheckoutBody(BaseModel):
     idempotency_key is validated as UUID4 (not raw str) so a non-UUID
     value surfaces as 422 invalid_body instead of slipping into the
     cache as opaque bytes. completed_at is a wire timestamp (the
-    cashier's stated completion time); Sentry uses it as
+    cashier's stated completion time); SEA uses it as
     sales_orders.shipped_at. created_at on the row is NOW().
     """
 
@@ -242,7 +242,7 @@ class CheckoutBody(BaseModel):
     lines:             List[CheckoutLine] = Field(..., min_length=_LINES_MIN, max_length=_LINES_MAX)
     # When true, the POS cashier was in "phone order" mode: the customer
     # called in, payment ran at the register (card-on-file or manual entry),
-    # and the warehouse picker will fulfill from open stock. Sentry creates
+    # and the warehouse picker will fulfill from open stock. SEA creates
     # the SO at status=OPEN, sets order_origin='phone-order', shipped_at
     # NULL, and reserves stock via inventory.quantity_allocated instead of
     # the immediate quantity_on_hand decrement that counter sales use.
@@ -261,7 +261,7 @@ class CheckoutBody(BaseModel):
     ship_address:      Optional[str]   = Field(None, max_length=500)
     # Free-text label written verbatim into sales_orders.order_origin. POS
     # sends "POS" for a counter sale and "Phone Order" for a phone-order
-    # checkout; Sentry stores whatever it receives without re-deriving from
+    # checkout; SEA stores whatever it receives without re-deriving from
     # is_phone_order so the wire is authoritative. 64-char cap matches the
     # column width in mig 063.
     order_origin:      Optional[str]   = Field(None, max_length=64)
@@ -290,12 +290,12 @@ class CheckoutBody(BaseModel):
     # optional, so an older POS that never sends them still validates.
     order_type:        Optional[Literal["sale", "replacement", "exchange"]] = None
     parent_so_number:  Optional[str]   = Field(None, max_length=64)
-    # Exchange: the items being returned. Sentry auto-creates the <orig>-RMA
+    # Exchange: the items being returned. SEA auto-creates the <orig>-RMA
     # from these (operational; the goods are received back against it later).
     returned_items:    Optional[List[ReturnedItem]] = Field(None, max_length=_LINES_MAX)
     # Backorder (create-without-stock). When true the cashier checked "backorder"
     # on a ship-mode order: the item is not in allocatable stock, so the POS
-    # sends the lines with empty warehouse_id / bin_id and Sentry creates a
+    # sends the lines with empty warehouse_id / bin_id and SEA creates a
     # WAITING_STOCK sales order at the backorder warehouse with no inventory
     # movement. It clears
     # through the receiving auto-fulfill hook when stock arrives. Orthogonal to
@@ -350,7 +350,7 @@ class RefundBody(BaseModel):
     """POST /api/v1/pos/refund body.
 
     Supports full-order and partial (line-item) refunds. When `lines` is
-    omitted the refund covers the whole original sale: Sentry derives the line
+    omitted the refund covers the whole original sale: SEA derives the line
     set from the original SO via the POS_CHECKOUT audit_log entry. When `lines`
     is present the refund covers only those (sku, warehouse, bin) lines, at the
     quantities given -- a subset of, and never exceeding, what the original sold.
@@ -360,7 +360,7 @@ class RefundBody(BaseModel):
 
     external_refund_ref is the Windcave (or cash) reference for the refund leg
     itself; original_external_txn_ref is the original sale's DpsTxnRef, included
-    for cross-check (Sentry does not require it to match but it is captured in
+    for cross-check (SEA does not require it to match but it is captured in
     the refund's audit_log details).
     """
 
@@ -388,7 +388,7 @@ class RefundBody(BaseModel):
 class ReferenceOrderLine(BaseModel):
     """One line of a historical reference order. Only sku + quantity: the
     reference SO records what was sold so a post-fulfillment child can link to
-    it, but carries no pricing (Sentry stores none) and touches no inventory."""
+    it, but carries no pricing (SEA stores none) and touches no inventory."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -401,7 +401,7 @@ class ReferenceOrderBody(BaseModel):
 
     Ingests a minimal historical "reference" SO so a post-fulfillment child
     (replacement / exchange / standalone RMA) can link parent_so_id when the
-    original lives only in an external source system, not Sentry. The reference
+    original lives only in an external source system, not SEA. The reference
     SO records the original's lines as fully shipped, but is historical
     scaffolding only: it does NOT touch inventory (the goods are not on hand)
     and emits no events (the real sale is already booked in the external source

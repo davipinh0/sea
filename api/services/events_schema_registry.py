@@ -71,7 +71,7 @@ V150_CATALOG: Tuple[Tuple[str, int, str], ...] = (
     # edit surface (header PUT or any line add/update/remove). Carries the
     # per-field diff -- line edits qualify the field with the SKU
     # (line[SKU].quantity_ordered) so the ERP knows which line moved and can
-    # reverse-sync a PO correction made in Sentry. The mirror of
+    # reverse-sync a PO correction made in SEA. The mirror of
     # salesorderedit.completed for the inbound-PO over-receipt path.
     ("purchaseorderedit.completed", 1, "purchase_order"),
     # post-fulfillment returns: goods received back against a return SO

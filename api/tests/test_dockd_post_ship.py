@@ -12,7 +12,7 @@ Coverage:
 - 422 invalid_so_number for malformed path parameter.
 - Pydantic body: 422 invalid_body for missing required, extra
   property, invalid UUID4 idempotency_key, length overflow.
-- 422 unknown_operator when operator_username is not a Sentry
+- 422 unknown_operator when operator_username is not a SEA
   users row.
 - Idempotency replay: same key + same body -> 200 with
   X-Idempotent-Replay: true and the cached response.

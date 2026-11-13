@@ -100,7 +100,7 @@ def _backorder_body(*, sku="TST-001", qty=1, order_type=None,
     body = {
         "idempotency_key":  str(uuid.uuid4()),
         "external_txn_ref": f"WC-{uuid.uuid4().hex[:12]}",
-        # A real seeded Sentry user: post-SSO the cashier_id IS a Sentry
+        # A real seeded SEA user: post-SSO the cashier_id IS a SEA
         # username, and the backorder.opened emit resolves opened_by from it,
         # so the actor must exist in `users` (as every real cashier does).
         "cashier_id":       "admin",
@@ -387,7 +387,7 @@ class TestBackorderOpenedEmit:
     """A POS create-without-stock backorder emits backorder.opened on the
     integration_events outbox at parity with the admin partial-fulfill BO, so
     a POS backorder reaches the same Teams path. The SO has no parent (it IS
-    the backorder), so parent_so_* are null; the cashier is a real Sentry user
+    the backorder), so parent_so_* are null; the cashier is a real SEA user
     via SSO, so opened_by resolves from cashier_id."""
 
     def test_emits_backorder_opened_with_null_parent_and_resolved_actor(
@@ -415,7 +415,7 @@ class TestBackorderOpenedEmit:
         assert payload["parent_so_external_id"] is None
         assert payload["parent_so_number"] is None
         assert payload["backorder_so_number"] == so_number
-        # opened_by resolved from the cashier's Sentry username (SSO).
+        # opened_by resolved from the cashier's SEA username (SSO).
         assert payload["opened_by_user_external_id"] == _user_external_id("admin")
         assert payload["warehouse_id"] == wh
         assert {it["sku"] for it in payload["items"]} == {"TST-001"}

@@ -11,7 +11,7 @@ Credential pattern catalog (#52): connectors do not always raise an
 exception that embeds a URL. A RuntimeError("API rejected key
 'sk-abc123' for account 42") would slip through URL-only scrubbing.
 CREDENTIAL_PATTERNS catches the credential shapes seen on the
-connector surface today: Sentry's own bearer tokens, AWS access keys,
+connector surface today: SEA's own bearer tokens, AWS access keys,
 generic Bearer headers, key=value connection-string fragments,
 NetSuite OAuth fragments, JWT-shaped strings, plus a heuristic
 catch-all for long base64-ish strings near credential keywords.

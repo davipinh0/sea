@@ -4,7 +4,7 @@
 -- Stores the data printed on the label that travels with each material
 -- (OT, reserva, material, lote, solicitante, recebedor, ordem de serviço).
 --
--- Mapping onto the existing Sentry tables (no parallel model):
+-- Mapping onto the existing SEA tables (no parallel model):
 --   * Recebimento / OT  = purchase_orders
 --       codigo_ot            -> po_number          (existing)
 --       codigo_barras        -> po_barcode         (existing)

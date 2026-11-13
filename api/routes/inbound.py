@@ -200,7 +200,7 @@ def register_inbound_resource(resource_key: str, endpoint_suffix: str) -> None:
     one line here per resource.
 
     Rate limit is env-configurable via INBOUND_RATE_LIMIT_PER_MINUTE (default 500).
-    Sentry can sustain much higher than the original "100 per minute" default --
+    SEA can sustain much higher than the original "100 per minute" default --
     bulk pre-cutover pushes (item master, inventory seed, customer migration)
     need higher ceilings without compromising steady-state safety. Single-
     threaded pushers max out at ~12 req/sec (RTT-limited) so 500/min gives
@@ -233,7 +233,7 @@ register_inbound_resource("customers", "customers")
 # Token-authed bulk inventory STATE-SYNC endpoint. Used for:
 #   - Initial cutover seed of on-hand quantities
 #   - Continuous mirror from an external marketplace / fulfillment system
-#   - Drift correction (when an upstream system and Sentry disagree, push
+#   - Drift correction (when an upstream system and SEA disagree, push
 #     the upstream's state in)
 #   - Bulk corrections post-cutover
 #
@@ -255,8 +255,8 @@ register_inbound_resource("customers", "customers")
 # Returns 200 on no-op (delta == 0) with { applied_delta: 0, current_quantity, ... }
 #
 # Bidirectional sync architecture:
-#   upstream -> Sentry: this endpoint (state-based)
-#   Sentry -> upstream: existing inventoryadjusted.completed webhook events (delta-based)
+#   upstream -> SEA: this endpoint (state-based)
+#   SEA -> upstream: existing inventoryadjusted.completed webhook events (delta-based)
 
 
 def _inventory_update_post():
@@ -313,7 +313,7 @@ def _inventory_update_post():
         response.headers["X-Sentry-Canonical-Model"] = "DRAFT-v1"
         return response
 
-    # Resolve the source-system SKU to Sentry's item_id via
+    # Resolve the source-system SKU to SEA's item_id via
     # cross_system_mappings -> items. The token's source_system tells us
     # which mapping namespace to look in.
     source_system = g.current_token.get("source_system") if g.current_token else None
@@ -486,7 +486,7 @@ def _inventory_update_post():
             "bin_external_id": str(bin_row.external_id),
             "quantity_delta": quantity_change,
             "reason_code": reason_code,
-            "applied_by_user_external_id": None,  # Pipe B path: no Sentry user identity
+            "applied_by_user_external_id": None,  # Pipe B path: no SEA user identity
             "applied_at": adj_row.adjusted_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
         },
     )

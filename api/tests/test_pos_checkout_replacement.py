@@ -1,7 +1,7 @@
 """POST /api/v1/pos/checkout: replacement / exchange child orders.
 
 A replacement or exchange checkout names an original order via
-parent_so_number; Sentry looks the parent up (in token scope), mints the SO
+parent_so_number; SEA looks the parent up (in token scope), mints the SO
 number as <parent>-REPLACEMENT / -EXCHANGE, and links parent_so_id. A plain
 sale is unchanged (POS-<id>, order_type sale, no parent).
 """

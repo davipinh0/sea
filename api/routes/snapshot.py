@@ -354,7 +354,7 @@ def _run_keyset_query(
                 "quantity_allocated": r["quantity_allocated"],
                 "quantity_available": r["quantity_available"],
                 "lot_number": r["lot_number"],
-                # Sentry does not track serial numbers at the inventory
+                # SEA does not track serial numbers at the inventory
                 # row level in v1.5.0; emit null so the wire shape
                 # stays stable for a future schema bump.
                 "serial_number": None,

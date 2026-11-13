@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import { useWarehouse } from '../warehouse.jsx';
 import { formatDateTime } from '../utils/sea.js';
 
 // Panel notifications: withdrawal requested, materials received and
@@ -15,6 +17,13 @@ const KIND_LABEL = {
   RETIRADA_SOLICITADA: 'Solicitação de retirada',
   RECEBIMENTO: 'Recebimento de materiais',
   ARMAZENAGEM_CONCLUIDA: 'Armazenamento concluído',
+};
+
+// Where each notification leads: the screen where the operator acts on it.
+const KIND_TARGET = {
+  RETIRADA_SOLICITADA: '/retirada',
+  RECEBIMENTO: '/expedicao/armazenagem',
+  ARMAZENAGEM_CONCLUIDA: '/estoque/sp12',
 };
 
 const EMAIL_LABEL = {
@@ -71,6 +80,8 @@ function writeSeen(username, id) {
 
 export default function Notificacoes() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { warehouses, setWarehouseId } = useWarehouse() || {};
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -136,6 +147,18 @@ export default function Notificacoes() {
     if (lastId.current !== null) writeSeen(username, lastId.current);
   }
 
+  // Open the screen the notification is about, at the location it happened.
+  function go(n) {
+    setOpen(false);
+    setToast(null);
+    setUnread(0);
+    if (lastId.current !== null) writeSeen(username, lastId.current);
+    if (n.warehouse_id && (warehouses || []).some((w) => w.warehouse_id === n.warehouse_id)) {
+      setWarehouseId?.(n.warehouse_id);
+    }
+    navigate(KIND_TARGET[n.kind] || '/');
+  }
+
   return (
     <div className="sea-notif" ref={boxRef}>
       <button type="button" className="sea-notif-bell" onClick={toggle} aria-label={unread ? `Notificações: ${unread} nova(s)` : 'Notificações'} title="Notificações">
@@ -149,18 +172,18 @@ export default function Notificacoes() {
         <div className="sea-notif-list" role="dialog" aria-label="Notificações">
           {items.length === 0 && <div className="sea-notif-empty">Nenhuma notificação.</div>}
           {items.map((n) => (
-            <div key={n.notification_id} className="sea-notif-item">
+            <button type="button" key={n.notification_id} className="sea-notif-item" onClick={() => go(n)}>
               <div className="sea-notif-kind">{KIND_LABEL[n.kind] || n.kind} · {n.warehouse_code}</div>
               <div className="sea-notif-title">{n.title}</div>
               <div>{n.message}</div>
               <div className="sea-notif-meta">{formatDateTime(n.created_at)} · {EMAIL_LABEL[n.email_status] || n.email_status}</div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {toast && !open && (
-        <div className="sea-notif-toast" role="status" aria-live="polite" onClick={toggle}>
+        <div className="sea-notif-toast" role="status" aria-live="polite" onClick={() => go(toast)}>
           <div className="sea-notif-kind">{KIND_LABEL[toast.kind] || toast.kind}</div>
           <div className="sea-notif-title">{toast.title}</div>
           <div>{toast.message}</div>

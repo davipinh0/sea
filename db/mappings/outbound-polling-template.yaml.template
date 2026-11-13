@@ -1,5 +1,5 @@
 # =====================================================================
-# Sentry WMS v1.5.1 outbound POLLING envelope -- annotated reference
+# SEA v1.5.1 outbound POLLING envelope -- annotated reference
 # =====================================================================
 #
 # Companion to outbound-webhook-template.yaml.template (the push
@@ -41,7 +41,7 @@
 #   2. Pick a polling MODE (mutually exclusive; sending both = 400):
 #      - client-cursor  : you persist `next_cursor` yourself between
 #                          polls and pass it back as `after`.
-#      - consumer-group : Sentry persists the cursor for you under
+#      - consumer-group : SEA persists the cursor for you under
 #                          a `consumer_group` identifier; resumable
 #                          across processes / hosts.
 #
@@ -106,7 +106,7 @@ request:
       mode: "consumer-group"
       description: |
         Consumer-group identifier registered via the admin panel
-        (Consumer Groups page). Sentry reads the group's
+        (Consumer Groups page). SEA reads the group's
         last_cursor as the effective `after` and applies the group's
         subscription JSONB as additional filtering. Mutually exclusive
         with `after`.
@@ -279,7 +279,7 @@ modes:
 
   consumer_group:
     summary: |
-      Sentry persists the cursor under a registered group identifier.
+      SEA persists the cursor under a registered group identifier.
       Resumable across processes / hosts; survives client crashes.
       Per-group subscription JSONB carries additional filter (event_types,
       warehouse_ids) layered on top of the token's scope.

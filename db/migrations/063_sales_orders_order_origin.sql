@@ -5,7 +5,7 @@
 -- "in-store-walkin", etc.). Distinct from:
 --
 --   * source_system (FK-gated allowlist of connectors that push to
---     Sentry; the value is "which connector pushed this")
+--     SEA; the value is "which connector pushed this")
 --   * order_source (small enum 'web' / 'pos' added by mig 056 for the
 --     POS endpoint surface)
 --

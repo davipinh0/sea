@@ -40,14 +40,23 @@ sea_bp = Blueprint("sea", __name__)
 STAGING = list(sea.STAGING_TYPES)
 
 
+# A mobile module granted to the user opens the same data as the page of
+# the panel that does the same work.
+FUNCTION_PAGES = {"receive": "receiving", "putaway": "putaway"}
+
+
 def require_any_page(*page_keys):
-    """ADMIN passes; other users need at least one of ``page_keys``."""
+    """ADMIN passes; other users need at least one of ``page_keys`` (or the
+    mobile module that corresponds to one of them)."""
 
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             allowed = g.current_user.get("allowed_pages")
             if allowed is None or any(k in allowed for k in page_keys):
+                return f(*args, **kwargs)
+            functions = g.current_user.get("allowed_functions") or []
+            if any(FUNCTION_PAGES.get(fn) in page_keys for fn in functions):
                 return f(*args, **kwargs)
             return jsonify({"error": "Permission denied", "page_key": page_keys[0]}), 403
 

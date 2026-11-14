@@ -12,8 +12,10 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
-import ReceiveScreen from '../screens/ReceiveScreen';
-import PutAwayScreen from '../screens/PutAwayScreen';
+import ReceberScreen from '../screens/ReceberScreen';
+import ArmazenarScreen from '../screens/ArmazenarScreen';
+import RetiradaScreen from '../screens/RetiradaScreen';
+import TransferirScreen from '../screens/TransferirScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -63,8 +65,10 @@ export default function AppNavigator() {
           ) : (
             <>
               <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="Receive" component={ReceiveScreen} />
-              <Stack.Screen name="PutAway" component={PutAwayScreen} />
+              <Stack.Screen name="Receber" component={ReceberScreen} />
+              <Stack.Screen name="Armazenar" component={ArmazenarScreen} />
+              <Stack.Screen name="Retirada" component={RetiradaScreen} />
+              <Stack.Screen name="Transferir" component={TransferirScreen} />
             </>
           )
         ) : (

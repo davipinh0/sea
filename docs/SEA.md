@@ -221,6 +221,26 @@ vivo pode (a) alimentar as tabelas `sap_*` ou (b) implementar `OtSource.lookup(d
 OtData` e registrar-se em `_SOURCES`. Nos dois casos recebimento, armazenagem e retirada não
 mudam. Nenhum endpoint, credencial ou formato do SAP foi presumido.
 
+## App mobile
+
+App Android (Expo / React Native) em `mobile/`, para celular comum: os códigos são digitados ou
+lidos com a **câmera**. Usa a mesma API do painel.
+
+| Módulo | O que faz | Quem vê |
+|---|---|---|
+| Receber | lê a OT; se ela está só na base do SAP, mostra os materiais e registra a entrega; recebe parcial ou integral | local Expedição; permissão Recebimento (ou módulo "Receber") |
+| Armazenar | lista o que aguarda em todos os locais e guarda em qualquer prateleira (sugestão, lista ou código do endereço) | local Expedição; permissão Armazenagem (ou módulo "Armazenagem") |
+| Retirada | fila do almoxarife: iniciar separação, pronta para entrega, cancelar com motivo | permissão Retirada |
+| Transferir | busca o material e move entre endereços ou locais | permissão Materiais, Visão Geral ou Armazenagem |
+
+O funcionário continua solicitando e confirmando a retirada no terminal (painel web).
+
+**Servidor.** O celular acessa o painel pela rede: defina `ADMIN_BIND_HOST=0.0.0.0` no `.env`,
+recrie os serviços e informe no app (tela de login, "URL do servidor") `http://IP-DO-COMPUTADOR:8080`.
+
+**Rodar e gerar.** Em `mobile/`: `npm install`; `npm test` (testes); `npx expo start` (abrir no
+celular com o Expo Go); `npx eas-cli login`, `npx eas-cli init` e `npm run build:apk` (gerar o APK).
+
 ## Notificações e e-mail
 
 | Evento | Quando | Assunto do e-mail |

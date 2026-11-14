@@ -81,7 +81,7 @@ def require_auth(f):
             row = db.execute(
                 text(
                     "SELECT role, is_active, warehouse_ids, password_changed_at, "
-                    "must_change_password "
+                    "must_change_password, allowed_functions "
                     "FROM users WHERE user_id = :uid"
                 ),
                 {"uid": payload["user_id"]},
@@ -113,6 +113,8 @@ def require_auth(f):
         payload["role"] = row.role
         payload["warehouse_ids"] = list(row.warehouse_ids) if row.warehouse_ids else []
         payload["allowed_pages"] = allowed_pages  # None for ADMIN, list for USER
+        # Mobile modules granted to the user (receive, putaway).
+        payload["allowed_functions"] = list(row.allowed_functions or [])
 
         g.current_user = payload
 

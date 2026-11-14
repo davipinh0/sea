@@ -3,18 +3,15 @@ import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, ActivityInd
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { useScanSettingsContext } from '../context/ScanSettingsContext';
-import ScanInput from '../components/ScanInput';
+import CodeInput from '../components/CodeInput';
+import { visibleModules } from '../utils/sea';
 import ErrorPopup from '../components/ErrorPopup';
 import useScreenError from '../hooks/useScreenError';
 import WarehouseSelector from '../components/WarehouseSelector';
 import client, { getStoredApiUrl, setApiUrl } from '../api/client';
 import { colors, fonts, radii, spacing } from '../theme/styles';
 
-// SEA mobile modules (Expedição area): OT receiving and SP12 put-away.
-const FUNCTIONS = [
-  { key: 'receive', label: 'RECEBER', sub: 'Recebimento de OT', screen: 'Receive', accent: 'red' },
-  { key: 'putaway', label: 'ARMAZENAR', sub: 'Armazenagem SP12', screen: 'PutAway', accent: 'copper' },
-]
+// The modules and who sees each one are in utils/sea.js (MODULES).
 
 const ACCENT_COLORS = {
   red: colors.accentRed,
@@ -24,7 +21,7 @@ const ACCENT_COLORS = {
 
 export default function HomeScreen({ navigation }) {
   const { user, warehouseId, logout, switchWarehouse } = useAuth();
-  const [allowedFunctions, setAllowedFunctions] = useState([]);
+  const [me, setMe] = useState(null);
   const [badges, setBadges] = useState({});
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseCode, setWarehouseCode] = useState('');
@@ -84,21 +81,19 @@ export default function HomeScreen({ navigation }) {
       // remains for in-session navigation but is not fetched here.
       const [meResp, dashResp, whResp] = await Promise.all([
         client.get('/api/auth/me'),
-        client.get(`/api/admin/dashboard?warehouse_id=${warehouseId}`),
+        client.get(`/api/sea/painel?warehouse_id=${warehouseId}`),
         client.get('/api/warehouses/list'),
       ]);
 
-      setAllowedFunctions(meResp.data.allowed_functions || []);
+      setMe(meResp.data);
       setRequirePacking(meResp.data.require_packing !== false);
 
       const stats = dashResp.data;
       setBadges({
-        receive: stats.pending_receipts || 0,
-        putaway: stats.items_awaiting_putaway || 0,
-        pick: stats.orders_ready_to_pick || 0,
-        pack: stats.ready_to_pack || 0,
-        ship: stats.ready_to_ship || 0,
-        count: 0,
+        receive: stats.open_ots || 0,
+        putaway: stats.staging_ots || 0,
+        // Requests of every location the user works in.
+        retirada: stats.pending_withdrawals_all ?? stats.pending_withdrawals ?? 0,
       });
 
       const whList = whResp.data.warehouses || [];
@@ -150,7 +145,7 @@ export default function HomeScreen({ navigation }) {
         const contents = (binResp.data.items || [])
           .map((c) => `${c.sku}: ${c.quantity_on_hand}`)
           .join('\n');
-        setInfoModal({ visible: true, title: bin.bin_code, message: `${bin.bin_type}\n\n${contents || 'Endereço vazio'}` });
+        setInfoModal({ visible: true, title: bin.bin_code, message: contents || 'Endereço vazio' });
         return;
       }
     } catch {
@@ -162,7 +157,7 @@ export default function HomeScreen({ navigation }) {
       const poResp = await client.get(`/api/receiving/po/${encoded}`);
       if (poResp.data && poResp.data.purchase_order) {
         const po = poResp.data.purchase_order;
-        navigation.navigate('Receive', { po_number: po.po_number });
+        navigation.navigate('Receber', { code: po.po_number });
         return;
       }
     } catch {
@@ -172,9 +167,7 @@ export default function HomeScreen({ navigation }) {
     showError('Código de barras não reconhecido');
   };
 
-  const visibleFunctions = FUNCTIONS.filter(
-    (fn) => allowedFunctions.includes(fn.key)
-  );
+  const visibleFunctions = visibleModules(me, warehouseCode);
 
   const getBadgeCount = (key) => badges[key] || 0;
 
@@ -365,7 +358,7 @@ export default function HomeScreen({ navigation }) {
                   }
                 }}
               >
-                <Text style={styles.infoModalButtonText}>{pwSaving ? 'SAVING...' : 'CHANGE'}</Text>
+                <Text style={styles.infoModalButtonText}>{pwSaving ? 'SALVANDO...' : 'ALTERAR'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.infoModalButton, { flex: 1, marginTop: 0, backgroundColor: colors.cardBorder }]}
@@ -379,10 +372,11 @@ export default function HomeScreen({ navigation }) {
       </Modal>
 
       <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentInner} keyboardShouldPersistTaps="handled">
-        <ScanInput
-          placeholder="LEIA O CÓDIGO DE BARRAS"
-          onScan={handleScan}
+        <CodeInput
+          placeholder="Código de barras ou do material"
+          onSubmit={handleScan}
           disabled={scanDisabled}
+          buttonLabel="BUSCAR"
         />
 
         <Text style={styles.operationsLabel}>OPERAÇÕES</Text>
@@ -405,6 +399,9 @@ export default function HomeScreen({ navigation }) {
               >
                 <View style={[styles.accentStripe, { backgroundColor: accentColor }]} />
                 <View style={[styles.accentDash, { backgroundColor: accentColor }]} />
+                {badgeCount > 0 && (
+                  <View style={styles.cardBadge}><Text style={styles.cardBadgeText}>{badgeCount}</Text></View>
+                )}
                 <Text style={styles.cardLabel}>{fn.label}</Text>
                 <Text style={styles.cardSub}>{fn.sub}</Text>
               </TouchableOpacity>
@@ -484,6 +481,11 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  cardBadge: {
+    position: 'absolute', top: 10, right: 10, minWidth: 24, height: 24, borderRadius: 12,
+    paddingHorizontal: 6, backgroundColor: colors.accentRed, alignItems: 'center', justifyContent: 'center',
+  },
+  cardBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   screen: {
     flex: 1,
     backgroundColor: colors.background,

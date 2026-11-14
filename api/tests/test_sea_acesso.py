@@ -211,3 +211,35 @@ class TestListsSharedBetweenPages:
         users = _user(client, sp12["conn"], "sea.acesso.z3", ["users"], [WAREHOUSE])
         assert client.get("/api/admin/warehouses", headers=users).status_code == 200
         assert client.get(f"/api/admin/zones?warehouse_id={WAREHOUSE}", headers=users).status_code == 403
+
+
+class TestMobileModules:
+    """The app's modules open the same data as the matching page of the panel."""
+
+    def _with_functions(self, client, conn, username, functions):
+        headers = _user(client, conn, username, [], [WAREHOUSE])
+        conn.execute(text("UPDATE users SET allowed_functions = :f WHERE username = :u"),
+                     {"f": functions, "u": username})
+        return headers
+
+    def test_receive_module_reads_receiving_data(self, client, sp12):
+        headers = self._with_functions(client, sp12["conn"], "sea.app.1", ["receive"])
+        areas = client.get(f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers)
+        assert areas.status_code == 200
+        assert client.get("/api/sea/recebimentos/consulta?codigo=123", headers=headers).status_code == 200
+        # The withdrawal queue is not part of this module.
+        assert client.get("/api/sea/retiradas", headers=headers).status_code == 403
+
+    def test_putaway_module_reads_storage_data(self, client, sp12):
+        headers = self._with_functions(client, sp12["conn"], "sea.app.2", ["putaway"])
+        assert client.get("/api/sea/armazenagem/destinos", headers=headers).status_code == 200
+        assert client.get(
+            f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers
+        ).status_code == 403
+
+    def test_no_module_and_no_page_stays_closed(self, client, sp12):
+        headers = self._with_functions(client, sp12["conn"], "sea.app.3", [])
+        assert client.get(
+            f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers
+        ).status_code == 403
+        assert client.get("/api/sea/armazenagem/destinos", headers=headers).status_code == 403

@@ -26,13 +26,21 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",
-        "VIBRATE"
+        "VIBRATE",
+        "CAMERA"
       ]
     },
     "plugins": [
       "expo-asset",
       "expo-secure-store",
       "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O SEA usa a câmera para ler códigos de barras de ordens, materiais e endereços.",
+          "recordAudioAndroid": false
+        }
+      ],
       "./plugins/chainway-scanner",
       "./plugins/with-cleartext-traffic"
     ]

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, ActivityIndicator, StyleSheet, TextInput, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { useScanSettingsContext } from '../context/ScanSettingsContext';
 import CodeInput from '../components/CodeInput';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { visibleModules } from '../utils/sea';
+import useAutoRefresh from '../hooks/useAutoRefresh';
+import { readSeen, unregisterDevice } from '../notifications';
 import ErrorPopup from '../components/ErrorPopup';
 import useScreenError from '../hooks/useScreenError';
 import WarehouseSelector from '../components/WarehouseSelector';
@@ -89,7 +92,17 @@ export default function HomeScreen({ navigation }) {
       setRequirePacking(meResp.data.require_packing !== false);
 
       const stats = dashResp.data;
+      // Notifications that arrived since the list was last opened.
+      let unread = 0;
+      try {
+        const [seen, notifResp] = await Promise.all([readSeen(), client.get('/api/sea/notificacoes?limit=50')]);
+        const list = notifResp.data?.notifications || [];
+        unread = seen === null ? 0 : list.filter((n) => n.notification_id > seen).length;
+      } catch {
+        // The badge just stays empty.
+      }
       setBadges({
+        notificacoes: unread,
         receive: stats.open_ots || 0,
         putaway: stats.staging_ots || 0,
         // Requests of every location the user works in.
@@ -112,10 +125,20 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
       getStoredApiUrl().then(setServerUrl);
-    }, [loadData])
+    }, [])
   );
+  // Counters and modules follow what happens while the screen is open.
+  useAutoRefresh(loadData);
+
+  // Cards adapt to the screen: two per row, one on a narrow screen or
+  // when the phone uses a large font.
+  const { width, fontScale } = useWindowDimensions();
+  const oneColumn = width < 340 || fontScale > 1.3;
+  const cardWidth = oneColumn ? width - 32 : (width - 32 - spacing.cardGap) / 2;
+
+  // The phone stops receiving notifications of who logs out.
+  const signOut = async () => { await unregisterDevice(); logout(); };
 
   const handleScan = async (barcode) => {
     const cleaned = barcode.replace(/[\r\n\s]+/g, '').trim();
@@ -174,7 +197,7 @@ export default function HomeScreen({ navigation }) {
   const userInitial = (user?.full_name || user?.username || 'U').charAt(0).toUpperCase();
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerLogo}>SEA</Text>
         <View style={styles.headerRight}>
@@ -209,7 +232,7 @@ export default function HomeScreen({ navigation }) {
             }}>
               <Text style={styles.menuItemText}>ALTERAR SENHA</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowUserMenu(false); logout(); }}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowUserMenu(false); signOut(); }}>
               <Text style={styles.menuItemTextDanger}>SAIR</Text>
             </TouchableOpacity>
           </View>
@@ -388,12 +411,11 @@ export default function HomeScreen({ navigation }) {
           {visibleFunctions.map((fn, index) => {
             const accentColor = ACCENT_COLORS[fn.accent];
             const badgeCount = getBadgeCount(fn.key);
-            const isShip = fn.key === 'ship';
 
             return (
               <TouchableOpacity
                 key={fn.key}
-                style={[styles.gridCard, isShip && styles.gridCardFull]}
+                style={[styles.gridCard, { width: cardWidth }]}
                 onPress={() => navigation.navigate(fn.screen)}
                 activeOpacity={0.7}
               >
@@ -476,16 +498,11 @@ export default function HomeScreen({ navigation }) {
         }}
         onClose={needsWarehouse ? undefined : () => setShowWarehousePicker(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  cardBadge: {
-    position: 'absolute', top: 10, right: 10, minWidth: 24, height: 24, borderRadius: 12,
-    paddingHorizontal: 6, backgroundColor: colors.accentRed, alignItems: 'center', justifyContent: 'center',
-  },
-  cardBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -495,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 52,
+    paddingTop: 8,
     paddingBottom: 12,
   },
   headerLogo: {
@@ -594,7 +611,7 @@ const styles = StyleSheet.create({
   },
   contentInner: {
     padding: 16,
-    paddingBottom: 48,
+    paddingBottom: 72,
   },
   operationsLabel: {
     fontFamily: fonts.mono,
@@ -616,9 +633,10 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     borderRadius: radii.card,
     padding: spacing.cardPadding,
-    paddingTop: 18,
+    paddingTop: 20,
     overflow: 'hidden',
-    width: '48.5%',
+    minHeight: 104,
+    justifyContent: 'center',
   },
   gridCardFull: {
     width: '100%',
@@ -639,33 +657,33 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   cardSub: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 2,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
   cardBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    minWidth: 22,
+    top: 10,
+    right: 10,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    backgroundColor: colors.accentRed,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cardBadgeText: {
-    color: colors.cream,
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   footer: {
     position: 'absolute',

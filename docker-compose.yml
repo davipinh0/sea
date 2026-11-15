@@ -93,6 +93,8 @@ services:
       SEA_SMTP_PASSWORD: ${SEA_SMTP_PASSWORD:-}
       SEA_SMTP_FROM: ${SEA_SMTP_FROM:-sea@sea.local}
       SEA_SMTP_SECURITY: ${SEA_SMTP_SECURITY:-none}
+      # SEA: avisos no celular com o app fechado (vazio = desligado; expo = liga).
+      SEA_PUSH: ${SEA_PUSH:-}
       # SEA: identificação do funcionário (local = usuários do SEA).
       SEA_IDENTITY_PROVIDER: ${SEA_IDENTITY_PROVIDER:-local}
       # SEA: onde o recebimento procura a OT (base = base do SAP no SEA).
@@ -332,6 +334,8 @@ services:
       SEA_SMTP_PASSWORD: ${SEA_SMTP_PASSWORD:-}
       SEA_SMTP_FROM: ${SEA_SMTP_FROM:-sea@sea.local}
       SEA_SMTP_SECURITY: ${SEA_SMTP_SECURITY:-none}
+      # SEA: avisos no celular com o app fechado (vazio = desligado; expo = liga).
+      SEA_PUSH: ${SEA_PUSH:-}
     volumes:
       - ./api:/app
       - ./db:/db

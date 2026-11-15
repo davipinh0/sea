@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import client from '../api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
@@ -89,7 +90,7 @@ export default function TransferirScreen({ navigation, route }) {
   }
 
   return (
-    <View style={screenStyles.screen}>
+    <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="TRANSFERIR" onBack={() => (moving ? setMoving(null) : navigation.goBack())} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         {!moving && <CodeInput placeholder="Código do material" onSubmit={find} disabled={busy} buttonLabel="BUSCAR" />}
@@ -139,6 +140,6 @@ export default function TransferirScreen({ navigation, route }) {
         visible={picking} bins={bins} excludeBinId={moving?.bin_id}
         onPick={(bin) => { setTarget(bin); setPicking(false); setMessage(null); }} onClose={() => setPicking(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }

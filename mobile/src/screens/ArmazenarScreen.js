@@ -1,9 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import client from '../api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
 import { apiError, formatQuantity, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
@@ -44,7 +45,8 @@ export default function ArmazenarScreen({ navigation }) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Not while a material is being stored: the form stays as it is.
+  useAutoRefresh(load, { paused: !!active });
 
   async function select(row) {
     setActive(row);
@@ -89,7 +91,7 @@ export default function ArmazenarScreen({ navigation }) {
   }
 
   return (
-    <View style={screenStyles.screen}>
+    <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="ARMAZENAR" onBack={() => (active ? setActive(null) : navigation.goBack())} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <Message message={message} />
@@ -136,6 +138,6 @@ export default function ArmazenarScreen({ navigation }) {
         visible={picking} bins={bins} excludeBinId={active?.bin_id} suggestedBinId={suggested?.bin_id}
         onPick={(bin) => { setTarget(bin); setPicking(false); setMessage(null); }} onClose={() => setPicking(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import client from '../api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
 import { Button, Card, Field, Message, ui } from '../components/ui';
@@ -125,7 +126,7 @@ export default function ReceberScreen({ navigation, route }) {
   const receiver = user?.full_name || user?.username;
 
   return (
-    <View style={screenStyles.screen}>
+    <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="RECEBER" onBack={() => navigation.goBack()} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <CodeInput placeholder="Código de barras da OT" onSubmit={load} disabled={busy} buttonLabel="CONSULTAR" />
@@ -204,7 +205,7 @@ export default function ReceberScreen({ navigation, route }) {
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

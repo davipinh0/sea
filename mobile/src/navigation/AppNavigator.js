@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,6 +16,10 @@ import ReceberScreen from '../screens/ReceberScreen';
 import ArmazenarScreen from '../screens/ArmazenarScreen';
 import RetiradaScreen from '../screens/RetiradaScreen';
 import TransferirScreen from '../screens/TransferirScreen';
+import EstoqueScreen from '../screens/EstoqueScreen';
+import OrdensScreen from '../screens/OrdensScreen';
+import NotificacoesScreen from '../screens/NotificacoesScreen';
+import { onNotificationTap, registerDevice, startPolling } from '../notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -52,8 +56,22 @@ export default function AppNavigator() {
   // See issue #67 for the source-of-truth refactor that touches this area.
   const forced = !!user?.must_change_password;
 
+  // Notifications while a user is logged in: this phone is registered,
+  // new ones are shown as they arrive and a tap opens the related screen.
+  const navigation = useRef(null);
+  const active = !!user && !forced;
+  useEffect(() => {
+    if (!active) return undefined;
+    registerDevice();
+    const stopPolling = startPolling();
+    const stopTaps = onNotificationTap((screen) => {
+      if (navigation.current?.isReady()) navigation.current.navigate(screen);
+    });
+    return () => { stopPolling(); stopTaps(); };
+  }, [active]);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigation}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           forced ? (
@@ -69,6 +87,9 @@ export default function AppNavigator() {
               <Stack.Screen name="Armazenar" component={ArmazenarScreen} />
               <Stack.Screen name="Retirada" component={RetiradaScreen} />
               <Stack.Screen name="Transferir" component={TransferirScreen} />
+              <Stack.Screen name="Estoque" component={EstoqueScreen} />
+              <Stack.Screen name="Ordens" component={OrdensScreen} />
+              <Stack.Screen name="Notificacoes" component={NotificacoesScreen} />
             </>
           )
         ) : (

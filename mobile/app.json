@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#F26522"
       },
       "package": "br.sea.prototipo",
       "versionCode": 13,
@@ -28,7 +28,8 @@
         "INTERNET",
         "VIBRATE",
         "CAMERA",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -43,7 +44,13 @@
         }
       ],
       "./plugins/chainway-scanner",
-      "./plugins/with-cleartext-traffic"
+      "./plugins/with-cleartext-traffic",
+      [
+        "expo-notifications",
+        {
+          "color": "#F26522"
+        }
+      ]
     ],
     "extra": {
       "eas": {

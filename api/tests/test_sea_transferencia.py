@@ -71,11 +71,11 @@ class TestTransfer:
 
     def test_storage_rules_and_invalid_destinations(self, client, auth_headers, stored_ot, sp12):
         inv = stored_ot["inventory_id"]
-        # A2 is reserved to large materials; 'small' is PEQUENO.
+        # The storage rules apply: an address that holds one unit refuses two.
         from tests.test_sea import _bin
-        a2 = _bin(stored_ot["conn"], "T-A2", size_class="GRANDE")
-        big_only = _move(client, auth_headers, inv, a2, 1)
-        assert big_only.status_code == 409 and "tamanho" in big_only.get_json()["error"]
+        tight = _bin(stored_ot["conn"], "T-CAP1", capacity=1)
+        full = _move(client, auth_headers, inv, tight, 2)
+        assert full.status_code == 409 and "Capacidade" in full.get_json()["error"]
         assert _move(client, auth_headers, inv, sp12["c0"], 1).status_code == 400   # same address
         assert _move(client, auth_headers, inv, 99999999, 1).status_code == 404
         from tests.test_sea import STAGING_BIN

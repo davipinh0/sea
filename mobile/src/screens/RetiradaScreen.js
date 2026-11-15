@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import client from '../api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Button, Card, ConfirmModal, Message, ui } from '../components/ui';
 import { apiError, formatQuantity } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
@@ -39,11 +40,7 @@ export default function RetiradaScreen({ navigation }) {
   }, []);
 
   // Keeps the queue fresh while the screen is open.
-  useFocusEffect(useCallback(() => {
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [load]));
+  useAutoRefresh(load, { intervalMs: REFRESH_MS, paused: !!cancelling });
 
   async function act(withdrawal, action, body, done) {
     setBusy(true);
@@ -69,7 +66,7 @@ export default function RetiradaScreen({ navigation }) {
   }
 
   return (
-    <View style={screenStyles.screen}>
+    <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="RETIRADA" onBack={() => navigation.goBack()} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <Message message={message} />
@@ -113,7 +110,7 @@ export default function RetiradaScreen({ navigation }) {
           placeholder="Motivo do cancelamento" placeholderTextColor={colors.textPlaceholder}
         />
       </ConfirmModal>
-    </View>
+    </SafeAreaView>
   );
 }
 

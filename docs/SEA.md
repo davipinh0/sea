@@ -179,6 +179,16 @@ Limites conhecidos do protótipo:
   do local que guarda o material; separar é dos usuários daquele local, e confirmar ou cancelar
   é de quem solicitou.
 
+* **Cadastro de materiais** (Sistema, permissão própria; migração `088`): criar, alterar e excluir
+  os materiais consultados ao montar uma OT. Ao informar o código (na aba SAP > Nova OT ou no
+  recebimento pela etiqueta) o SEA traz descrição, unidade e peso por caixa.
+* **Nova OT** (Expedição > SAP): monta uma OT na base com materiais do cadastro; ela passa a ser
+  encontrada no recebimento como as que vêm do SAP.
+* **Prateleiras**: todas são `GRANDE`, que aceita material de qualquer tamanho; `PEQUENO` fica
+  restrito a material pequeno.
+* **Atualização automática**: as telas do painel se atualizam após qualquer mudança feita nele e
+  a cada 10 segundos, sem sair e voltar.
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):
@@ -234,6 +244,16 @@ lidos com a **câmera**. Usa a mesma API do painel.
 | Transferir | busca o material e move entre endereços ou locais | permissão Materiais, Visão Geral ou Armazenagem |
 
 O funcionário continua solicitando e confirmando a retirada no terminal (painel web).
+
+Além desses, o app tem **Estoque** (o que há em cada endereço), **Ordens** (consulta de OTs e
+materiais) e **Notificações**. As telas se atualizam sozinhas e o layout se ajusta à tela do
+aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` gera as imagens).
+
+**Notificações no celular.** Com o app aberto, ele consulta a API e mostra os avisos novos como
+notificação do aparelho. Com o app **fechado**, o aviso depende do serviço de push do Expo/Google:
+(1) criar um projeto no Firebase e enviar a chave ao Expo (`eas credentials`, Android > FCM V1),
+colocando o `google-services.json` em `mobile/`; (2) definir `SEA_PUSH=expo` no `.env`. Com isso o
+título e o texto de cada aviso passam pelos servidores do Expo e do Google; por isso vem desligado.
 
 **Servidor.** O celular acessa o painel pela rede: defina `ADMIN_BIND_HOST=0.0.0.0` no `.env`,
 recrie os serviços e informe no app (tela de login, "URL do servidor") `http://IP-DO-COMPUTADOR:8080`.

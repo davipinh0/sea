@@ -32,10 +32,6 @@ export default function AppNavigator() {
     }
   }, [isLoading]);
 
-  if (isLoading) {
-    return null; // Splash screen stays visible
-  }
-
   // Forced password change: when the user dict rehydrated from SecureStore
   // (or returned from login) carries must_change_password=true, route only
   // the change-password screen and nothing else. The force-kill + reopen
@@ -69,6 +65,12 @@ export default function AppNavigator() {
     });
     return () => { stopPolling(); stopTaps(); };
   }, [active]);
+
+  // Every hook is above this line: an early return before a hook makes
+  // React fail on the next render, which closes the app in a release build.
+  if (isLoading) {
+    return null; // Splash screen stays visible
+  }
 
   return (
     <NavigationContainer ref={navigation}>

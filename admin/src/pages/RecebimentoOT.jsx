@@ -9,6 +9,7 @@ import Modal from '../components/Modal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { DadosOtModal, MaterialOtModal, RegistroOtModal } from '../components/OtForms.jsx';
 import { OT_HEADER_FIELDS, formatDate, formatDateTime, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Expedição > Recebimento: read the OT barcode, check material code,
 // description and expected quantity, receive partially or in full into
@@ -48,6 +49,9 @@ export default function RecebimentoOT() {
   // Bumping ``openTick`` refreshes the list of OTs waiting for receipt.
   const [openTick, setOpenTick] = useState(0);
   const loadOpenOts = () => setOpenTick((n) => n + 1);
+  // Only the list of orders waiting: the order being received is not
+  // reloaded under the operator (it would erase the quantities typed).
+  useLiveRefresh(loadOpenOts);
 
   useEffect(() => {
     if (!warehouseId) return undefined;

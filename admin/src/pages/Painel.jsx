@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { formatDateTime, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Painel: operational overview of the SP12 sector. KPI tiles link to the
 // tab where the work happens; the activity feed reads the audit log.
@@ -80,10 +81,7 @@ export default function Painel() {
     return () => { cancelled = true; };
   }, [warehouseId, tick]);
 
-  useEffect(() => {
-    const timer = setInterval(() => setTick((n) => n + 1), REFRESH_MS);
-    return () => clearInterval(timer);
-  }, []);
+  useLiveRefresh(() => setTick((n) => n + 1), REFRESH_MS);
 
   if (!warehouseId) return <p style={{ padding: 24 }}>Selecione um local na barra superior.</p>;
 

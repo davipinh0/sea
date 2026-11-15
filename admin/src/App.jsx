@@ -22,6 +22,7 @@ import TerminalRetirada from './pages/TerminalRetirada.jsx';
 import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
 import Imports from './pages/Imports.jsx';
+import CadastroMateriais from './pages/CadastroMateriais.jsx';
 
 // SEA sections. Sub-pages keep the page_key that gates their backend
 // endpoints, so per-tab permissions keep working unchanged.
@@ -106,6 +107,7 @@ export default function App() {
 
         <Route path="/users" element={page(<RequirePage pageKey="users"><Users /></RequirePage>, 'Não foi possível carregar os usuários.')} />
         <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />
+        <Route path="/cadastro-materiais" element={page(<RequirePage pageKey="material-catalog"><CadastroMateriais /></RequirePage>, 'Não foi possível carregar o cadastro de materiais.')} />
         <Route path="/imports" element={page(<RequirePage pageKey="imports"><Imports /></RequirePage>, 'Não foi possível carregar a importação.')} />
 
         {/* Old SEA paths that still have a home in SEA. */}

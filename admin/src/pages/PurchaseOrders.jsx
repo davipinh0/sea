@@ -12,6 +12,7 @@ import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { useAuth } from '../auth.jsx';
 import { readError } from '../utils/sea.js';
 import { canExportCsv } from '../utils/permissions.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 const ALL_PO_STATUSES = ['OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
@@ -97,6 +98,8 @@ export default function PurchaseOrders() {
   const [resolvedItem, setResolvedItem] = useState(null);
 
   useEffect(() => { loadOrders(); }, [page, statusFilter, search, showArchived]);  // eslint-disable-line react-hooks/exhaustive-deps
+  // Keeps the list current; not while an order is being edited.
+  useLiveRefresh(() => { if (!editing) loadOrders(); });
 
   // Debounced SKU lookup. Fires while the operator is typing in the
   // Add Line SKU input so suggestions surface without a server query

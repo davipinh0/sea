@@ -146,6 +146,178 @@ def list_reservations(db, q: str = "", limit: int = 200) -> list[dict]:
     return result
 
 
+# ------------------------------------------------- Cadastro de materiais
+#
+# sap_materials is the material catalogue: what the code of a material
+# brings (description, unit, box weight) when an OT is put together. It
+# is maintained in Sistema > Cadastro de materiais.
+
+class CatalogError(Exception):
+    def __init__(self, message: str, status: int = 409):
+        super().__init__(message)
+        self.status = status
+
+
+def _material_dict(row) -> dict[str, object]:
+    return {"material_code": row.material_code, "description": row.description,
+            "uom": row.uom, "pack_weight_kg": row.pack_weight_kg}
+
+
+def list_materials(db, q: str = "", page: int = 1, per_page: int = 50) -> dict[str, object]:
+    params: dict[str, object] = {"limit": per_page, "offset": (page - 1) * per_page}
+    where = ""
+    if q:
+        where = "WHERE material_code ILIKE :q OR description ILIKE :q"
+        params["q"] = f"%{q}%"
+    total = db.execute(text(f"SELECT COUNT(*) FROM sap_materials {where}"), params).scalar()
+    rows = db.execute(
+        text(
+            f"""
+            SELECT material_code, description, uom, pack_weight_kg FROM sap_materials
+            {where} ORDER BY material_code LIMIT :limit OFFSET :offset
+            """
+        ),
+        params,
+    ).fetchall()
+    return {"materials": [_material_dict(r) for r in rows], "total": total, "page": page,
+            "per_page": per_page, "pages": max(1, -(-total // per_page))}
+
+
+def find_material(db, code: str) -> dict[str, object] | None:
+    """What a material code brings: the catalogue entry or, failing that,
+    a material already registered in the SEA (``source`` says which)."""
+    row = db.execute(
+        text("SELECT material_code, description, uom, pack_weight_kg FROM sap_materials "
+             "WHERE material_code = :c"),
+        {"c": code},
+    ).fetchone()
+    if row is not None:
+        return {**_material_dict(row), "source": "cadastro"}
+    row = db.execute(
+        text("SELECT sku AS material_code, item_name AS description, uom, pack_weight_kg "
+             "FROM items WHERE sku = :c"),
+        {"c": code},
+    ).fetchone()
+    return {**_material_dict(row), "source": "estoque"} if row is not None else None
+
+
+def _clean_material(data: dict) -> dict[str, object]:
+    uom = (data.get("uom") or "").strip().upper() or None
+    pack = data.get("pack_weight_kg")
+    # The box weight only applies to a material kept in KG.
+    return {"description": data["description"].strip(), "uom": uom,
+            "pack_weight_kg": pack if uom == "KG" else None}
+
+
+def create_material(db, data: dict) -> dict[str, object]:
+    code = data["material_code"].strip()
+    if db.execute(text("SELECT 1 FROM sap_materials WHERE material_code = :c"),
+                  {"c": code}).fetchone():
+        raise CatalogError(f"O material {code} já está no cadastro.")
+    db.execute(
+        text("INSERT INTO sap_materials (material_code, description, uom, pack_weight_kg) "
+             "VALUES (:c, :description, :uom, :pack_weight_kg)"),
+        {"c": code, **_clean_material(data)},
+    )
+    return {"material_code": code, **_clean_material(data)}
+
+
+def update_material(db, code: str, data: dict) -> dict[str, object]:
+    updated = db.execute(
+        text(
+            """
+            UPDATE sap_materials
+            SET description = :description, uom = :uom, pack_weight_kg = :pack_weight_kg,
+                updated_at = NOW()
+            WHERE material_code = :c RETURNING material_code
+            """
+        ),
+        {"c": code, **_clean_material(data)},
+    ).fetchone()
+    if updated is None:
+        raise CatalogError(f"O material {code} não está no cadastro.", status=404)
+    return {"material_code": code, **_clean_material(data)}
+
+
+def delete_material(db, code: str) -> None:
+    if db.execute(text("SELECT 1 FROM sap_materials WHERE material_code = :c"),
+                  {"c": code}).fetchone() is None:
+        raise CatalogError(f"O material {code} não está no cadastro.", status=404)
+    used = db.execute(
+        text("SELECT string_agg(DISTINCT ot_number, ', ') FROM sap_reservation_items "
+             "WHERE material_code = :c"),
+        {"c": code},
+    ).scalar()
+    if used:
+        raise CatalogError(
+            f"O material {code} está em OT(s) da base do SAP ({used}) e não pode ser excluído."
+        )
+    db.execute(text("DELETE FROM sap_materials WHERE material_code = :c"), {"c": code})
+
+
+def create_reservation(db, data: dict) -> dict[str, object]:
+    """Put together an OT in the base by hand: header plus materials, each
+    with its order. The materials come from the catalogue; an order that
+    is not in the base yet is added with the type informed."""
+    ot = data["ot_number"].strip()
+    if db.execute(text("SELECT 1 FROM sap_reservations WHERE ot_number = :ot"),
+                  {"ot": ot}).fetchone():
+        raise CatalogError(f"A OT {ot} já está na base do SAP.")
+    if db.execute(text("SELECT 1 FROM purchase_orders WHERE po_number = :ot OR po_barcode = :ot"),
+                  {"ot": ot}).fetchone():
+        raise CatalogError(f"A OT {ot} já foi registrada no SEA.")
+    codes = [m["material_code"].strip() for m in data["materials"]]
+    if len(set(codes)) != len(codes):
+        raise CatalogError("O mesmo material aparece mais de uma vez na OT.", status=400)
+
+    db.execute(
+        text(
+            f"""
+            INSERT INTO sap_reservations (ot_number, {', '.join(_HEADER_FIELDS)})
+            VALUES (:ot, {', '.join(':' + f for f in _HEADER_FIELDS)})
+            """
+        ),
+        {"ot": ot, **{f: data.get(f) for f in _HEADER_FIELDS}},
+    )
+    for m in data["materials"]:
+        code = m["material_code"].strip()
+        order = m["order_number"].strip()
+        material = db.execute(
+            text("SELECT uom FROM sap_materials WHERE material_code = :c"), {"c": code}
+        ).fetchone()
+        if material is None:
+            raise CatalogError(
+                f"O material {code} não está no cadastro de materiais. "
+                "Cadastre-o em Sistema > Cadastro de materiais.",
+                status=400,
+            )
+        known = db.execute(
+            text("SELECT order_type FROM sap_orders WHERE order_number = :n"), {"n": order}
+        ).fetchone()
+        if known is None:
+            db.execute(
+                text("INSERT INTO sap_orders (order_number, order_type) VALUES (:n, :t)"),
+                {"n": order, "t": m["order_type"]},
+            )
+        elif known.order_type != m["order_type"]:
+            raise CatalogError(
+                f"A ordem {order} está na base como {known.order_type}, não {m['order_type']}.",
+                status=400,
+            )
+        db.execute(
+            text(
+                """
+                INSERT INTO sap_reservation_items
+                    (ot_number, order_number, material_code, quantity, uom)
+                VALUES (:ot, :n, :c, :q, :u)
+                """
+            ),
+            {"ot": ot, "n": order, "c": code, "q": m["quantity"],
+             "u": (m.get("uom") or "").strip().upper() or None},
+        )
+    return {"ot": ot, "materials": len(codes)}
+
+
 # ------------------------------------------------------------- Import
 
 class _RowError(Exception):

@@ -19,6 +19,10 @@ from middleware.auth_middleware import (
 from middleware.db import with_db
 from schemas.sea import (
     CancelWithdrawalRequest,
+    CreateBaseOtRequest,
+    CreateCatalogMaterialRequest,
+    RegisterPushTokenRequest,
+    UpdateCatalogMaterialRequest,
     CreateWithdrawalRequest,
     InterpretLabelRequest,
     RegisterFromBaseRequest,
@@ -787,6 +791,115 @@ def base_sap():
         "summary": sap_base.summary(g.db),
         "reservations": sap_base.list_reservations(g.db, q),
     })
+
+
+CATALOG_PAGE = "material-catalog"
+# Who reads the catalogue: who maintains it and who puts OTs together.
+CATALOG_READ_KEYS = (CATALOG_PAGE, *RECEIVING_PAGE_KEYS)
+
+
+def _catalog_change(fn, *args, message, status=200):
+    try:
+        result = fn(g.db, *args)
+    except sap_base.CatalogError as exc:
+        g.db.rollback()
+        return _user_error(str(exc), exc.status)
+    g.db.commit()
+    return jsonify({"message": message, **(result or {})}), status
+
+
+@sea_bp.route("/catalogo")
+@require_auth
+@require_any_page(*CATALOG_READ_KEYS)
+@with_db
+def listar_catalogo():
+    page = max(1, request.args.get("page", 1, type=int))
+    per_page = min(max(1, request.args.get("per_page", 50, type=int)), 200)
+    q = (request.args.get("q") or "").strip()[:100]
+    return jsonify(sap_base.list_materials(g.db, q, page, per_page))
+
+
+@sea_bp.route("/catalogo/<path:code>")
+@require_auth
+@require_any_page(*CATALOG_READ_KEYS)
+@with_db
+def consultar_catalogo(code):
+    """What a material code brings (description, unit, box weight)."""
+    found = sap_base.find_material(g.db, code.strip())
+    if found is None:
+        return _user_error(f"Material {code} não encontrado no cadastro.", 404)
+    return jsonify(found)
+
+
+@sea_bp.route("/catalogo", methods=["POST"])
+@require_auth
+@require_admin_or_page_permission(CATALOG_PAGE)
+@validate_body(CreateCatalogMaterialRequest)
+@with_db
+def criar_material_catalogo(validated):
+    resp = _catalog_change(sap_base.create_material, validated.model_dump(),
+                           message="Material cadastrado", status=201)
+    return resp
+
+
+@sea_bp.route("/catalogo/<path:code>", methods=["PUT"])
+@require_auth
+@require_admin_or_page_permission(CATALOG_PAGE)
+@validate_body(UpdateCatalogMaterialRequest)
+@with_db
+def alterar_material_catalogo(code, validated):
+    return _catalog_change(sap_base.update_material, code.strip(), validated.model_dump(),
+                           message="Material atualizado")
+
+
+@sea_bp.route("/catalogo/<path:code>", methods=["DELETE"])
+@require_auth
+@require_admin_or_page_permission(CATALOG_PAGE)
+@with_db
+def excluir_material_catalogo(code):
+    return _catalog_change(sap_base.delete_material, code.strip(), message="Material excluído")
+
+
+@sea_bp.route("/sap/ots", methods=["POST"])
+@require_auth
+@require_any_page(*RECEIVING_PAGE_KEYS)
+@validate_body(CreateBaseOtRequest)
+@with_db
+def criar_ot_na_base(validated):
+    """Put an OT together in the SAP base (materials from the catalogue)."""
+    return _catalog_change(sap_base.create_reservation, validated.model_dump(mode="json"),
+                           message="OT criada na base do SAP", status=201)
+
+
+@sea_bp.route("/push/registrar", methods=["POST"])
+@require_auth
+@validate_body(RegisterPushTokenRequest)
+@with_db
+def registrar_push(validated):
+    """This device receives the SEA notifications of the logged-in user."""
+    g.db.execute(
+        text(
+            """
+            INSERT INTO sea_push_tokens (token, user_id) VALUES (:t, :u)
+            ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, updated_at = NOW()
+            """
+        ),
+        {"t": validated.token, "u": g.current_user["user_id"]},
+    )
+    g.db.commit()
+    return jsonify({"message": "Aparelho registrado"})
+
+
+@sea_bp.route("/push/remover", methods=["POST"])
+@require_auth
+@validate_body(RegisterPushTokenRequest)
+@with_db
+def remover_push(validated):
+    """Called on logout: the device stops receiving notifications."""
+    g.db.execute(text("DELETE FROM sea_push_tokens WHERE token = :t AND user_id = :u"),
+                 {"t": validated.token, "u": g.current_user["user_id"]})
+    g.db.commit()
+    return jsonify({"message": "Aparelho removido"})
 
 
 @sea_bp.route("/sap/importar/<kind>", methods=["POST"])

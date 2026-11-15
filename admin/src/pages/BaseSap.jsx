@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import PageHeader from '../components/PageHeader.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
+import NovaOtSapModal from '../components/NovaOtSapModal.jsx';
 import { formatDate, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Expedição > SAP: what the SEA holds from SAP (orders, materials
 // and the open OTs / reservations with their materials). Read-only: the
@@ -14,6 +16,10 @@ export default function BaseSap() {
   const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [message, setMessage] = useState('');
+  const [tick, setTick] = useState(0);
+  useLiveRefresh(() => setTick((n) => n + 1));
 
   useEffect(() => {
     let cancelled = false;
@@ -24,13 +30,22 @@ export default function BaseSap() {
       setData(await res.json());
     });
     return () => { cancelled = true; };
-  }, [search]);
+  }, [search, tick]);
 
   const reservations = data?.reservations || [];
 
   return (
     <div>
-      <PageHeader title="SAP" />
+      <PageHeader title="SAP">
+        <button type="button" className="btn btn-primary" onClick={() => { setMessage(''); setCreating(true); }}>Nova OT</button>
+      </PageHeader>
+      {message && <div className="tag tag-success" role="status" style={{ display: 'block', padding: 10, marginBottom: 12 }}>{message}</div>}
+      {creating && (
+        <NovaOtSapModal
+          onClose={() => setCreating(false)}
+          onCreated={(ot) => { setCreating(false); setMessage(`OT ${ot} criada. Ao ler este código no recebimento, o SEA traz os materiais dela.`); }}
+        />
+      )}
       <p className="settings-note">
         Dados vindos do SAP: ordens, materiais e OTs / reservas abertas. Ao ler o código de barras no recebimento, o SEA procura a OT aqui.
         A base é carregada em Sistema &gt; Importação de dados.

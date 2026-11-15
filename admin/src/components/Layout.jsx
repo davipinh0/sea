@@ -18,6 +18,7 @@ const PAGE_LABELS = {
   receiving: 'Expedição > Recebimento de Ordem', putaway: 'Expedição > Armazenagem',
   'purchase-orders': 'Expedição > Ordens', retirada: 'Retirada', users: 'Sistema > Usuários',
   settings: 'Sistema > Configurações', imports: 'Sistema > Importação de dados',
+  'material-catalog': 'Sistema > Cadastro de materiais',
   warehouses: 'Sistema > Configurações',
 };
 

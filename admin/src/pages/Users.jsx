@@ -46,6 +46,7 @@ const PAGE_GROUPS = [
     pages: [
       { key: 'users', label: 'Usuários' },
       { key: 'settings', label: 'Configurações' },
+      { key: 'material-catalog', label: 'Cadastro de materiais' },
       { key: 'imports', label: 'Importação de dados' },
     ],
   },

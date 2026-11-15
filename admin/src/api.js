@@ -45,6 +45,8 @@ async function apiFetch(path, options = {}) {
       }
     } catch (_) { /* non-JSON 403 (legacy / unrelated) */ }
   }
+  // Something changed on the server: open screens refresh (useLiveRefresh).
+  if (needsCsrf && res.ok) window.dispatchEvent(new Event('sea:changed'));
   return res;
 }
 

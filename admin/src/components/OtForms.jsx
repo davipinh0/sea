@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import StatusTag from './StatusTag.jsx';
@@ -65,6 +65,30 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
   const [material, setMaterial] = useState(payloadToFields(MATERIAL_FORM));
   const [reading, setReading] = useState(null);
   const [fromLabel, setFromLabel] = useState(false);
+  const [catalogNote, setCatalogNote] = useState('');
+
+  // The code brings description, unit and box weight from the catalogue
+  // (Sistema > Cadastro de materiais). Only empty fields are filled in:
+  // what the operator typed or the label informed is never replaced.
+  const materialCode = (material.material_code || '').trim();
+  useEffect(() => {
+    if (!materialCode) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const res = await api.get(`/sea/catalogo/${encodeURIComponent(materialCode)}`, { silentPermissionDenied: true });
+      if (cancelled || !res) return;
+      if (!res.ok) { setCatalogNote(''); return; }
+      const found = await res.json();
+      setMaterial((m) => ({
+        ...m,
+        description: m.description || found.description || '',
+        uom: m.uom || found.uom || '',
+        pack_weight_kg: m.pack_weight_kg || (found.pack_weight_kg ? String(found.pack_weight_kg) : ''),
+      }));
+      setCatalogNote(`Material ${materialCode} encontrado no ${found.source === 'cadastro' ? 'cadastro de materiais' : 'estoque do SEA'}: campos vazios preenchidos.`);
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [materialCode]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -187,6 +211,7 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
 
       <div className="section-title" style={{ marginTop: 16 }}>Material</div>
       <FieldGrid fields={materialFields(material)} values={material} onChange={setMaterial} idPrefix="etq-m" flagPending={!!reading} />
+      {catalogNote && <p className="settings-note" role="status">{catalogNote}</p>}
       {isKg(material) && (
         <p className="settings-note">
           KG por caixa completa o cadastro do material: o estoque fica em quilos e a retirada é feita por caixa. Em branco, a retirada é por quilo.

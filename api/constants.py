@@ -356,6 +356,9 @@ ALL_PAGE_KEYS = (
     "webhooks", "notifications", "audit-log", "imports", "integrations", "settings",
     # SEA: withdrawal queue + touchscreen terminal (Retirada).
     "retirada",
+    # SEA: Sistema > Cadastro de materiais (create, change and delete the
+    # materials consulted when an OT is put together).
+    "material-catalog",
 )
 
 # Override grants (mig 062): feature-flag grants that ride on the same

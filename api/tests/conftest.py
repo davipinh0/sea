@@ -132,6 +132,8 @@ ALL_TABLES = [
     "transfer_order_approvals",
     "transfer_order_lines",
     "transfer_orders",
+    # SEA (mig 088): devices that receive notifications.
+    "sea_push_tokens",
     # SEA (mig 085): SAP base mirror.
     "sap_reservation_items",
     "sap_reservations",

@@ -113,6 +113,47 @@ class CreateWithdrawalRequest(BaseModel):
     note: Optional[str] = Field(None, max_length=500)
 
 
+class CatalogMaterialFields(_LabelModel):
+    description: str = Field(..., min_length=1, max_length=200)
+    uom: Optional[str] = Field(None, max_length=10)
+    pack_weight_kg: Optional[int] = Field(None, gt=0, le=100000)
+
+
+class CreateCatalogMaterialRequest(CatalogMaterialFields):
+    material_code: str = Field(..., min_length=1, max_length=50)
+
+
+class UpdateCatalogMaterialRequest(CatalogMaterialFields):
+    """Change of a catalogue entry (the code is in the address)."""
+
+
+class BaseOtMaterial(_LabelModel):
+    order_number: str = Field(..., min_length=1, max_length=40)
+    order_type: Literal["PM11", "PM12"]
+    material_code: str = Field(..., min_length=1, max_length=50)
+    quantity: int = Field(..., gt=0, le=1000000)
+    uom: Optional[str] = Field(None, max_length=10)
+
+
+class CreateBaseOtRequest(_LabelModel):
+    """An OT put together by hand in the SAP base."""
+
+    ot_number: str = Field(..., min_length=1, max_length=50)
+    reservation_number: Optional[str] = Field(None, max_length=40)
+    requester_name: Optional[str] = Field(None, max_length=120)
+    needed_date: Optional[date] = None
+    department: Optional[str] = Field(None, max_length=60)
+    pickup_location: Optional[str] = Field(None, max_length=120)
+    unload_location: Optional[str] = Field(None, max_length=120)
+    materials: List[BaseOtMaterial] = Field(..., min_length=1, max_length=50)
+
+
+class RegisterPushTokenRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    token: str = Field(..., min_length=10, max_length=200)
+
+
 class TransferStockRequest(BaseModel):
     """Move stored material to another address (any location)."""
 

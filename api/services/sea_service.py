@@ -59,6 +59,8 @@ ACTION_WITHDRAWAL_CANCELLED = "WITHDRAWAL_CANCELLED"
 
 
 UOM_KG = "KG"
+# Size class of an address that accepts material of every size.
+SIZE_ANY = "GRANDE"
 
 
 def pack_weight(uom, pack_weight_kg):
@@ -890,7 +892,10 @@ def storage_problems(db, *, item, target_bin, quantity):
     if target_bin.is_active is False:
         problems.append(f"O endereço {target_bin.bin_code} está inativo.")
 
-    if target_bin.size_class and item.size_class != target_bin.size_class:
+    # A GRANDE address takes material of any size; a PEQUENO one is kept
+    # for small material.
+    if (target_bin.size_class and target_bin.size_class != SIZE_ANY
+            and item.size_class != target_bin.size_class):
         problems.append(
             f"O endereço {target_bin.bin_code} é reservado a materiais de tamanho "
             f"{target_bin.size_class}; o material {item.sku} é "

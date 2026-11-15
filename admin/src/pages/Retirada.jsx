@@ -6,6 +6,7 @@ import StatusTag from '../components/StatusTag.jsx';
 import Modal from '../components/Modal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { formatDateTime, formatQuantity, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Retirada: the stock keeper's queue. Requests made at the touchscreen
 // terminal arrive here (polled), are separated and marked ready; the
@@ -54,10 +55,7 @@ export default function Retirada() {
     return () => { cancelled = true; };
   }, [view, tick]);
 
-  useEffect(() => {
-    const timer = setInterval(() => setTick((n) => n + 1), POLL_MS);
-    return () => clearInterval(timer);
-  }, []);
+  useLiveRefresh(() => setTick((n) => n + 1), POLL_MS);
 
   async function step(w, action) {
     setBusy(w.withdrawal_id);

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import { useAuth } from '../auth.jsx';
 import { canExportCsv } from '../utils/permissions.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
@@ -34,6 +35,8 @@ export default function Bins() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => { if (warehouseId) { loadBins(); loadZones(); } }, [warehouseId, search, page]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useLiveRefresh(() => { if (warehouseId) loadBins(); });
 
   async function loadBins() {
     const params = new URLSearchParams({ warehouse_id: String(warehouseId), page, per_page: 50 });

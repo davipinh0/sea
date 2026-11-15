@@ -53,6 +53,7 @@ EMAIL_NO_RECIPIENT = "SEM_DESTINATARIO"
 EMAIL_NOT_CONFIGURED = "NAO_CONFIGURADO"
 EMAIL_FAILED = "FALHA"
 
+_PUSH_KEY = "sea_pending_pushes"
 _SESSION_KEY = "sea_pending_notifications"
 _SMTP_TIMEOUT_S = 15
 
@@ -109,6 +110,8 @@ def create(db, *, kind: str, warehouse_id: int, title: str, message: str,
     ).scalar()
     if status == EMAIL_PENDING:
         db.info.setdefault(_SESSION_KEY, []).append(notification_id)
+    if push_enabled():
+        db.info.setdefault(_PUSH_KEY, []).append(notification_id)
     return notification_id
 
 
@@ -120,11 +123,12 @@ def dispatch(db) -> None:
     in the panel) and the failure is logged.
     """
     pending = db.info.pop(_SESSION_KEY, [])
-    if not pending:
+    pushes = db.info.pop(_PUSH_KEY, [])
+    if not pending and not pushes:
         return
     from kombu.exceptions import OperationalError
 
-    from jobs.notification_tasks import send_notification_email
+    from jobs.notification_tasks import send_notification_email, send_notification_push
 
     for notification_id in pending:
         try:
@@ -132,6 +136,71 @@ def dispatch(db) -> None:
         except OperationalError:
             logger.exception("fila de e-mail indisponível; notificação %s segue PENDENTE",
                              notification_id)
+    for notification_id in pushes:
+        try:
+            send_notification_push.delay(notification_id)
+        except OperationalError:
+            logger.exception("fila indisponível; notificação %s sem aviso no celular",
+                             notification_id)
+
+
+# ------------------------------------------------------------ Celular
+#
+# Notifications on the phone while the app is closed go through the Expo
+# push service (which hands them to Google). That sends the title and the
+# text of the notification to an outside service, so it is off unless
+# SEA_PUSH=expo is set. With the app open, the app itself polls the API.
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+
+def push_enabled() -> bool:
+    return os.environ.get("SEA_PUSH", "").strip().lower() == "expo"
+
+
+def push_tokens(db, warehouse_id: int) -> list[str]:
+    """Devices of the active users who work in the location of the event
+    (administrators work in all of them)."""
+    rows = db.execute(
+        text(
+            """
+            SELECT t.token FROM sea_push_tokens t JOIN users u ON u.user_id = t.user_id
+            WHERE u.is_active = TRUE
+              AND (u.role = 'ADMIN' OR :wid = ANY(u.warehouse_ids))
+            ORDER BY t.token
+            """
+        ),
+        {"wid": warehouse_id},
+    ).fetchall()
+    return [r.token for r in rows]
+
+
+def _expo_send(messages: list[dict]) -> None:
+    import requests
+
+    resp = requests.post(EXPO_PUSH_URL, json=messages, timeout=10,
+                         headers={"Accept": "application/json"})
+    resp.raise_for_status()
+
+
+def send_push(db, notification_id: int, sender=_expo_send) -> int:
+    """Send one notification to the phones. Returns how many devices."""
+    row = db.execute(
+        text("SELECT warehouse_id, kind, title, message FROM sea_notifications "
+             "WHERE notification_id = :id"),
+        {"id": notification_id},
+    ).fetchone()
+    if row is None or not push_enabled():
+        return 0
+    tokens = push_tokens(db, row.warehouse_id)
+    if not tokens:
+        return 0
+    sender([
+        {"to": token, "title": row.title, "body": row.message, "sound": "default",
+         "channelId": "sea", "data": {"kind": row.kind, "notification_id": notification_id}}
+        for token in tokens
+    ])
+    return len(tokens)
 
 
 def admin_recipients(db) -> list[str]:

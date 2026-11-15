@@ -26,6 +26,7 @@ const NAV = [
     items: [
       { to: '/users', label: 'Usuários', pageKeys: ['users'] },
       { to: '/settings', label: 'Configurações', pageKeys: ['settings'] },
+      { to: '/cadastro-materiais', label: 'Cadastro de materiais', pageKeys: ['material-catalog'] },
       { to: '/imports', label: 'Importação de dados', pageKeys: ['imports'] },
     ],
   },

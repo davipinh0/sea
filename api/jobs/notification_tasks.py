@@ -12,6 +12,20 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task
+def send_notification_push(notification_id: int) -> dict:
+    import models.database as db
+    from services import notification_service
+
+    session = db.SessionLocal()
+    try:
+        devices = notification_service.send_push(session, notification_id)
+        logger.info("notificação %s: enviada a %s aparelho(s)", notification_id, devices)
+        return {"notification_id": notification_id, "devices": devices}
+    finally:
+        session.close()
+
+
+@celery_app.task
 def send_notification_email(notification_id: int) -> dict:
     import models.database as db
     from services import notification_service

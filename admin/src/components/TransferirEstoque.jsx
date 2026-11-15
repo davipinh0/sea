@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { formatQuantity, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Estoque > Materiais > material: where the material is and the option to
 // move it to another address, in the same location (A1 to B2) or to
@@ -18,6 +19,7 @@ export default function TransferirEstoque({ itemId, onMoved }) {
 
   // Bumping ``tick`` reloads the stock after a transfer.
   const [tick, setTick] = useState(0);
+  useLiveRefresh(() => setTick((n) => n + 1));
 
   useEffect(() => {
     let cancelled = false;

@@ -6,6 +6,7 @@ import DataTable from '../components/DataTable.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { formatDateTime, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Estoque SP12: total stock of the sector, an address map (shelves A, B,
 // C... by level) and the list of PM11 / PM12 transfer orders with where
@@ -66,8 +67,9 @@ export default function EstoqueSP12() {
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState(null);
 
-  // Bumping ``tick`` re-runs both fetches (Atualizar button).
+  // Bumping ``tick`` re-runs both fetches (Atualizar button and auto-refresh).
   const [tick, setTick] = useState(0);
+  useLiveRefresh(() => setTick((n) => n + 1));
 
   useEffect(() => {
     if (!warehouseId) return undefined;

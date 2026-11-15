@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import { useAuth } from '../auth.jsx';
 import { formatQuantity, readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 import { OtTypeTag } from '../components/sea.jsx';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -47,6 +48,9 @@ export default function Items() {
     const timer = setTimeout(() => loadItems(controller.signal), search ? 250 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [page, search, filter, warehouseId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keeps the list current; not while a form is open over it.
+  useLiveRefresh(() => { if (!showModal) loadItems(); });
 
   // signal is supplied by the debounced effect so a superseded query
   // aborts mid-flight. The mutation handlers (save/delete/archive) call

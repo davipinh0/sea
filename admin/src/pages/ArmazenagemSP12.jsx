@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
 import { readError } from '../utils/sea.js';
+import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Expedição > Armazenagem: material waiting in a receiving area, with an
 // automatic address suggestion (whole order in one address, size class,
@@ -136,6 +137,10 @@ export default function ArmazenagemSP12() {
   // Bumping ``tick`` re-runs the fetch (Atualizar button, after a put-away).
   const [tick, setTick] = useState(0);
   const load = () => setTick((n) => n + 1);
+  useLiveRefresh(load);
+  // What the last load showed. The rows are only rebuilt when it changes,
+  // so an automatic refresh never erases a destination being chosen.
+  const shown = useRef('');
 
   // Every location the user sees; the selected one comes first. When the
   // list of locations is not available, only the selected one is used.
@@ -174,6 +179,9 @@ export default function ArmazenagemSP12() {
       const dest = destRes?.ok ? (await destRes.json()).bins || [] : null;
       if (cancelled) return;
       setError('');
+      const signature = JSON.stringify([rows.map((r) => [r.inventory_id, r.quantity]), (dest || []).map((b) => b.bin_id)]);
+      if (signature === shown.current) return;
+      shown.current = signature;
       setPending(rows);
       if (dest) setDestinations(groupByLocation(dest));
       setOtTypes(types);

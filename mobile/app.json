@@ -27,7 +27,8 @@
       "permissions": [
         "INTERNET",
         "VIBRATE",
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA"
       ]
     },
     "plugins": [
@@ -43,6 +44,12 @@
       ],
       "./plugins/chainway-scanner",
       "./plugins/with-cleartext-traffic"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8bcaf915-0743-437b-8e9d-f54e555efbfb"
+      }
+    },
+    "owner": "davipinh0"
   }
 }

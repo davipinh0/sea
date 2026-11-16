@@ -1,16 +1,16 @@
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
-import { ScanSettingsProvider } from './src/context/ScanSettingsContext';
+import { StatusBar } from 'expo-status-bar';
+import { isDark } from './src/theme/styles';
 import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ScanSettingsProvider>
-          <AppNavigator />
-        </ScanSettingsProvider>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <AppNavigator />
       </AuthProvider>
     </SafeAreaProvider>
   );

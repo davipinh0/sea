@@ -1,837 +1,277 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, ActivityIndicator, StyleSheet, TextInput, useWindowDimensions } from 'react-native';
-import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { useAuth } from '../auth/AuthContext';
-import { useScanSettingsContext } from '../context/ScanSettingsContext';
-import CodeInput from '../components/CodeInput';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { visibleModules } from '../utils/sea';
+import { reloadAppAsync } from 'expo';
+import { useAuth } from '../auth/AuthContext';
+import client from '../api/client';
+import WarehouseSelector from '../components/WarehouseSelector';
+import ServerDialog from '../components/ServerDialog';
+import { Button } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { readSeen, unregisterDevice } from '../notifications';
-import ErrorPopup from '../components/ErrorPopup';
-import useScreenError from '../hooks/useScreenError';
-import WarehouseSelector from '../components/WarehouseSelector';
-import client, { getStoredApiUrl, setApiUrl } from '../api/client';
-import { colors, fonts, radii, spacing } from '../theme/styles';
+import { visibleModules } from '../utils/sea';
+import { colors, radii, saveTheme, spacing, themeChoice } from '../theme/styles';
 
-// The modules and who sees each one are in utils/sea.js (MODULES).
+// Tela inicial: local selecionado, sino de notificações e menu do usuário
+// no topo; abaixo, os módulos que o usuário pode abrir.
 
-const ACCENT_COLORS = {
-  red: colors.accentRed,
-  copper: colors.copper,
-  gray: colors.grayAccent,
-};
+const ACCENT = { red: colors.accentRed, copper: colors.copper, gray: colors.grayAccent };
+const THEMES = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']];
 
 export default function HomeScreen({ navigation }) {
   const { user, warehouseId, logout, switchWarehouse } = useAuth();
-  const [me, setMe] = useState(null);
-  const [badges, setBadges] = useState({});
+  const [me, setMe] = useState(user);
   const [warehouses, setWarehouses] = useState([]);
-  const [warehouseCode, setWarehouseCode] = useState('');
-  const [warehouseName, setWarehouseName] = useState('');
-  const [showWarehousePicker, setShowWarehousePicker] = useState(false);
-  const [needsWarehouse, setNeedsWarehouse] = useState(false);
-  const warehouseResolved = useRef(false);
-  const [requirePacking, setRequirePacking] = useState(true);
-  const { error, scanDisabled, showError, clearError } = useScreenError();
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showScanConfig, setShowScanConfig] = useState(false);
-  const [showChangePw, setShowChangePw] = useState(false);
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
-  const [pwError, setPwError] = useState('');
-  const [pwSuccess, setPwSuccess] = useState('');
-  const [pwSaving, setPwSaving] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const scanSettings = useScanSettingsContext();
-  const [serverUrl, setServerUrl] = useState('');
-  const scrollRef = React.useRef(null);
-  useScrollToTop(scrollRef);
-  // Modal state for replacing Alert.alert
-  const [infoModal, setInfoModal] = useState({ visible: false, title: '', message: '' });
-  const [confirmModal, setConfirmModal] = useState({ visible: false, title: '', message: '', onConfirm: null, confirmText: 'OK', confirmDestructive: false });
+  const [counts, setCounts] = useState({});
+  const [unread, setUnread] = useState(0);
+  const [picking, setPicking] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showServer, setShowServer] = useState(false);
 
-  // On first load after login, if no warehouse is set, fetch the list and
-  // either auto-select (single warehouse) or show a blocking picker.
-  useEffect(() => {
-    if (warehouseId || warehouseResolved.current) return;
-    (async () => {
-      try {
-        const resp = await client.get('/api/warehouses/list');
-        const list = resp.data.warehouses || [];
-        setWarehouses(list);
-        if (list.length === 1) {
-          switchWarehouse(list[0].id);
-          warehouseResolved.current = true;
-        } else if (list.length > 1) {
-          setNeedsWarehouse(true);
-        }
-      } catch {
-        // If fetch fails, show picker with empty list - user can retry via header pill
-        setNeedsWarehouse(true);
-      }
-    })();
-  }, [warehouseId, switchWarehouse]);
-
-  const loadData = useCallback(async () => {
-    if (!warehouseId) return;
-
+  // Who the user is and where they work change rarely: loaded once and
+  // refreshed in the background, never in the way of the screen.
+  const loadProfile = useCallback(async () => {
     try {
-      // hotfix/picking-revert-allocation no-Resume rule: the home
-      // screen no longer surfaces an "active batch" affordance. A
-      // new scan auto-cancels any prior in-progress batch this user
-      // owns (see services.picking_service.cancel_prior_user_batches),
-      // so there is nothing to resume to. /api/picking/active-batch
-      // remains for in-session navigation but is not fetched here.
-      const [meResp, dashResp, whResp] = await Promise.all([
-        client.get('/api/auth/me'),
-        client.get(`/api/sea/painel?warehouse_id=${warehouseId}`),
-        client.get('/api/warehouses/list'),
-      ]);
-
+      const [meResp, whResp] = await Promise.all([client.get('/api/auth/me'), client.get('/api/warehouses/list')]);
       setMe(meResp.data);
-      setRequirePacking(meResp.data.require_packing !== false);
-
-      const stats = dashResp.data;
-      // Notifications that arrived since the list was last opened.
-      let unread = 0;
-      try {
-        const [seen, notifResp] = await Promise.all([readSeen(), client.get('/api/sea/notificacoes?limit=50')]);
-        const list = notifResp.data?.notifications || [];
-        unread = seen === null ? 0 : list.filter((n) => n.notification_id > seen).length;
-      } catch {
-        // The badge just stays empty.
-      }
-      setBadges({
-        notificacoes: unread,
-        receive: stats.open_ots || 0,
-        putaway: stats.staging_ots || 0,
-        // Requests of every location the user works in.
-        retirada: stats.pending_withdrawals_all ?? stats.pending_withdrawals ?? 0,
-      });
-
-      const whList = whResp.data.warehouses || [];
-      setWarehouses(whList);
-      const current = whList.find((w) => w.id === warehouseId);
-      if (current) {
-        setWarehouseCode(current.code);
-        setWarehouseName(current.name);
-      }
+      setWarehouses(whResp.data.warehouses || []);
     } catch {
-      // Silent fail on refresh - data shows stale
-    } finally {
-      setInitialLoading(false);
+      // Keeps what is on screen.
     }
-  }, [warehouseId]);
+  }, []);
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  useFocusEffect(
-    useCallback(() => {
-      getStoredApiUrl().then(setServerUrl);
-    }, [])
-  );
-  // Counters and modules follow what happens while the screen is open.
-  useAutoRefresh(loadData);
+  // The first location is chosen for who has only one.
+  const chosen = useRef(false);
+  useEffect(() => {
+    if (warehouseId || chosen.current || warehouses.length !== 1) return;
+    chosen.current = true;
+    switchWarehouse(warehouses[0].id);
+  }, [warehouseId, warehouses, switchWarehouse]);
+
+  // The selected location comes from what is already in memory, so
+  // changing it is immediate; the counters follow in the background.
+  const current = useMemo(() => warehouses.find((w) => w.id === warehouseId) || null, [warehouses, warehouseId]);
+  const modules = visibleModules(me, current?.code);
+
+  const loadCounts = useCallback(async () => {
+    if (!warehouseId) return;
+    client.get(`/api/sea/painel?warehouse_id=${warehouseId}`)
+      .then((resp) => setCounts({
+        receive: resp.data.unreceived_ots ?? resp.data.open_ots ?? 0,
+        putaway: resp.data.staging_ots || 0,
+        retirada: resp.data.pending_withdrawals_all ?? resp.data.pending_withdrawals ?? 0,
+      }))
+      .catch(() => {});
+    Promise.all([readSeen(), client.get('/api/sea/notificacoes?limit=50')])
+      .then(([seen, resp]) => {
+        const list = resp.data?.notifications || [];
+        setUnread(seen === null ? 0 : list.filter((n) => n.notification_id > seen).length);
+      })
+      .catch(() => {});
+  }, [warehouseId]);
+  useAutoRefresh(loadCounts);
+
+  function selectWarehouse(id) {
+    setPicking(false);
+    setCounts({});
+    switchWarehouse(id);
+  }
+
+  // The phone stops receiving notifications of who logs out.
+  async function signOut() {
+    setMenu(false);
+    await unregisterDevice();
+    logout();
+  }
+
+  async function chooseTheme(choice) {
+    if (choice === themeChoice) return;
+    await saveTheme(choice);
+    // Every screen builds its colours when the app starts.
+    reloadAppAsync('Tema alterado').catch(() => {});
+  }
 
   // Cards adapt to the screen: two per row, one on a narrow screen or
   // when the phone uses a large font.
   const { width, fontScale } = useWindowDimensions();
   const oneColumn = width < 340 || fontScale > 1.3;
   const cardWidth = oneColumn ? width - 32 : (width - 32 - spacing.cardGap) / 2;
-
-  // The phone stops receiving notifications of who logs out.
-  const signOut = async () => { await unregisterDevice(); logout(); };
-
-  const handleScan = async (barcode) => {
-    const cleaned = barcode.replace(/[\r\n\s]+/g, '').trim();
-    if (!cleaned) return;
-    const encoded = encodeURIComponent(cleaned);
-
-    // Try item lookup (UPC or SKU)
-    try {
-      const itemResp = await client.get(`/api/lookup/item/${encoded}`);
-      if (itemResp.data && itemResp.data.item) {
-        const item = itemResp.data.item;
-        const locations = (itemResp.data.locations || [])
-          .map((l) => `${l.bin_code}: ${l.quantity_on_hand}`)
-          .join('\n');
-        setInfoModal({ visible: true, title: item.sku, message: `${item.item_name}\n\n${locations || 'Sem saldo em estoque'}` });
-        return;
-      }
-    } catch {
-      // Not an item
-    }
-
-    // Try bin lookup
-    try {
-      const binResp = await client.get(`/api/lookup/bin/${encoded}`);
-      if (binResp.data && binResp.data.bin) {
-        const bin = binResp.data.bin;
-        const contents = (binResp.data.items || [])
-          .map((c) => `${c.sku}: ${c.quantity_on_hand}`)
-          .join('\n');
-        setInfoModal({ visible: true, title: bin.bin_code, message: contents || 'Endereço vazio' });
-        return;
-      }
-    } catch {
-      // Not a bin
-    }
-
-    // Try PO lookup
-    try {
-      const poResp = await client.get(`/api/receiving/po/${encoded}`);
-      if (poResp.data && poResp.data.purchase_order) {
-        const po = poResp.data.purchase_order;
-        navigation.navigate('Receber', { code: po.po_number });
-        return;
-      }
-    } catch {
-      // Not a PO
-    }
-
-    showError('Código de barras não reconhecido');
-  };
-
-  const visibleFunctions = visibleModules(me, warehouseCode);
-
-  const getBadgeCount = (key) => badges[key] || 0;
-
-  const userInitial = (user?.full_name || user?.username || 'U').charAt(0).toUpperCase();
+  const initial = (me?.full_name || me?.username || 'U').charAt(0).toUpperCase();
+  const needsWarehouse = !warehouseId && warehouses.length > 1;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerLogo}>SEA</Text>
+        <Text style={styles.logo}>SEA</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.warehousePill} onPress={() => setShowWarehousePicker(true)}>
-            <Text style={styles.warehousePillText}>{warehouseCode || '---'}</Text>
+          <TouchableOpacity style={styles.pill} onPress={() => setPicking(true)} accessibilityLabel={`Local: ${current?.code || 'não selecionado'}. Tocar para trocar`}>
+            <Text style={styles.pillText} numberOfLines={1}>{current?.code || 'Local'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.userAvatar} onPress={() => setShowUserMenu(true)}>
-            <Text style={styles.userAvatarText}>{userInitial}</Text>
+          <TouchableOpacity style={styles.bell} onPress={() => navigation.navigate('Notificacoes')} accessibilityLabel={unread ? `Notificações: ${unread} nova(s)` : 'Notificações'}>
+            <Text style={styles.bellIcon}>{'\u{1F514}'}</Text>
+            {unread > 0 && <View style={styles.bellBadge}><Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text></View>}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.avatar} onPress={() => setMenu(true)} accessibilityLabel="Menu do usuário">
+            <Text style={styles.avatarText}>{initial}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <Modal visible={showUserMenu} transparent animationType="fade">
-        <Pressable style={styles.menuOverlay} onPress={() => setShowUserMenu(false)}>
-          <View style={styles.menuCard}>
-            <Text style={styles.menuUser}>{user?.full_name || user?.username || 'Usuário'}</Text>
-            <Text style={styles.menuRole}>{user?.role}</Text>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => {
-              setShowUserMenu(false);
-              getStoredApiUrl().then(setServerUrl);
-              setShowScanConfig(true);
-            }}>
-              <Text style={styles.menuItemText}>CONFIGURAÇÕES</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => {
-              setShowUserMenu(false);
-              setPwForm({ current: '', newPw: '', confirm: '' });
-              setPwError('');
-              setPwSuccess('');
-              setShowChangePw(true);
-            }}>
-              <Text style={styles.menuItemText}>ALTERAR SENHA</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowUserMenu(false); signOut(); }}>
-              <Text style={styles.menuItemTextDanger}>SAIR</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Scan Settings Modal */}
-      <Modal visible={showScanConfig} transparent animationType="fade">
-        <Pressable style={styles.menuOverlay} onPress={() => setShowScanConfig(false)}>
-          <Pressable style={[styles.scanConfigCard, { maxHeight: '80%' }]} onPress={() => {}}>
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text style={styles.scanConfigTitle}>CONFIGURAÇÕES</Text>
-
-            <Text style={styles.scanConfigLabel}>URL DO SERVIDOR</Text>
-            <TextInput
-              style={styles.scanConfigInput}
-              value={serverUrl}
-              onChangeText={setServerUrl}
-              onBlur={() => { if (serverUrl.trim()) setApiUrl(serverUrl.trim()); }}
-              placeholder="http://10.1.10.150:5000"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholderTextColor={colors.textPlaceholder}
-            />
-            <Text style={[styles.scanConfigHint, { marginBottom: 16 }]}>Endereço do servidor da API - alterar exige novo login</Text>
-
-            <Text style={styles.scanConfigLabel}>MODO DE LEITURA</Text>
-            <View style={styles.scanModeRow}>
-              <TouchableOpacity
-                style={[styles.scanModeBtn, scanSettings?.mode === 'keyboard' && styles.scanModeBtnActive]}
-                onPress={() => scanSettings?.setMode('keyboard')}
-              >
-                <Text style={[styles.scanModeBtnText, scanSettings?.mode === 'keyboard' && styles.scanModeBtnTextActive]}>TECLADO</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.scanModeBtn, scanSettings?.mode === 'intent' && styles.scanModeBtnActive]}
-                onPress={() => scanSettings?.setMode('intent')}
-              >
-                <Text style={[styles.scanModeBtnText, scanSettings?.mode === 'intent' && styles.scanModeBtnTextActive]}>INTENT</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.scanConfigHint}>
-              {scanSettings?.mode === 'keyboard'
-                ? 'O leitor digita no campo de texto em foco (padrão)'
-                : 'O leitor envia um intent de broadcast (Chainway nativo)'}
-            </Text>
-
-            {scanSettings?.mode === 'intent' && (
-              <>
-                <Text style={[styles.scanConfigLabel, { marginTop: 16 }]}>AÇÃO DO INTENT</Text>
-                <TextInput
-                  style={styles.scanConfigInput}
-                  value={scanSettings.intentAction}
-                  onChangeText={scanSettings.setIntentAction}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholderTextColor={colors.textPlaceholder}
-                />
-                <Text style={[styles.scanConfigLabel, { marginTop: 8 }]}>TECLA EXTRA</Text>
-                <TextInput
-                  style={styles.scanConfigInput}
-                  value={scanSettings.intentExtra}
-                  onChangeText={scanSettings.setIntentExtra}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholderTextColor={colors.textPlaceholder}
-                />
-                {!scanSettings.scannerAvailable && (
-                  <Text style={styles.scanConfigWarn}>Módulo nativo indisponível - o modo intent exige um APK próprio</Text>
-                )}
-              </>
-            )}
-
-            <TouchableOpacity style={styles.scanConfigDone} onPress={() => {
-              if (serverUrl.trim()) setApiUrl(serverUrl.trim());
-              setShowScanConfig(false);
-            }}>
-              <Text style={styles.scanConfigDoneText}>CONCLUIR</Text>
-            </TouchableOpacity>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal visible={showChangePw} transparent animationType="fade">
-        <Pressable style={styles.menuOverlay} onPress={() => setShowChangePw(false)}>
-          <Pressable style={styles.infoModalCard} onPress={() => {}}>
-            <Text style={styles.infoModalTitle}>ALTERAR SENHA</Text>
-            <TextInput
-              style={[styles.scanConfigInput, { marginBottom: 10 }]}
-              placeholder="Senha atual"
-              placeholderTextColor={colors.textPlaceholder}
-              value={pwForm.current}
-              onChangeText={(t) => { setPwForm({ ...pwForm, current: t }); setPwError(''); setPwSuccess(''); }}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            <TextInput
-              style={[styles.scanConfigInput, { marginBottom: 10 }]}
-              placeholder="Nova senha"
-              placeholderTextColor={colors.textPlaceholder}
-              value={pwForm.newPw}
-              onChangeText={(t) => { setPwForm({ ...pwForm, newPw: t }); setPwError(''); setPwSuccess(''); }}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            <TextInput
-              style={[styles.scanConfigInput, { marginBottom: 10 }]}
-              placeholder="Confirmar nova senha"
-              placeholderTextColor={colors.textPlaceholder}
-              value={pwForm.confirm}
-              onChangeText={(t) => { setPwForm({ ...pwForm, confirm: t }); setPwError(''); setPwSuccess(''); }}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            {pwError ? <Text style={{ color: colors.accentRed, fontSize: 12, marginBottom: 8 }}>{pwError}</Text> : null}
-            {pwSuccess ? <Text style={{ color: colors.copper, fontSize: 12, marginBottom: 8 }}>{pwSuccess}</Text> : null}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              <TouchableOpacity
-                style={[styles.infoModalButton, { flex: 1, marginTop: 0 }]}
-                disabled={pwSaving}
-                onPress={async () => {
-                  if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) {
-                    setPwError('Todos os campos são obrigatórios');
-                    return;
-                  }
-                  if (pwForm.newPw !== pwForm.confirm) {
-                    setPwError('As novas senhas não coincidem');
-                    return;
-                  }
-                  setPwSaving(true);
-                  setPwError('');
-                  try {
-                    await client.post('/api/auth/change-password', {
-                      current_password: pwForm.current,
-                      new_password: pwForm.newPw,
-                    });
-                    setPwSuccess('Senha alterada - entre novamente');
-                    setTimeout(() => { setShowChangePw(false); logout(); }, 1500);
-                  } catch (err) {
-                    setPwError(err.response?.data?.error || 'Falha ao alterar a senha');
-                  } finally {
-                    setPwSaving(false);
-                  }
-                }}
-              >
-                <Text style={styles.infoModalButtonText}>{pwSaving ? 'SALVANDO...' : 'ALTERAR'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.infoModalButton, { flex: 1, marginTop: 0, backgroundColor: colors.cardBorder }]}
-                onPress={() => setShowChangePw(false)}
-              >
-                <Text style={[styles.infoModalButtonText, { color: colors.textPrimary }]}>CANCELAR</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentInner} keyboardShouldPersistTaps="handled">
-        <CodeInput
-          placeholder="Código de barras ou do material"
-          onSubmit={handleScan}
-          disabled={scanDisabled}
-          buttonLabel="BUSCAR"
-        />
-
-        <Text style={styles.operationsLabel}>OPERAÇÕES</Text>
-
-        {initialLoading ? (
-          <ActivityIndicator size="large" color={colors.accentRed} style={{ marginTop: 32 }} />
-        ) : (
-        <View style={styles.grid}>
-          {visibleFunctions.map((fn, index) => {
-            const accentColor = ACCENT_COLORS[fn.accent];
-            const badgeCount = getBadgeCount(fn.key);
-
-            return (
-              <TouchableOpacity
-                key={fn.key}
-                style={[styles.gridCard, { width: cardWidth }]}
-                onPress={() => navigation.navigate(fn.screen)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.accentStripe, { backgroundColor: accentColor }]} />
-                <View style={[styles.accentDash, { backgroundColor: accentColor }]} />
-                {badgeCount > 0 && (
-                  <View style={styles.cardBadge}><Text style={styles.cardBadgeText}>{badgeCount}</Text></View>
-                )}
-                <Text style={styles.cardLabel}>{fn.label}</Text>
-                <Text style={styles.cardSub}>{fn.sub}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.section}>OPERAÇÕES</Text>
+        {modules.length === 0 && (
+          <Text style={styles.empty}>
+            {current ? 'Nenhuma operação liberada para o seu usuário neste local.' : 'Selecione o local no topo da tela.'}
+          </Text>
         )}
+        <View style={styles.grid}>
+          {modules.map((m) => (
+            <TouchableOpacity key={m.key} style={[styles.card, { width: cardWidth }]} activeOpacity={0.7} onPress={() => navigation.navigate(m.screen)} accessibilityLabel={m.label}>
+              <View style={[styles.stripe, { backgroundColor: ACCENT[m.accent] }]} />
+              {counts[m.key] > 0 && <View style={styles.cardBadge}><Text style={styles.badgeText}>{counts[m.key]}</Text></View>}
+              <Text style={styles.cardLabel}>{m.label}</Text>
+              <Text style={styles.cardSub}>{m.sub}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={() => { getStoredApiUrl().then(setServerUrl); setShowScanConfig(true); }}>
-          <Text style={styles.footerIp}>{serverUrl || 'Definir URL do servidor'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.footerText}>v1.9.0 / {warehouseName}</Text>
-      </View>
-
-      {/* Info modal (replaces Alert.alert for lookups) */}
-      <Modal visible={infoModal.visible} transparent animationType="fade">
-        <Pressable style={styles.menuOverlay} onPress={() => setInfoModal({ visible: false, title: '', message: '' })}>
-          <Pressable style={styles.infoModalCard} onPress={() => {}}>
-            <Text style={styles.infoModalTitle}>{infoModal.title}</Text>
-            <Text style={styles.infoModalMessage}>{infoModal.message}</Text>
-            <TouchableOpacity
-              style={styles.infoModalButton}
-              onPress={() => setInfoModal({ visible: false, title: '', message: '' })}
-            >
-              <Text style={styles.infoModalButtonText}>OK</Text>
+      <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
+        <Pressable style={styles.overlay} onPress={() => setMenu(false)}>
+          <Pressable style={styles.menu} onPress={() => {}}>
+            <Text style={styles.menuUser}>{me?.full_name || me?.username}</Text>
+            <Text style={styles.menuRole}>{me?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}</Text>
+            <View style={styles.divider} />
+            <Text style={styles.menuLabel}>TEMA</Text>
+            <View style={styles.themes}>
+              {THEMES.map(([value, label]) => (
+                <TouchableOpacity key={value} style={[styles.theme, themeChoice === value && styles.themeActive]} onPress={() => chooseTheme(value)} accessibilityLabel={`Tema ${label}`}>
+                  <Text style={[styles.themeText, themeChoice === value && styles.themeTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setMenu(false); setChangingPassword(true); }}>
+              <Text style={styles.menuItemText}>Alterar senha</Text>
+            </TouchableOpacity>
+            {me?.role === 'ADMIN' && (
+              <TouchableOpacity style={styles.menuItem} onPress={() => { setMenu(false); setShowServer(true); }}>
+                <Text style={styles.menuItemText}>Servidor</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.menuItem} onPress={signOut}>
+              <Text style={[styles.menuItemText, { color: colors.danger }]}>Sair</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* Confirm modal (replaces Alert.alert for confirmations) */}
-      <Modal visible={confirmModal.visible} transparent animationType="fade">
-        <Pressable style={styles.menuOverlay} onPress={() => setConfirmModal((p) => ({ ...p, visible: false }))}>
-          <Pressable style={styles.infoModalCard} onPress={() => {}}>
-            <Text style={styles.infoModalTitle}>{confirmModal.title}</Text>
-            <Text style={styles.infoModalMessage}>{confirmModal.message}</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-              <TouchableOpacity
-                style={[styles.infoModalButton, { flex: 1, backgroundColor: confirmModal.confirmDestructive ? colors.accentRed : colors.accentRed }]}
-                onPress={confirmModal.onConfirm}
-              >
-                <Text style={styles.infoModalButtonText}>{confirmModal.confirmText}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.infoModalButton, { flex: 1, backgroundColor: colors.cardBorder }]}
-                onPress={() => setConfirmModal((p) => ({ ...p, visible: false }))}
-              >
-                <Text style={[styles.infoModalButtonText, { color: colors.textPrimary }]}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <ErrorPopup
-        visible={!!error}
-        message={error}
-        onDismiss={clearError}
-      />
-
+      <PasswordDialog visible={changingPassword} onClose={() => setChangingPassword(false)} onChanged={logout} />
+      <ServerDialog visible={showServer} onClose={() => setShowServer(false)} onChanged={signOut} />
       <WarehouseSelector
-        visible={showWarehousePicker || needsWarehouse}
-        warehouses={warehouses}
-        selected={warehouseId}
-        onSelect={(id) => {
-          switchWarehouse(id);
-          setShowWarehousePicker(false);
-          setNeedsWarehouse(false);
-          warehouseResolved.current = true;
-        }}
-        onClose={needsWarehouse ? undefined : () => setShowWarehousePicker(false)}
+        visible={picking || needsWarehouse} warehouses={warehouses} selected={warehouseId}
+        onSelect={selectWarehouse} onClose={needsWarehouse ? undefined : () => setPicking(false)}
       />
     </SafeAreaView>
   );
 }
 
+function PasswordDialog({ visible, onClose, onChanged }) {
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function close() {
+    setForm({ current: '', next: '', confirm: '' });
+    setError('');
+    onClose();
+  }
+
+  async function save() {
+    if (!form.current || !form.next || !form.confirm) { setError('Preencha os três campos.'); return; }
+    if (form.next !== form.confirm) { setError('A nova senha e a confirmação não são iguais.'); return; }
+    if (form.next.length < 8 || !/[A-Za-zÀ-ÿ]/.test(form.next) || !/\d/.test(form.next)) {
+      setError('A nova senha precisa ter pelo menos 8 caracteres, com ao menos uma letra e um número.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await client.post('/api/auth/change-password', { current_password: form.current, new_password: form.next });
+      close();
+      onChanged();
+    } catch (err) {
+      setError(err.response?.status === 401 || err.response?.status === 400 ? 'A senha atual está incorreta ou a nova senha não foi aceita.' : 'Não foi possível alterar a senha.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const field = (key, placeholder) => (
+    <TextInput
+      style={styles.input} value={form[key]} onChangeText={(t) => { setForm({ ...form, [key]: t }); setError(''); }}
+      placeholder={placeholder} placeholderTextColor={colors.textPlaceholder} secureTextEntry autoCapitalize="none"
+      accessibilityLabel={placeholder}
+    />
+  );
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
+      <View style={styles.overlay}>
+        <View style={styles.menu}>
+          <Text style={styles.menuUser}>Alterar senha</Text>
+          <Text style={[styles.menuRole, { marginBottom: 12 }]}>Depois de alterar, entre de novo com a nova senha.</Text>
+          {field('current', 'Senha atual')}
+          {field('next', 'Nova senha')}
+          {field('confirm', 'Confirmar nova senha')}
+          {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label={busy ? 'SALVANDO...' : 'ALTERAR'} onPress={save} disabled={busy} style={{ flex: 1 }} />
+            <Button label="CANCELAR" secondary onPress={close} style={{ flex: 1 }} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  headerLogo: {
-    fontFamily: fonts.mono,
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.accentRed,
-    letterSpacing: 4,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  warehousePill: {
-    backgroundColor: colors.cardBg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radii.badge,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 32,
-    justifyContent: 'center',
-  },
-  warehousePillText: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  userAvatar: {
-    backgroundColor: colors.accentRed,
-    borderRadius: 8,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userAvatarText: {
-    color: colors.background,
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  menuCard: {
-    backgroundColor: colors.background,
-    borderRadius: radii.card,
-    padding: 16,
-    minWidth: 180,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  menuUser: {
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  menuRole: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: colors.cardBorder,
-    marginVertical: 12,
-  },
-  menuItem: {
-    paddingVertical: 8,
-  },
-  menuItemText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    letterSpacing: 0.3,
-  },
-  menuItemTextDanger: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.accentRed,
-    letterSpacing: 0.3,
-  },
-  content: {
-    flex: 1,
-  },
-  contentInner: {
-    padding: 16,
-    paddingBottom: 72,
-  },
-  operationsLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 2,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.cardGap,
-  },
-  gridCard: {
-    backgroundColor: colors.cardBg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radii.card,
-    padding: spacing.cardPadding,
-    paddingTop: 20,
-    overflow: 'hidden',
-    minHeight: 104,
-    justifyContent: 'center',
-  },
-  gridCardFull: {
-    width: '100%',
-  },
-  accentStripe: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 5,
-    borderTopLeftRadius: radii.card,
-    borderTopRightRadius: radii.card,
-  },
-  accentDash: {
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    marginBottom: 6,
-  },
-  cardLabel: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: 0.3,
-  },
-  cardSub: {
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  cardBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    backgroundColor: colors.accentRed,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  footerIp: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
-    marginBottom: 2,
-  },
-  footerText: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textPlaceholder,
-  },
-  // Scan config modal
-  scanConfigCard: {
-    backgroundColor: colors.background,
-    borderRadius: radii.card,
-    padding: 20,
-    width: '90%',
-    maxWidth: 340,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignSelf: 'center',
-    marginTop: 120,
-  },
-  scanConfigTitle: {
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
-    marginBottom: 16,
-  },
-  scanConfigLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.3,
-    marginBottom: 6,
-  },
-  scanModeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  scanModeBtn: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    borderRadius: radii.button,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  scanModeBtnActive: {
-    borderColor: colors.accentRed,
-    backgroundColor: '#fdf6f4',
-  },
-  scanModeBtnText: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  scanModeBtnTextActive: {
-    color: colors.accentRed,
-  },
-  scanConfigHint: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginBottom: 4,
-  },
-  scanConfigInput: {
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: radii.input,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    color: colors.textPrimary,
-    backgroundColor: colors.inputBg,
-  },
-  scanConfigWarn: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.copper,
-    marginTop: 8,
-  },
-  scanConfigDone: {
-    marginTop: 20,
-    backgroundColor: colors.accentRed,
-    borderRadius: radii.button,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  scanConfigDoneText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.cream,
-    letterSpacing: 0.5,
-  },
-  // Info/Confirm modals
-  infoModalCard: {
-    backgroundColor: colors.background,
-    borderRadius: radii.card,
-    padding: 20,
-    width: '90%',
-    maxWidth: 340,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  infoModalTitle: {
-    fontFamily: fonts.mono,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  infoModalMessage: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  infoModalButton: {
-    backgroundColor: colors.accentRed,
-    borderRadius: radii.button,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  infoModalButtonText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.cream,
-    letterSpacing: 0.5,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
+  logo: { fontSize: 24, fontWeight: '900', letterSpacing: 1.5, color: colors.copper },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  pill: { maxWidth: 150, minHeight: 40, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 20, backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.cardBorder },
+  pillText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  bell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  bellIcon: { fontSize: 22 },
+  bellBadge: { position: 'absolute', top: 2, right: 0, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.buttonBg, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: colors.onAccent, fontSize: 16, fontWeight: '800' },
+  content: { padding: 16, paddingBottom: 32 },
+  section: { fontSize: 11, fontWeight: '700', letterSpacing: 2, color: colors.textMuted, marginBottom: 10 },
+  empty: { fontSize: 14, color: colors.textMuted, marginTop: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.cardGap },
+  card: { minHeight: 104, justifyContent: 'center', padding: spacing.cardPadding, paddingTop: 20, overflow: 'hidden', backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radii.card },
+  stripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 5 },
+  cardBadge: { position: 'absolute', top: 12, right: 10, minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: colors.buttonBg, alignItems: 'center', justifyContent: 'center' },
+  cardLabel: { fontSize: 16, fontWeight: '800', letterSpacing: 0.3, color: colors.textPrimary },
+  cardSub: { fontSize: 13, lineHeight: 17, color: colors.textSecondary, marginTop: 4 },
+  overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 },
+  menu: { backgroundColor: colors.background, borderRadius: radii.card, padding: 18, borderWidth: 1, borderColor: colors.cardBorder },
+  menuUser: { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
+  menuRole: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  menuLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: colors.textMuted, marginBottom: 8 },
+  divider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: 14 },
+  themes: { flexDirection: 'row', gap: 8 },
+  theme: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radii.small, borderWidth: 1.5, borderColor: colors.cardBorder, backgroundColor: colors.cardBg },
+  themeActive: { borderColor: colors.copper, backgroundColor: colors.cream },
+  themeText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  themeTextActive: { color: colors.accentRed, fontWeight: '800' },
+  menuItem: { minHeight: 48, justifyContent: 'center' },
+  menuItemText: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  input: { minHeight: 48, paddingHorizontal: 12, marginBottom: 10, fontSize: 15, color: colors.textPrimary, backgroundColor: colors.inputBg, borderWidth: 1.5, borderColor: colors.inputBorder, borderRadius: radii.input },
+  error: { fontSize: 13, color: colors.danger, marginBottom: 10 },
 });

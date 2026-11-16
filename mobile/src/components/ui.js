@@ -128,8 +128,8 @@ export const ui = StyleSheet.create({
 
 const styles = StyleSheet.create({
   message: { padding: 12, borderRadius: radii.small, marginBottom: 12, borderWidth: 1 },
-  messageOk: { backgroundColor: '#EAF6EC', borderColor: colors.success },
-  messageError: { backgroundColor: '#FDECEA', borderColor: colors.danger },
+  messageOk: { backgroundColor: colors.successBg, borderColor: colors.success },
+  messageError: { backgroundColor: colors.dangerBg, borderColor: colors.danger },
   messageText: { fontSize: 14, fontWeight: '600' },
   card: {
     backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.cardBorder,

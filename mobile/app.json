@@ -5,7 +5,7 @@
     "version": "1.36.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
@@ -43,12 +43,14 @@
           "recordAudioAndroid": false
         }
       ],
-      "./plugins/chainway-scanner",
       "./plugins/with-cleartext-traffic",
       [
         "expo-notifications",
         {
-          "color": "#F26522"
+          "color": "#F26522",
+          "sounds": [
+            "./assets/sea_aviso.wav"
+          ]
         }
       ]
     ],

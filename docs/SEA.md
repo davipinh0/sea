@@ -189,6 +189,12 @@ Limites conhecidos do protótipo:
 * **Atualização automática**: as telas do painel se atualizam após qualquer mudança feita nele e
   a cada 10 segundos, sem sair e voltar.
 
+* **Tema escuro**: no painel, o botão de lua/sol na barra superior (a escolha fica no navegador;
+  sem escolha, segue o sistema). No app, menu do usuário > Tema (Sistema, Claro, Escuro).
+* **Contador do Receber**: conta as ordens que ainda não tiveram nada recebido; uma ordem
+  recebida em parte sai do contador e continua na lista "aguardando recebimento".
+* **Textos das notificações** citam a unidade do material (ex.: "18 KG de 1 material(is)").
+
 ## Base do SAP
 
 O SEA guarda um espelho dos dados que vêm do SAP (migração `085_sea_base_sap.sql`):
@@ -248,6 +254,11 @@ O funcionário continua solicitando e confirmando a retirada no terminal (painel
 Além desses, o app tem **Estoque** (o que há em cada endereço), **Ordens** (consulta de OTs e
 materiais) e **Notificações**. As telas se atualizam sozinhas e o layout se ajusta à tela do
 aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` gera as imagens).
+
+**Servidor no app.** O endereço do servidor não aparece em nenhuma tela. Só um administrador o
+altera (tela de login > "Servidor (administrador)" ou menu do usuário > Servidor), confirmando com
+usuário e senha válidos no novo endereço. O APK já sai com o endereço de `eas.json`
+(`EXPO_PUBLIC_API_URL`).
 
 **Notificações no celular.** Com o app aberto, ele consulta a API e mostra os avisos novos como
 notificação do aparelho. Com o app **fechado**, o aviso depende do serviço de push do Expo/Google:

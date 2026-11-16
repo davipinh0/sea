@@ -10,6 +10,7 @@
  * directly so the list of auth keys stays centralized.
  */
 
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
@@ -23,17 +24,22 @@ export const AUTH_STORAGE_KEYS = [
   'login_timestamp',
 ];
 
+// The browser build exists only to check the app on a computer; the
+// device keystore is not there, so it keeps the session in AsyncStorage.
+const ON_WEB = Platform.OS === 'web';
+
 export async function getAuthItem(key) {
-  return SecureStore.getItemAsync(key);
+  return ON_WEB ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key);
 }
 
 export async function setAuthItem(key, value) {
-  return SecureStore.setItemAsync(key, value);
+  return ON_WEB ? AsyncStorage.setItem(key, value) : SecureStore.setItemAsync(key, value);
 }
 
 export async function deleteAuthItem(key) {
   try {
-    await SecureStore.deleteItemAsync(key);
+    if (ON_WEB) await AsyncStorage.removeItem(key);
+    else await SecureStore.deleteItemAsync(key);
   } catch {
     // deleteItemAsync throws if the key is not set; callers treat delete as idempotent.
   }

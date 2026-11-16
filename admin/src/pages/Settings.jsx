@@ -191,9 +191,9 @@ export default function Settings() {
       <div className="settings-section">
         <h3>Sobre</h3>
         <div className="detail-grid">
-          <span className="detail-label">Sistema</span><span>SEA · Sistema de Expedição e Armazenamento (protótipo, dados fictícios)</span>
+          <span className="detail-label">Sistema</span><span>SEA · Sistema de Expedição e Armazenamento</span>
           <span className="detail-label">Licença</span>
-          <span>Apache 2.0 (arquivos LICENSE e NOTICE do projeto)</span>
+          <span>Apache 2.0</span>
         </div>
       </div>
     </div>

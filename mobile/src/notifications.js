@@ -13,7 +13,11 @@ import client from './api/client';
 //     the server has it switched on (SEA_PUSH=expo) and the app was built
 //     with the Firebase key. Without that, this part simply stays off.
 
-const CHANNEL = 'sea';
+// Android keeps the sound of a channel for good, so the channel carries
+// the sound in its name.
+const CHANNEL = 'sea-avisos';
+// The two short tones of the panel (assets/sea_aviso.wav).
+const SOUND = 'sea_aviso.wav';
 const POLL_MS = 15000;
 const TOKEN_KEY = 'sea_push_token';
 const SEEN_KEY = 'sea_notif_seen';
@@ -44,7 +48,7 @@ Notifications.setNotificationHandler({
 async function allowed() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL, {
-      name: 'Avisos do SEA', importance: Notifications.AndroidImportance.HIGH, sound: 'default',
+      name: 'Avisos do SEA', importance: Notifications.AndroidImportance.HIGH, sound: SOUND,
     });
   }
   const current = await Notifications.getPermissionsAsync();
@@ -130,7 +134,7 @@ function announce(list) {
   [...list].reverse().forEach((n) => {
     Notifications.scheduleNotificationAsync({
       content: {
-        title: n.title, body: n.message, sound: 'default',
+        title: n.title, body: n.message, sound: SOUND,
         data: { kind: n.kind, notification_id: n.notification_id },
       },
       trigger: Platform.OS === 'android' ? { channelId: CHANNEL } : null,

@@ -232,6 +232,10 @@ def painel():
         "pending_withdrawals_all": int(pending_everywhere),
         "ots": ot_counts,
         "open_ots": open_ots,
+        # Orders with nothing received yet: what the "Receber" counters
+        # show. An order received in part leaves the counter (it is still
+        # listed as waiting for the rest).
+        "unreceived_ots": sum(t.get("OPEN", 0) for t in ot_counts.values()),
         "pending_withdrawals": pending_withdrawals,
         "withdrawals": w_counts,
         "stored_units": int(stock.stored_units),

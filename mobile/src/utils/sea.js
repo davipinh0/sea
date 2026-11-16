@@ -28,8 +28,6 @@ export const MODULES = [
   { key: 'transfer', label: 'TRANSFERIR', sub: 'Entre endereços e locais', screen: 'Transferir', accent: 'gray', pages: ['items', 'inventory', 'putaway'] },
   { key: 'estoque', label: 'ESTOQUE', sub: 'O que há em cada endereço', screen: 'Estoque', accent: 'copper', pages: ['inventory'] },
   { key: 'ordens', label: 'ORDENS', sub: 'Consulta de OTs e materiais', screen: 'Ordens', accent: 'gray', pages: ['inventory', 'purchase-orders', 'receiving', 'putaway', 'retirada'] },
-  // Every user follows the notifications of the locations they work in.
-  { key: 'notificacoes', label: 'NOTIFICAÇÕES', sub: 'Avisos do sistema', screen: 'Notificacoes', accent: 'red', pages: [], everyone: true },
 ];
 
 export function visibleModules(me, warehouseCode) {
@@ -38,7 +36,7 @@ export function visibleModules(me, warehouseCode) {
   const functions = me.allowed_functions || [];
   return MODULES.filter((m) => {
     if (m.onlyAt && warehouseCode !== m.onlyAt) return false;
-    if (me.role === 'ADMIN' || m.everyone) return true;
+    if (me.role === 'ADMIN') return true;
     return (m.fn && functions.includes(m.fn)) || m.pages.some((p) => pages.includes(p));
   });
 }

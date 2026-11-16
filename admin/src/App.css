@@ -82,6 +82,57 @@
   --radius-lg: 8px;
 }
 
+/* Dark theme: the same variables with dark surfaces. Chosen in the top
+   bar (utils/theme.js) and kept per browser; without a choice it follows
+   the system. */
+:root[data-theme="dark"] {
+  --accent: #F26522;
+  --accent-hover: #FF7F45;
+  --copper: #9AA4B0;
+  --cream: #3B2415;
+
+  --chrome-bg: #101214;
+  --chrome-surface: #1B1E22;
+
+  --bg: #15171A;
+  --white: #1F2327;
+  --surface: #262B30;
+
+  --text: #F2F3F5;
+  --text-secondary: #BAC1CA;
+  --text-tertiary: #8D95A0;
+
+  --border: #33393F;
+  --border-dark: #4A525B;
+
+  --success: #5BC27A;
+  --success-bg: #16301F;
+  --warning: #F0C24B;
+  --warning-bg: #352C12;
+  --danger: #FF7A6E;
+  --danger-bg: #3A1B18;
+  --info: #6FB5E6;
+  --info-bg: #142A3A;
+  --purple: #A9A1F5;
+  --purple-bg: #26234A;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .sea-badge-pm11 { background: #4A2A14; color: #FFC9A6; }
+:root[data-theme="dark"] .sea-badge-pm12 { background: #2F363D; color: #D5DBE2; }
+/* Buttons and tags that put white text on the accent keep a darker orange. */
+:root[data-theme="dark"] .btn-primary,
+:root[data-theme="dark"] .terminal-btn:not(.secondary),
+:root[data-theme="dark"] .topbar-avatar { background: #C2410C; color: #FFFFFF; }
+:root[data-theme="dark"] .btn-primary:hover { background: #D9500F; }
+
+.theme-toggle {
+  width: 32px; height: 30px; border-radius: 6px; border: 0; cursor: pointer; font-size: 15px;
+  background: transparent; color: var(--chrome-text); display: flex; align-items: center; justify-content: center;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.1); }
+
 body {
   font-family: var(--sans);
   font-size: 14px;
@@ -633,7 +684,7 @@ a {
 }
 
 .data-table tbody tr:hover {
-  background: #FAFAFB;
+  background: var(--surface);
 }
 
 .data-table tbody tr.clickable {
@@ -1190,7 +1241,7 @@ a {
 }
 
 .lines-table tbody tr:nth-child(even) {
-  background: #FAFAFB;
+  background: var(--surface);
 }
 
 /* ── Settings ─────────────────────────────────── */

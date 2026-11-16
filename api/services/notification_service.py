@@ -197,7 +197,7 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
         return 0
     sender([
         {"to": token, "title": row.title, "body": row.message, "sound": "default",
-         "channelId": "sea", "data": {"kind": row.kind, "notification_id": notification_id}}
+         "channelId": "sea-avisos", "data": {"kind": row.kind, "notification_id": notification_id}}
         for token in tokens
     ])
     return len(tokens)

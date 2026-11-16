@@ -5,6 +5,7 @@ import { useWarehouse } from '../warehouse.jsx';
 import { api } from '../api.js';
 import SeaLogo from './SeaLogo.jsx';
 import Notificacoes from './Notificacoes.jsx';
+import { currentTheme, setTheme } from '../utils/theme.js';
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -33,6 +34,7 @@ export default function TopBar({ forced = false }) {
   const { warehouses, warehouseId, warehouse, setWarehouseId } = useWarehouse();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [theme, setThemeState] = useState(currentTheme);
   const [showWhPicker, setShowWhPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -235,6 +237,12 @@ export default function TopBar({ forced = false }) {
           </div>
         )}
       </div>}
+      <button
+        type="button" className="theme-toggle" onClick={() => setThemeState(setTheme(theme === 'dark' ? 'light' : 'dark'))}
+        aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'} title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+      >
+        {theme === 'dark' ? '\u2600' : '\u263E'}
+      </button>
       {!forced && <Notificacoes />}
       <div className="topbar-user" ref={menuRef} style={{ position: 'relative' }}>
         <div className="topbar-avatar" onClick={() => setShowMenu(!showMenu)} title={user?.full_name || user?.username}>

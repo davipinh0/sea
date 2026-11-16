@@ -1,428 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Modal, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../auth/AuthContext';
-import client, { getStoredApiUrl, setApiUrl, hasStoredApiUrl } from '../api/client';
-import { colors, fonts, radii } from '../theme/styles';
+import ServerDialog from '../components/ServerDialog';
+import { Button } from '../components/ui';
+import { colors, radii } from '../theme/styles';
 
-const SEA_LOGIN_RENDERED = '__sea_login_rendered__';
+// Login. The server address is not shown here; changing it is an
+// administrator's action (ServerDialog).
+
+const LAST_USER_KEY = 'sea_last_username';
 
 export default function LoginScreen() {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showServerModal, setShowServerModal] = useState(false);
-  const [serverUrl, setServerUrlLocal] = useState('');
-  const [serverDisplay, setServerDisplay] = useState('');
-  const [needsSetup, setNeedsSetup] = useState(null);
-  const [connectUrl, setConnectUrl] = useState('');
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState('');
-  const [modalError, setModalError] = useState('');
-  const [modalChecking, setModalChecking] = useState(false);
-  const [renderGuard] = useState(() => {
-    // Guard against duplicate renders  -  only allow one instance
-    if (global[SEA_LOGIN_RENDERED]) return false;
-    global[SEA_LOGIN_RENDERED] = true;
-    return true;
-  });
+  const [busy, setBusy] = useState(false);
+  const [showServer, setShowServer] = useState(false);
 
   useEffect(() => {
-    return () => { global[SEA_LOGIN_RENDERED] = false; };
+    AsyncStorage.getItem(LAST_USER_KEY).then((saved) => { if (saved) setUsername(saved); }).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    AsyncStorage.getItem('sea_last_username').then((saved) => {
-      if (saved) setUsername(saved);
-    }).catch(() => {});
-
-    hasStoredApiUrl().then((hasUrl) => {
-      if (hasUrl) {
-        setNeedsSetup(false);
-        getStoredApiUrl().then((url) => setServerDisplay(url || ''));
-      } else {
-        setNeedsSetup(true);
-      }
-    });
-  }, []);
-
-  const handleConnect = async () => {
-    const trimmed = connectUrl.replace(/\/+$/, '').trim();
-    if (!trimmed) {
-      setConnectError('Informe a URL do servidor');
-      return;
-    }
-    setConnecting(true);
-    setConnectError('');
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(`${trimmed}/api/health`, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!resp.ok) throw new Error('Resposta inválida');
-      await setApiUrl(trimmed);
-      setServerDisplay(trimmed);
-      setNeedsSetup(false);
-    } catch (err) {
-      setConnectError(`Não foi possível conectar: ${err.message}`);
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!username || !password) {
-      setError('Usuário e senha são obrigatórios');
-      return;
-    }
+  async function submit() {
+    const user = username.trim();
+    if (!user || !password) { setError('Informe o usuário e a senha.'); return; }
     setError('');
-    setLoading(true);
-    AsyncStorage.setItem('sea_last_username', username).catch(() => {});
+    setBusy(true);
+    AsyncStorage.setItem(LAST_USER_KEY, user).catch(() => {});
     try {
-      await login(username, password);
+      await login(user, password);
     } catch (err) {
       if (err.response?.status === 401) {
-        setError('Credenciais inválidas');
+        setError('Usuário ou senha inválidos.');
         setPassword('');
+      } else if (err.response?.status === 429) {
+        setError('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
       } else {
-        setError('Erro de conexão - verifique o Wi-Fi');
+        setError('Sem conexão com o servidor. Confira o Wi-Fi; se continuar, peça a um administrador para conferir o endereço do servidor.');
       }
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
-
-  const openServerModal = () => {
-    getStoredApiUrl().then((url) => {
-      setServerUrlLocal(url || '');
-      setModalError('');
-      setModalChecking(false);
-      setShowServerModal(true);
-    });
-  };
-
-  const saveServerUrl = async () => {
-    const trimmed = serverUrl.replace(/\/+$/, '').trim();
-    if (!trimmed) return;
-    setModalChecking(true);
-    setModalError('');
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(`${trimmed}/api/health`, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!resp.ok) throw new Error('Resposta inválida');
-      await setApiUrl(trimmed);
-      setServerDisplay(trimmed);
-      setShowServerModal(false);
-    } catch {
-      setModalError('Não foi possível conectar ao servidor');
-    } finally {
-      setModalChecking(false);
-    }
-  };
-
-  if (!renderGuard) return null;
-  if (needsSetup === null) return null;
-
-  if (needsSetup) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          <View style={styles.logoSection}>
-            <Text style={styles.logoText}>SEA</Text>
-            <Text style={styles.logoSubtext}>SISTEMA DE EXPEDIÇÃO E ARMAZENAMENTO</Text>
-          </View>
-
-          <View style={styles.form}>
-            <Text style={styles.setupLabel}>URL DO SERVIDOR</Text>
-            <TextInput
-              style={styles.input}
-              value={connectUrl}
-              onChangeText={(t) => { setConnectUrl(t); setConnectError(''); }}
-              placeholder="http://192.168.1.100:5000"
-              placeholderTextColor={colors.textPlaceholder}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              returnKeyType="done"
-              onSubmitEditing={handleConnect}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={[styles.loginButton, connecting && styles.loginButtonDisabled]}
-              onPress={handleConnect}
-              disabled={connecting}
-            >
-              <Text style={styles.loginButtonText}>
-                {connecting ? 'CONNECTING...' : 'CONNECT'}
-              </Text>
-            </TouchableOpacity>
-
-            {connectError ? <Text style={styles.error}>{connectError}</Text> : null}
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.container}>
-        <View style={styles.logoSection}>
-          <Text style={styles.logoText}>SEA</Text>
-          <Text style={styles.logoSubtext}>SISTEMA DE EXPEDIÇÃO E ARMAZENAMENTO</Text>
-        </View>
+    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.logo}>SEA</Text>
+          <Text style={styles.subtitle}>Sistema de Expedição e Armazenamento</Text>
 
-        <View style={styles.form}>
           <TextInput
-            style={styles.input}
-            placeholder="Usuário"
-            placeholderTextColor={colors.textPlaceholder}
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
+            style={styles.input} value={username} onChangeText={setUsername} placeholder="Usuário ou e-mail"
+            placeholderTextColor={colors.textPlaceholder} autoCapitalize="none" autoCorrect={false}
+            accessibilityLabel="Usuário ou e-mail" returnKeyType="next"
           />
           <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor={colors.textPlaceholder}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
+            style={styles.input} value={password} onChangeText={setPassword} placeholder="Senha" secureTextEntry
+            placeholderTextColor={colors.textPlaceholder} autoCapitalize="none" accessibilityLabel="Senha"
+            returnKeyType="go" onSubmitEditing={submit}
           />
+          {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+          <Button label={busy ? 'ENTRANDO...' : 'ENTRAR'} onPress={submit} disabled={busy} />
 
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.loginButtonText}>{loading ? 'ENTRANDO...' : 'LOGIN'}</Text>
+          <TouchableOpacity style={styles.serverLink} onPress={() => setShowServer(true)} accessibilityRole="button">
+            <Text style={styles.serverLinkText}>Servidor (administrador)</Text>
           </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity style={styles.serverInfo} onPress={openServerModal}>
-            <Text style={styles.version}>v1.9.0</Text>
-            {serverDisplay ? (
-              <Text style={styles.serverUrlText} numberOfLines={1}>{serverDisplay}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Server URL modal */}
-      <Modal visible={showServerModal} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowServerModal(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>URL DO SERVIDOR</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={serverUrl}
-              onChangeText={(t) => { setServerUrlLocal(t); setModalError(''); }}
-              placeholder="http://10.1.10.150:5000"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholderTextColor={colors.textPlaceholder}
-              returnKeyType="done"
-              onSubmitEditing={saveServerUrl}
-              autoFocus
-            />
-            {modalError ? <Text style={styles.modalErrorText}>{modalError}</Text> : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalSaveBtn, modalChecking && styles.loginButtonDisabled]}
-                onPress={saveServerUrl}
-                disabled={modalChecking}
-              >
-                <Text style={styles.modalSaveBtnText}>{modalChecking ? 'CHECKING...' : 'SAVE'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowServerModal(false)}>
-                <Text style={styles.modalCancelBtnText}>CANCELAR</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-    </KeyboardAvoidingView>
+      <ServerDialog visible={showServer} onClose={() => setShowServer(false)} onChanged={() => setError('')} />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  logoSection: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logoText: {
-    fontFamily: fonts.mono,
-    fontSize: 36,
-    fontWeight: '700',
-    color: colors.accentRed,
-    letterSpacing: 4,
-  },
-  logoSubtext: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textMuted,
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  form: {
-    gap: 12,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  logo: { fontSize: 44, fontWeight: '900', letterSpacing: 2, color: colors.copper, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 4, marginBottom: 32 },
   input: {
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: radii.input,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: colors.inputBg,
-    minHeight: 48,
+    minHeight: 52, paddingHorizontal: 14, marginBottom: 12, fontSize: 16, color: colors.textPrimary,
+    backgroundColor: colors.inputBg, borderWidth: 1.5, borderColor: colors.inputBorder, borderRadius: radii.input,
   },
-  loginButton: {
-    backgroundColor: colors.accentRed,
-    borderRadius: radii.button,
-    paddingVertical: 14,
-    alignItems: 'center',
-    minHeight: 48,
-    marginTop: 8,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: colors.cream,
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  error: {
-    color: colors.accentRed,
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  setupLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  serverInfo: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  version: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textPlaceholder,
-    textAlign: 'center',
-  },
-  serverUrlText: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textPlaceholder,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  // Server URL modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: colors.background,
-    borderRadius: radii.card,
-    padding: 20,
-    width: '100%',
-    maxWidth: 320,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  modalTitle: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: radii.input,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    fontFamily: fonts.mono,
-    color: colors.textPrimary,
-    backgroundColor: colors.inputBg,
-    marginBottom: 16,
-  },
-  modalErrorText: {
-    color: colors.accentRed,
-    fontSize: 12,
-    marginBottom: 12,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  modalSaveBtn: {
-    flex: 1,
-    backgroundColor: colors.accentRed,
-    borderRadius: radii.button,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalSaveBtnText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.cream,
-    letterSpacing: 0.5,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    backgroundColor: colors.cardBorder,
-    borderRadius: radii.button,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalCancelBtnText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
-  },
+  error: { fontSize: 14, color: colors.danger, marginBottom: 12 },
+  serverLink: { marginTop: 28, alignSelf: 'center', padding: 8 },
+  serverLinkText: { fontSize: 13, color: colors.textMuted, textDecorationLine: 'underline' },
 });

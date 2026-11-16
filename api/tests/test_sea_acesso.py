@@ -243,3 +243,23 @@ class TestMobileModules:
             f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers
         ).status_code == 403
         assert client.get("/api/sea/armazenagem/destinos", headers=headers).status_code == 403
+
+
+class TestReceiveCounter:
+    def test_counter_drops_once_something_of_the_order_is_received(
+        self, client, auth_headers, sp12
+    ):
+        def counters():
+            body = client.get(f"/api/sea/painel?warehouse_id={WAREHOUSE}",
+                              headers=auth_headers).get_json()
+            return body["unreceived_ots"], body["open_ots"]
+
+        before_new, before_open = counters()
+        po_id = _create_ot(client, auth_headers, "OT-CONT-1", [(sp12["small"], 36)])
+        assert counters() == (before_new + 1, before_open + 1)
+        # Half of it arrives: the order is still open, but it no longer
+        # asks for attention on the "Receber" button.
+        assert _receive(client, auth_headers, po_id, sp12["small"], 18).status_code == 200
+        assert counters() == (before_new, before_open + 1)
+        assert _receive(client, auth_headers, po_id, sp12["small"], 18).status_code == 200
+        assert counters() == (before_new, before_open)

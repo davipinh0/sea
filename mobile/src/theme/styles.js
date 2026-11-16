@@ -1,35 +1,89 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Appearance, Platform, StyleSheet } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-export const colors = {
-  // Brand (SEA: orange + graphite). Key names kept from SEA so every
-  // screen picks up the new palette without further changes.
+// Theme. The choice (Sistema / Claro / Escuro) is read once, when the app
+// starts, because every screen builds its styles from ``colors`` at load.
+// Changing it saves the choice and restarts the app (see setTheme).
+export const THEME_KEY = 'sea_theme';
+
+function savedTheme() {
+  try {
+    const value = SecureStore.getItem(THEME_KEY);
+    return value === 'dark' || value === 'light' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export const themeChoice = savedTheme() || 'system';
+export const isDark = themeChoice === 'system' ? Appearance.getColorScheme() === 'dark' : themeChoice === 'dark';
+
+export async function saveTheme(choice) {
+  if (choice === 'system') await SecureStore.deleteItemAsync(THEME_KEY);
+  else await SecureStore.setItemAsync(THEME_KEY, choice);
+}
+
+// Brand: orange + graphite. Key names kept so every screen picks the
+// palette up without further changes.
+const light = {
   accentRed: '#C2410C',
   copper: '#F26522',
   cream: '#FFF1E8',
+  buttonBg: '#C2410C',
+  onAccent: '#FFFFFF',
 
-  // Surfaces
   background: '#ffffff',
   cardBg: '#F4F5F7',
   cardBorder: '#E3E5E8',
   inputBg: '#F4F5F7',
   inputBorder: '#CDD1D6',
 
-  // Text
   textPrimary: '#1F2328',
   textSecondary: '#555D69',
   textMuted: '#8A919B',
   textPlaceholder: '#A3A9B1',
 
-  // Status
   success: '#2d7a3a',
+  successBg: '#EAF6EC',
   warning: '#B45309',
   danger: '#B42318',
+  dangerBg: '#FDECEA',
 
-  // Utility
   border: '#E3E5E8',
   overlay: 'rgba(0,0,0,0.4)',
   grayAccent: '#6B7785',
 };
+
+const dark = {
+  accentRed: '#FF8A4C',
+  copper: '#F26522',
+  cream: '#3B2415',
+  buttonBg: '#D9500F',
+  onAccent: '#FFFFFF',
+
+  background: '#15171A',
+  cardBg: '#1F2327',
+  cardBorder: '#33393F',
+  inputBg: '#1F2327',
+  inputBorder: '#4A525B',
+
+  textPrimary: '#F2F3F5',
+  textSecondary: '#BAC1CA',
+  textMuted: '#8D95A0',
+  textPlaceholder: '#6E7682',
+
+  success: '#5BC27A',
+  successBg: '#16301F',
+  warning: '#F0A44B',
+  danger: '#FF7A6E',
+  dangerBg: '#3A1B18',
+
+  border: '#33393F',
+  overlay: 'rgba(0,0,0,0.65)',
+  grayAccent: '#8D95A0',
+};
+
+export const colors = isDark ? dark : light;
 
 export const radii = {
   card: 12,
@@ -75,11 +129,11 @@ export const screenStyles = StyleSheet.create({
 // ── Shared buttons ───────────────────────────────────────────
 export const buttonStyles = StyleSheet.create({
   buttonPrimary: {
-    backgroundColor: colors.accentRed, borderRadius: radii.button,
+    backgroundColor: colors.buttonBg, borderRadius: radii.button,
     paddingVertical: 14, alignItems: 'center', minHeight: 48,
   },
   buttonPrimaryText: {
-    color: colors.cream, fontFamily: fonts.mono, fontSize: 14,
+    color: colors.onAccent, fontFamily: fonts.mono, fontSize: 14,
     fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', textAlign: 'center',
   },
   buttonSecondary: {
@@ -205,7 +259,7 @@ export default StyleSheet.create({
 
   // ── Buttons ─────────────────────────────────────────────
   buttonPrimary: {
-    backgroundColor: colors.accentRed,
+    backgroundColor: colors.buttonBg,
     borderRadius: radii.button,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -214,7 +268,7 @@ export default StyleSheet.create({
     minHeight: 48,
   },
   buttonPrimaryText: {
-    color: colors.cream,
+    color: colors.onAccent,
     fontFamily: fonts.mono,
     fontSize: 14,
     fontWeight: '700',
@@ -284,7 +338,7 @@ export default StyleSheet.create({
     backgroundColor: colors.copper,
   },
   badgeText: {
-    color: colors.cream,
+    color: colors.onAccent,
     fontFamily: fonts.mono,
     fontSize: 10,
     fontWeight: '700',

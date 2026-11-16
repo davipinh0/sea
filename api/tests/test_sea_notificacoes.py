@@ -412,3 +412,35 @@ def _other_admin(client, conn):
         "/api/auth/login", json={"username": "sea.notif.limpar", "password": "Senha123"}
     ).get_json()["token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+class TestNotificationUnits:
+    def _receive(self, client, headers, conn, ot, uom, quantity):
+        item = conn.execute(
+            text("INSERT INTO items (sku, item_name, uom, external_id) "
+                 "VALUES (:s, :s, :u, gen_random_uuid()) RETURNING item_id"),
+            {"s": f"UN-{ot}", "u": uom},
+        ).scalar()
+        po_id = _create_ot(client, headers, ot, [(item, quantity)])
+        assert _receive(client, headers, po_id, item, quantity).status_code == 200
+        return item
+
+    def test_receipt_names_the_unit_of_the_material(self, client, auth_headers, sp12):
+        conn = sp12["conn"]
+        self._receive(client, auth_headers, conn, "OT-UN-KG", "KG", 18)
+        assert _rows(conn, "RECEBIMENTO")[-1].message.startswith("18 KG de 1 material(is) recebida(s) em ")
+        self._receive(client, auth_headers, conn, "OT-UN-PC", "PC", 3)
+        assert _rows(conn, "RECEBIMENTO")[-1].message.startswith("3 PC de 1 material(is)")
+        self._receive(client, auth_headers, conn, "OT-UN-X", None, 2)
+        assert _rows(conn, "RECEBIMENTO")[-1].message.startswith("2 unidade(s) de 1 material(is)")
+
+    def test_withdrawal_request_names_the_unit(self, client, auth_headers, sp12):
+        conn = sp12["conn"]
+        item = self._receive(client, auth_headers, conn, "OT-UN-RET", "KG", 36)
+        assert _putaway(client, auth_headers, item, sp12["c0"], 36, "OT-UN-RET").status_code == 200
+        inventory_id = conn.execute(
+            text("SELECT inventory_id FROM inventory WHERE item_id = :i AND bin_id = :b"),
+            {"i": item, "b": sp12["c0"]},
+        ).scalar()
+        assert _request(client, auth_headers, inventory_id, 18, ot="OT-UN-RET").status_code == 201
+        assert "18 KG x UN-OT-UN-RET (T-C0)" in _rows(conn, "RETIRADA_SOLICITADA")[-1].message

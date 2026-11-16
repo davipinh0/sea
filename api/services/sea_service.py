@@ -1053,6 +1053,12 @@ def find_employee(db, user_id):
     ).fetchone()
 
 
+def amount_label(quantity, uom=None):
+    """A quantity as the notifications say it: "18 KG", "3 PC" or, when
+    the unit is not known, "3 unidade(s)"."""
+    return f"{quantity} {uom}" if uom else f"{quantity} unidade(s)"
+
+
 def notify_receipt(db, po, receipt_ids, username):
     """Announce the materials just received for an order (no-op for
     purchase orders that are not SEA orders)."""
@@ -1063,8 +1069,11 @@ def notify_receipt(db, po, receipt_ids, username):
             """
             SELECT COALESCE(SUM(r.quantity_received), 0) AS units,
                    COUNT(DISTINCT r.item_id) AS materials,
-                   string_agg(DISTINCT b.bin_code, ', ') AS bins
+                   string_agg(DISTINCT b.bin_code, ', ') AS bins,
+                   COUNT(DISTINCT COALESCE(UPPER(i.uom), '')) AS units_of_measure,
+                   MAX(UPPER(i.uom)) AS uom
             FROM item_receipts r JOIN bins b ON b.bin_id = r.bin_id
+            JOIN items i ON i.item_id = r.item_id
             WHERE r.receipt_id = ANY(:ids)
             """
         ),
@@ -1073,8 +1082,11 @@ def notify_receipt(db, po, receipt_ids, username):
     notifications.create(
         db, kind=notifications.KIND_RECEIPT, warehouse_id=po.warehouse_id,
         title=f"Recebimento de materiais: OT {po.po_number} ({po.order_type})",
-        message=(f"{int(row.units)} unidade(s) de {row.materials} material(is) recebida(s) "
-                 f"em {row.bins}. Aguardando armazenagem."),
+        # The unit is named when every material received shares it
+        # ("18 KG de 1 material(is)"); mixed units stay as "unidade(s)".
+        message=(f"{amount_label(int(row.units), row.uom if row.units_of_measure == 1 else None)} "
+                 f"de {row.materials} material(is) recebida(s) em {row.bins}. "
+                 "Aguardando armazenagem."),
         ot=po.po_number, username=username,
     )
 
@@ -1324,6 +1336,10 @@ def order_stock(db, order_number, warehouse_ids=None):
     }
 
 
+def _unit_suffix(uom):
+    return f" {uom.upper()}" if uom else ""
+
+
 def create_withdrawal(db, *, ot, lines, username, note=None):
     """Reserve stock of an OT and open a withdrawal request.
 
@@ -1446,7 +1462,8 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
         message="Solicitada por {}: {}.".format(
             username,
             "; ".join(
-                f"{ln['quantity']} x {locked[ln['inventory_id']].sku} "
+                f"{ln['quantity']}{_unit_suffix(locked[ln['inventory_id']].uom)} x "
+                f"{locked[ln['inventory_id']].sku} "
                 f"({locked[ln['inventory_id']].bin_code})" for ln in lines
             ),
         ),

@@ -57,7 +57,7 @@ export default function Sidebar() {
       if (!res || !res.ok) return;
       const data = await res.json();
       setCounts({
-        '/expedicao': data.open_ots || 0,
+        '/expedicao': data.unreceived_ots ?? data.open_ots ?? 0,
         // Requests of every location the user works in, not only the selected one.
         '/retirada': data.pending_withdrawals_all ?? data.pending_withdrawals ?? 0,
       });

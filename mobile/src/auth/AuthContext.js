@@ -89,8 +89,9 @@ export function AuthProvider({ children }) {
   };
 
   const switchWarehouse = async (newWarehouseId) => {
-    await setAuthItem('warehouse_id', String(newWarehouseId));
+    // The screen changes at once; saving the choice follows.
     setWarehouseId(newWarehouseId);
+    await setAuthItem('warehouse_id', String(newWarehouseId));
   };
 
   // Called by ChangePasswordScreen after a successful forced password

@@ -168,12 +168,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 20, paddingTop: 60 },
   banner: {
-    backgroundColor: colors.accentRed,
+    backgroundColor: colors.buttonBg,
     padding: 14,
     borderRadius: radii.small,
     marginBottom: 20,
   },
-  bannerText: { color: colors.cream, fontSize: 14, lineHeight: 20 },
+  bannerText: { color: colors.onAccent, fontSize: 14, lineHeight: 20 },
   bannerBold: { fontWeight: '700' },
   title: {
     fontSize: 22,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   button: {
-    backgroundColor: colors.accentRed,
+    backgroundColor: colors.buttonBg,
     padding: 14,
     borderRadius: radii.button,
     alignItems: 'center',
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: colors.cream, fontSize: 16, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: 16, fontWeight: '700' },
   secondaryButton: {
     padding: 14,
     borderRadius: radii.button,

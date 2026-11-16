@@ -7,26 +7,25 @@ const keys = (me, code) => visibleModules(me, code).map((m) => m.key);
 
 describe('visibleModules', () => {
   it('shows everything to an administrator at the Expedição location', () => {
-    expect(keys({ role: 'ADMIN' }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens', 'notificacoes']);
+    expect(keys({ role: 'ADMIN' }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens']);
   });
 
   it('offers receiving and storage only at the Expedição location', () => {
-    expect(keys({ role: 'ADMIN' }, 'SP12')).toEqual(['retirada', 'transfer', 'estoque', 'ordens', 'notificacoes']);
+    expect(keys({ role: 'ADMIN' }, 'SP12')).toEqual(['retirada', 'transfer', 'estoque', 'ordens']);
     expect(keys({ role: 'ADMIN' }, 'Solda')).not.toContain('receive');
   });
 
   it('follows the page permissions of the user', () => {
     const me = { role: 'USER', allowed_pages: ['retirada'], allowed_functions: [] };
-    expect(keys(me, EXPEDICAO_CODE)).toEqual(['retirada', 'ordens', 'notificacoes']);
-    expect(keys({ role: 'USER', allowed_pages: ['inventory'] }, 'SP12')).toEqual(['transfer', 'estoque', 'ordens', 'notificacoes']);
-    expect(keys({ role: 'USER', allowed_pages: ['receiving', 'putaway'] }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'transfer', 'ordens', 'notificacoes']);
+    expect(keys(me, EXPEDICAO_CODE)).toEqual(['retirada', 'ordens']);
+    expect(keys({ role: 'USER', allowed_pages: ['inventory'] }, 'SP12')).toEqual(['transfer', 'estoque', 'ordens']);
+    expect(keys({ role: 'USER', allowed_pages: ['receiving', 'putaway'] }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'transfer', 'ordens']);
   });
 
   it('still honours the mobile functions granted to a user', () => {
     const me = { role: 'USER', allowed_pages: [], allowed_functions: ['receive'] };
-    expect(keys(me, EXPEDICAO_CODE)).toEqual(['receive', 'notificacoes']);
-    // Notifications are for every user; nothing else shows.
-    expect(keys(me, 'SP12')).toEqual(['notificacoes']);
+    expect(keys(me, EXPEDICAO_CODE)).toEqual(['receive']);
+    expect(keys(me, 'SP12')).toEqual([]);
   });
 
   it('shows nothing without a user', () => {

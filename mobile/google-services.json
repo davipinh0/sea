@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "549019522870",
+    "project_id": "br-sea",
+    "storage_bucket": "br-sea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:549019522870:android:dda50865b0a78565410597",
+        "android_client_info": {
+          "package_name": "br.sea.prototipo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWO2FF_K3l3j2D3t1M-V42VlTPY-tIP8k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

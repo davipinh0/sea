@@ -23,6 +23,9 @@ async function adminLogin(url, username, password) {
       body: JSON.stringify({ username, password }), signal: controller.signal,
     });
     if (resp.status === 401) return 'Usuário ou senha inválidos.';
+    if (resp.status === 429) return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
+    // The address is right, but the system behind it is starting or down.
+    if (resp.status >= 500) return 'O servidor do SEA está iniciando ou fora do ar. Tente de novo em instantes.';
     if (!resp.ok) return 'O endereço respondeu, mas não é um servidor do SEA.';
     const data = await resp.json();
     if (data?.user?.role !== 'ADMIN') return 'Só um administrador do sistema pode alterar o servidor.';

@@ -38,6 +38,8 @@ export default function LoginScreen() {
         setPassword('');
       } else if (err.response?.status === 429) {
         setError('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
+      } else if (err.response?.status >= 500) {
+        setError('O servidor do SEA está iniciando ou fora do ar. Tente de novo em instantes.');
       } else {
         setError('Sem conexão com o servidor. Confira o Wi-Fi; se continuar, peça a um administrador para conferir o endereço do servidor.');
       }

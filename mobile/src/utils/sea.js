@@ -47,6 +47,7 @@ export function apiError(err, fallback) {
   if (!err?.response) return 'Sem conexão com o servidor. Verifique a rede e o endereço do servidor.';
   const data = err.response.data;
   if (err.response.status === 403) return 'Você não tem permissão para esta ação.';
+  if (err.response.status >= 502 && err.response.status <= 504) return 'O servidor do SEA está iniciando ou fora do ar. Tente de novo em instantes.';
   if (data && typeof data.error === 'string' && data.user_facing) return data.error;
   return fallback;
 }

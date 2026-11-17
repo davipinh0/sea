@@ -31,13 +31,12 @@ WHERE w.warehouse_code = 'SP12'
   AND NOT EXISTS (SELECT 1 FROM bins b WHERE b.warehouse_id = w.warehouse_id AND b.bin_code = 'SP12-RECEB');
 
 -- Endereços das prateleiras: A, B, C x níveis 0-3.
--- Capacidade NULL = ainda não configurada (sem limite). Todas as
--- prateleiras são GRANDE: aceitam material de qualquer tamanho.
+-- Prateleiras livres: sem capacidade nem classe de tamanho.
 INSERT INTO bins (zone_id, warehouse_id, bin_code, bin_barcode, bin_type, aisle, level_num,
                   pick_sequence, putaway_sequence, size_class, description, external_id)
 SELECT z.zone_id, w.warehouse_id, s.shelf || n.lvl, s.shelf || n.lvl, 'Pickable', s.shelf, n.lvl::text,
        s.ord * 10 + n.lvl, s.ord * 10 + n.lvl,
-       'GRANDE',
+       NULL,
        'Prateleira ' || s.shelf || ', nível ' || n.lvl, gen_random_uuid()
 FROM warehouses w
 JOIN zones z ON z.warehouse_id = w.warehouse_id AND z.zone_code = 'PRAT'

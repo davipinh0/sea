@@ -185,30 +185,29 @@ class TestSp12Rules:
         assert _inv(sp12["conn"], sp12["small"], sp12["c0"], ot).quantity_on_hand == 3
         assert _inv(sp12["conn"], sp12["small"], sp12["b0"], ot).quantity_on_hand == 3
 
-    def test_size_class_reserved_address(self, client, auth_headers, sp12):
+    def test_shelves_are_free(self, client, auth_headers, sp12):
+        """Size class, capacity and compatibility are no longer limits:
+        any material, of any order, in any quantity, in any shelf. (The
+        fixture still marks T-A3 as PEQUENO and gives T-B0 room for 10.)"""
+        # A material without size in the shelf marked for small parts.
         ot = self._staged(client, auth_headers, sp12, "OT-S-2", "other", 2)
-        resp = _putaway(client, auth_headers, sp12["other"], sp12["a3"], 2, ot)
-        assert resp.status_code == 409
-        assert "PEQUENO" in resp.get_json()["error"]
-        ot2 = self._staged(client, auth_headers, sp12, "OT-S-3", "small", 2)
-        assert _putaway(client, auth_headers, sp12["small"], sp12["a3"], 2, ot2).status_code == 200
-
-    def test_capacity_is_enforced_only_when_configured(self, client, auth_headers, sp12):
+        assert _putaway(client, auth_headers, sp12["other"], sp12["a3"], 2, ot).status_code == 200
+        # More units than the old capacity of the address.
         ot = self._staged(client, auth_headers, sp12, "OT-S-4", "small", 12)
-        resp = _putaway(client, auth_headers, sp12["small"], sp12["b0"], 11, ot)
-        assert resp.status_code == 409
-        assert "Capacidade" in resp.get_json()["error"]
-        assert _putaway(client, auth_headers, sp12["small"], sp12["b0"], 10, ot).status_code == 200
+        assert _putaway(client, auth_headers, sp12["small"], sp12["b0"], 12, ot).status_code == 200
+        # Materials of different groups and orders together.
+        ot = self._staged(client, auth_headers, sp12, "OT-S-7", "small2", 2)
+        assert _putaway(client, auth_headers, sp12["small2"], sp12["a3"], 2, ot).status_code == 200
+        assert _inv(sp12["conn"], sp12["small2"], sp12["a3"], ot).quantity_on_hand == 2
 
-    def test_compatibility_groups(self, client, auth_headers, sp12):
-        ot1 = self._staged(client, auth_headers, sp12, "OT-S-5", "small", 2)
-        assert _putaway(client, auth_headers, sp12["small"], sp12["c0"], 2, ot1).status_code == 200
-        ot2 = self._staged(client, auth_headers, sp12, "OT-S-6", "small2", 2)
-        assert _putaway(client, auth_headers, sp12["small2"], sp12["c0"], 2, ot2).status_code == 200
-        ot3 = self._staged(client, auth_headers, sp12, "OT-S-7", "other", 2)
-        resp = _putaway(client, auth_headers, sp12["other"], sp12["c0"], 2, ot3)
-        assert resp.status_code == 409
-        assert "compatível" in resp.get_json()["error"]
+    def test_receiving_area_and_inactive_address_are_still_refused(
+        self, client, auth_headers, sp12
+    ):
+        ot = self._staged(client, auth_headers, sp12, "OT-S-8", "small", 2)
+        sp12["conn"].execute(text("UPDATE bins SET is_active = FALSE WHERE bin_id = :b"),
+                             {"b": sp12["c0"]})
+        off = _putaway(client, auth_headers, sp12["small"], sp12["c0"], 1, ot)
+        assert off.status_code == 409 and "inativo" in off.get_json()["error"]
 
     def test_suggestion_prefers_address_holding_the_ot(self, client, auth_headers, sp12):
         ot = self._staged(client, auth_headers, sp12, "OT-S-8", "small", 4)

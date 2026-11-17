@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
+import { ACTION_LABELS, actionLabel, entityLabel } from '../utils/sea.js';
 
 // Action-type categorization drives the badge color in the table and
 // modal header. Categories map to existing tag-* classes in App.css so
@@ -49,7 +50,11 @@ const CATEGORY_TAG_CLASS = {
 
 const ACTION_OPTIONS = [
   { value: '', label: 'Todas as ações' },
-  ...Object.keys(ACTION_CATEGORY).sort().map((a) => ({ value: a, label: a })),
+  // Only the actions the SEA records (the rest belong to modules it does not use).
+  ...Object.keys(ACTION_LABELS)
+    .map((a) => ({ value: a, label: actionLabel(a) }))
+    .filter((o, i, all) => all.findIndex((x) => x.label === o.label) === i)
+    .sort((a, b) => a.label.localeCompare(b.label)),
 ];
 
 const FILTER_LABEL_STYLE = {
@@ -87,9 +92,9 @@ function ActionBadge({ action }) {
   return (
     <span
       className={`tag ${CATEGORY_TAG_CLASS[category]}`}
-      style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 0.4 }}
+      style={{ fontSize: 11 }} title={action}
     >
-      {action}
+      {actionLabel(action)}
     </span>
   );
 }
@@ -104,7 +109,7 @@ function EntityCell({ row }) {
         fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)',
         textTransform: 'uppercase', letterSpacing: 0.4,
       }}>
-        {row.entity_type}
+        {entityLabel(row.entity_type)}
       </span>
       {row.entity_name && (
         <span className="mono" style={{ fontSize: 12 }}>{row.entity_name}</span>

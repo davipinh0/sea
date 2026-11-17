@@ -33,25 +33,17 @@ function shelvesFrom(bins) {
 }
 
 function Slot({ bin, selected, onSelect }) {
-  const pct = bin.occupancy_pct;
-  const ots = [...new Set(bin.contents.map((c) => c.ot).filter(Boolean))];
+  const orders = [...new Set(bin.contents.map((c) => c.order_number).filter(Boolean))];
   return (
     <button type="button" className={`sea-slot${selected ? ' selected' : ''}`} onClick={() => onSelect(bin)}>
       <div className="sea-slot-head">
         <span className="sea-slot-code">{bin.bin_code}</span>
-        <span>
-          {bin.size_class && <span className="tag tag-info" style={{ marginRight: 4 }}>{bin.size_class === 'PEQUENO' ? 'Peças pequenas' : 'Materiais grandes'}</span>}
-          {!bin.is_active && <span className="tag tag-gray">Inativo</span>}
-        </span>
+        <span>{!bin.is_active && <span className="tag tag-gray">Inativo</span>}</span>
       </div>
       <div className="sea-slot-meta">
         {bin.units > 0 ? `${bin.units} un.` : 'Vazio'}
-        {bin.capacity_units ? ` de ${bin.capacity_units}` : ' · capacidade não configurada'}
-        {ots.length > 0 && ` · ${ots.join(', ')}`}
+        {orders.length > 0 && ` · ${orders.length === 1 ? 'Ordem' : 'Ordens'} ${orders.join(', ')}`}
       </div>
-      {bin.capacity_units ? (
-        <div className={`sea-bar${pct >= 100 ? ' is-full' : ''}`}><span style={{ width: `${Math.min(100, pct)}%` }} /></div>
-      ) : null}
     </button>
   );
 }
@@ -94,10 +86,11 @@ export default function EstoqueSP12() {
     if (typeFilter) params.set('order_type', typeFilter);
     if (statusFilter) params.set('status', statusFilter);
     if (search) params.set('q', search);
-    api.get(`/sea/ots?${params}`).then(async (res) => {
+    // One row per order (PM11 / PM12); the OT is a reference column.
+    api.get(`/sea/ordens?${params}`).then(async (res) => {
       if (cancelled || !res?.ok) return;
       const json = await res.json();
-      if (!cancelled) setOts(json.ots || []);
+      if (!cancelled) setOts(json.orders || []);
     });
     return () => { cancelled = true; };
   }, [warehouseId, typeFilter, statusFilter, search, tick]);
@@ -107,7 +100,7 @@ export default function EstoqueSP12() {
   const selectedBin = selected && estoque ? estoque.bins.find((b) => b.bin_id === selected) : null;
 
   const otColumns = [
-    { key: 'ot', label: 'Ordem (OT)', mono: true },
+    { key: 'order_number', label: 'Ordem', mono: true },
     { key: 'order_type', label: 'Tipo', render: (r) => <OtTypeTag type={r.order_type} />, csvValue: (r) => r.order_type },
     { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} />, csvValue: (r) => r.status },
     { key: 'qty_ordered', label: 'Prevista' },
@@ -117,6 +110,7 @@ export default function EstoqueSP12() {
     { key: 'qty_withdrawn', label: 'Retirada' },
     { key: 'bins', label: 'Endereço', mono: true, render: (r) => r.bins || '-' },
     { key: 'received_at', label: 'Recebida em', render: (r) => formatDateTime(r.received_at) },
+    { key: 'ot', label: 'OT', mono: true },
   ];
 
   if (!warehouseId) return <p style={{ padding: 24 }}>Selecione um local na barra superior.</p>;
@@ -161,14 +155,15 @@ export default function EstoqueSP12() {
           <div className="card-title">Conteúdo de {selectedBin.bin_code}</div>
           {selectedBin.contents.length === 0 ? <p className="settings-note">Endereço vazio.</p> : (
             <table className="lines-table">
-              <thead><tr><th>Ordem (OT)</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Em estoque</th><th>Reservado</th><th>Disponível</th></tr></thead>
+              <thead><tr><th>Ordem</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Em estoque</th><th>Reservado</th><th>Disponível</th><th>OT</th></tr></thead>
               <tbody>
                 {selectedBin.contents.map((c) => (
                   <tr key={c.inventory_id}>
-                    <td className="mono">{c.ot ? <a href="#" onClick={(e) => { e.preventDefault(); setDetail(c.ot); }}>{c.ot}</a> : '-'}</td>
+                    <td className="mono">{c.order_number || '-'}</td>
                     <td><OtTypeTag type={c.order_type} /></td>
                     <td className="mono">{c.sku}</td><td>{c.item_name}</td>
                     <td>{c.quantity_on_hand}</td><td>{c.quantity_allocated}</td><td>{c.available}</td>
+                    <td className="mono">{c.ot ? <a href="#" onClick={(e) => { e.preventDefault(); setDetail(c.ot); }}>{c.ot}</a> : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -187,12 +182,12 @@ export default function EstoqueSP12() {
         <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Status da ordem">
           {OT_STATUSES.map((s) => <option key={s} value={s}>{OT_STATUS_LABELS[s]}</option>)}
         </select>
-        <input className="form-input" placeholder="Buscar ordem" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="form-input" placeholder="Buscar por ordem ou OT" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       <DataTable
         columns={otColumns}
         data={ots}
-        rowKey="po_id"
+        rowKey="row_id"
         onRowClick={(r) => setDetail(r.ot)}
         emptyMessage="Nenhuma ordem encontrada."
       />

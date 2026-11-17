@@ -276,13 +276,13 @@ def estoque():
     ).fetchall()
     contents = g.db.execute(
         text(
-            """
+            f"""
             SELECT inv.bin_id, inv.inventory_id, inv.item_id, i.sku, i.item_name,
-                   inv.lot_number, p.order_type, inv.quantity_on_hand, inv.quantity_allocated
+                   inv.lot_number, inv.quantity_on_hand, inv.quantity_allocated,
+                   {sea.ORDER_OF_STOCK_COLUMNS}
             FROM inventory inv
             JOIN items i ON i.item_id = inv.item_id
-            LEFT JOIN purchase_orders p
-              ON p.po_number = inv.lot_number AND p.order_type IS NOT NULL
+            {sea.ORDER_OF_STOCK_JOIN}
             WHERE inv.warehouse_id = :wid AND inv.quantity_on_hand > 0
             ORDER BY i.sku
             """
@@ -294,6 +294,7 @@ def estoque():
         by_bin.setdefault(c.bin_id, []).append({
             "inventory_id": c.inventory_id, "item_id": c.item_id, "sku": c.sku,
             "item_name": c.item_name, "ot": c.lot_number, "order_type": c.order_type,
+            "order_number": c.order_number,
             "quantity_on_hand": c.quantity_on_hand, "quantity_allocated": c.quantity_allocated,
             "available": max(0, c.quantity_on_hand - c.quantity_allocated),
         })
@@ -618,6 +619,24 @@ def get_ot(code):
         "stock": sea.ot_stock(g.db, ot),
         "withdrawals": _withdrawals(po_id=ot.po_id),
     })
+
+
+@sea_bp.route("/ordens")
+@require_auth
+@require_any_page(*OT_PAGE_KEYS)
+@with_db
+def list_ordens():
+    """The orders (PM11 / PM12) of a location, one row per order and OT."""
+    warehouse_id, err = _warehouse_arg()
+    if err:
+        return err
+    order_type = request.args.get("order_type") or None
+    if order_type and order_type not in sea.OT_TYPES:
+        return _user_error("order_type deve ser PM11 ou PM12", 400)
+    return jsonify({"orders": sea.order_rows(
+        g.db, warehouse_id, order_type=order_type,
+        status=request.args.get("status") or None, q=request.args.get("q"),
+    )})
 
 
 @sea_bp.route("/ordens/<path:number>")
@@ -1056,6 +1075,16 @@ def transferir_estoque(validated):
     return jsonify({"message": "Transferência concluída", **result})
 
 
+@sea_bp.route("/armazenagem/pendentes")
+@require_auth
+@require_any_page("putaway", "receiving")
+@with_db
+def pendentes_de_armazenagem():
+    """What waits for storage in every location of the user, with the
+    order of each material."""
+    return jsonify({"pending_items": sea.pending_storage(g.db, _user_warehouse_ids())})
+
+
 @sea_bp.route("/armazenagem/destinos")
 @require_auth
 @require_any_page("putaway", "receiving", *TRANSFER_PAGE_KEYS)
@@ -1170,10 +1199,17 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             text(
                 """
                 SELECT wl.withdrawal_id, wl.inventory_id, wl.quantity, i.sku, i.item_name,
-                       i.uom, i.pack_weight_kg, b.bin_code
+                       i.uom, i.pack_weight_kg, b.bin_code,
+                       COALESCE(ol.service_order_number, op.service_order_number, op.po_number)
+                           AS order_number,
+                       COALESCE(ol.service_order_type, op.order_type) AS order_type
                 FROM withdrawal_lines wl
                 JOIN items i ON i.item_id = wl.item_id
                 JOIN bins b ON b.bin_id = wl.bin_id
+                JOIN withdrawals wd ON wd.withdrawal_id = wl.withdrawal_id
+                JOIN purchase_orders op ON op.po_id = wd.po_id
+                LEFT JOIN purchase_order_lines ol
+                  ON ol.po_id = op.po_id AND ol.item_id = wl.item_id
                 WHERE wl.withdrawal_id = ANY(:ids)
                 ORDER BY b.bin_code, i.sku
                 """
@@ -1183,6 +1219,7 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             lines.setdefault(ln.withdrawal_id, []).append({
                 "inventory_id": ln.inventory_id, "sku": ln.sku, "item_name": ln.item_name,
                 "bin_code": ln.bin_code, "quantity": ln.quantity, "uom": ln.uom,
+                "order_number": ln.order_number, "order_type": ln.order_type,
                 "pack_weight_kg": sea.pack_weight(ln.uom, ln.pack_weight_kg),
             })
     return [
@@ -1199,6 +1236,11 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             "confirmed_by": r.confirmed_by, "cancelled_by": r.cancelled_by,
             "cancelled_at": _iso(r.cancelled_at), "cancel_reason": r.cancel_reason,
             "lines": lines.get(r.withdrawal_id, []),
+            # The order(s) of the materials requested, e.g. ["PM12 2002349234"].
+            "orders": sorted({
+                " ".join(x for x in (ln["order_type"], ln["order_number"]) if x)
+                for ln in lines.get(r.withdrawal_id, []) if ln["order_number"]
+            }),
         }
         for r in rows
     ]

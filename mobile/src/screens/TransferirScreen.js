@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
-import { apiError, formatQuantity, parseQuantity, quantityProblem } from '../utils/sea';
+import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 
 // Transferência entre endereços. Find a material by its code, see where
@@ -107,7 +107,7 @@ export default function TransferirScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={ui.code}>{s.warehouse_code} · {s.bin_code}</Text>
                   <Text style={ui.meta}>
-                    OT {s.ot || '-'}{s.quantity_allocated > 0 ? ` · ${s.quantity_allocated} reservado(s)` : ''}
+                    Ordem {orderName(s)}{s.quantity_allocated > 0 ? ` · ${s.quantity_allocated} reservado(s)` : ''}
                     {!s.stored ? ' · área de recebimento (use Armazenar)' : ''}
                   </Text>
                 </View>

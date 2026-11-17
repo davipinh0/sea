@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  EXPEDICAO_CODE, apiError, formatQuantity, groupByLocation, parseQuantity, quantityProblem, visibleModules,
+  EXPEDICAO_CODE, apiError, formatQuantity, groupByLocation, orderName, parseQuantity, quantityProblem, visibleModules,
 } from '../sea';
 
 const keys = (me, code) => visibleModules(me, code).map((m) => m.key);
@@ -89,5 +89,14 @@ describe('apiError', () => {
     // The proxy answers 502 while the API behind it is restarting.
     expect(apiError({ response: { status: 502, data: '<html>' } }, 'x')).toMatch(/iniciando ou fora do ar/);
     expect(apiError(new Error('Network request failed'), 'x')).toMatch(/Sem conexão/);
+  });
+});
+
+describe('orderName', () => {
+  it('names a material by its order, with the type first', () => {
+    expect(orderName({ order_type: 'PM12', order_number: '2002349234' })).toBe('PM12 2002349234');
+    expect(orderName({ order_number: '2002349234' })).toBe('2002349234');
+    expect(orderName({})).toBe('-');
+    expect(orderName(null)).toBe('-');
   });
 });

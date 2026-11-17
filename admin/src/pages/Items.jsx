@@ -118,9 +118,8 @@ export default function Items() {
       upc: form.upc || null,
       mpn: form.mpn || null,
       category: form.category || null,
-      // SEA SP12 rules: size class and compatibility group (blank = none).
+      // Informative only: shelves take material of any size.
       size_class: form.size_class || null,
-      compat_group: (form.compat_group || '').trim() || null,
       uom: (form.uom || '').trim().toUpperCase() || null,
       // Box weight only makes sense for a material kept in KG.
       pack_weight_kg: (form.uom || '').trim().toUpperCase() === 'KG' && form.pack_weight_kg ? Number(form.pack_weight_kg) : null,
@@ -228,7 +227,6 @@ export default function Items() {
             <span className="detail-label">MPN</span><span className="mono">{detail.mpn || '-'}</span>
             <span className="detail-label">Categoria</span><span>{detail.category || '-'}</span>
             <span className="detail-label">Tamanho</span><span>{detail.size_class || '-'}</span>
-            <span className="detail-label">Grupo de compatibilidade</span><span>{detail.compat_group || '-'}</span>
             <span className="detail-label">Peso</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} kg` : '-'}</span>
             <span className="detail-label">Ativo</span><span>{detail.is_active ? 'Sim' : 'Não'}</span>
           </div>
@@ -312,19 +310,14 @@ export default function Items() {
           )}
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="item-size">Classe de tamanho (SP12)</label>
+              <label htmlFor="item-size">Tamanho</label>
               <select id="item-size" className="form-select" value={form.size_class || ''} onChange={(e) => setForm({ ...form, size_class: e.target.value })}>
                 <option value="">Não definida</option>
                 <option value="PEQUENO">Pequeno (ex.: parafusos)</option>
                 <option value="GRANDE">Grande</option>
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="item-compat">Grupo de compatibilidade</label>
-              <input id="item-compat" className="form-input" placeholder="ex.: FIXADORES" value={form.compat_group || ''} onChange={(e) => setForm({ ...form, compat_group: e.target.value })} />
-            </div>
           </div>
-          <p className="settings-note">Materiais do mesmo grupo podem dividir um endereço. Em branco: só divide endereço com ele mesmo.</p>
         </Modal>
       )}
 

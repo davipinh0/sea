@@ -4,14 +4,10 @@ Two concerns live here, both scoped to SEA Ordens de Transferência (OT):
 a purchase_orders row with order_type PM11/PM12 whose received stock
 carries the OT number as inventory.lot_number.
 
-1. SP12 storage rules (put-away):
-   * an OT may be spread freely over any number of storage addresses;
-   * an address may hold several materials only when they are
-     compatible (same item, or same non-null items.compat_group);
-   * bins.size_class restricts an address to one material size class
-     (e.g. A3 = PEQUENO for screws); NULL = any;
-   * bins.capacity_units caps the units stored in an address;
-     NULL = not configured (no limit). No numeric capacity is invented.
+1. Storage (put-away): shelves are free. Any material of any order goes
+   to any storage address, in any quantity, and an order may be spread
+   over several addresses. Only a receiving area or a switched-off
+   address is refused as a destination.
 
 2. Withdrawals (retiradas) at the touchscreen terminal:
    REQUESTED -> PICKING -> READY -> DELIVERED, or CANCELLED.
@@ -59,8 +55,6 @@ ACTION_WITHDRAWAL_CANCELLED = "WITHDRAWAL_CANCELLED"
 
 
 UOM_KG = "KG"
-# Size class of an address that accepts material of every size.
-SIZE_ANY = "GRANDE"
 
 
 def pack_weight(uom, pack_weight_kg):
@@ -70,6 +64,22 @@ def pack_weight(uom, pack_weight_kg):
     if pack_weight_kg and (uom or "").strip().upper() == UOM_KG:
         return int(pack_weight_kg)
     return None
+
+
+# The order (PM11 / PM12) is how the operation names a material; the OT is
+# the document it arrived with. A stock row carries the OT as its lot, so
+# its order is the one of that material on that OT. These fragments add
+# ``order_number`` / ``order_type`` to any query over ``inventory inv``.
+ORDER_OF_STOCK_JOIN = """
+    LEFT JOIN purchase_orders op
+      ON op.po_number = inv.lot_number AND op.order_type IS NOT NULL
+    LEFT JOIN purchase_order_lines ol
+      ON ol.po_id = op.po_id AND ol.item_id = inv.item_id
+"""
+ORDER_OF_STOCK_COLUMNS = """
+    COALESCE(ol.service_order_number, op.service_order_number, op.po_number) AS order_number,
+    COALESCE(ol.service_order_type, op.order_type) AS order_type
+"""
 
 
 class SeaError(Exception):
@@ -879,10 +889,12 @@ def _item(db, item_id):
 
 
 def storage_problems(db, *, item, target_bin, quantity):
-    """List the storage rules a put-away of ``quantity`` units would
-    break (address type, size class, capacity, compatibility). An order
-    may be spread over any number of addresses. Returns [] when the move
-    is allowed.
+    """Why ``target_bin`` cannot receive the material, or [].
+
+    Shelves are free: any material, of any order, in any quantity. The
+    only refusals left are a receiving area (it is not storage) and an
+    address that was switched off. ``item`` and ``quantity`` stay in the
+    signature for the callers.
     """
     problems = []
     if target_bin.bin_type in STAGING_TYPES:
@@ -891,46 +903,6 @@ def storage_problems(db, *, item, target_bin, quantity):
         )
     if target_bin.is_active is False:
         problems.append(f"O endereço {target_bin.bin_code} está inativo.")
-
-    # A GRANDE address takes material of any size; a PEQUENO one is kept
-    # for small material.
-    if (target_bin.size_class and target_bin.size_class != SIZE_ANY
-            and item.size_class != target_bin.size_class):
-        problems.append(
-            f"O endereço {target_bin.bin_code} é reservado a materiais de tamanho "
-            f"{target_bin.size_class}; o material {item.sku} é "
-            f"{item.size_class or 'sem classe definida'}."
-        )
-
-    occupants = db.execute(
-        text(
-            """
-            SELECT inv.item_id, i.sku, i.compat_group, inv.lot_number,
-                   SUM(inv.quantity_on_hand) AS units
-            FROM inventory inv JOIN items i ON i.item_id = inv.item_id
-            WHERE inv.bin_id = :bid AND inv.quantity_on_hand > 0
-            GROUP BY inv.item_id, i.sku, i.compat_group, inv.lot_number
-            """
-        ),
-        {"bid": target_bin.bin_id},
-    ).fetchall()
-
-    if target_bin.capacity_units is not None:
-        used = sum(int(o.units) for o in occupants)
-        if used + quantity > target_bin.capacity_units:
-            problems.append(
-                f"Capacidade excedida em {target_bin.bin_code}: {used} de "
-                f"{target_bin.capacity_units} unidades ocupadas, tentando adicionar {quantity}."
-            )
-
-    for o in occupants:
-        if o.item_id == item.item_id:
-            continue
-        if not (item.compat_group and o.compat_group == item.compat_group):
-            problems.append(
-                f"{item.sku} não é compatível com {o.sku}, já armazenado em {target_bin.bin_code}."
-            )
-            break
 
     return problems
 
@@ -1033,11 +1005,29 @@ def suggest_storage(db, *, inventory_id, warehouse_ids=None):
 
 # -------------------------------------------------------- Withdrawals
 
-def order_label(ot):
-    """Text that names an order in messages: OT plus its PM order."""
-    number = getattr(ot, "service_order_number", None)
-    detail = " ".join(x for x in (ot.order_type, number) if x)
-    return f"OT {ot.po_number} ({detail})" if detail else f"OT {ot.po_number}"
+def order_label(db, ot, item_ids=None):
+    """Text that names what a message is about: the order(s) of the
+    materials involved (all of the OT when ``item_ids`` is None), with the
+    OT they arrived with. E.g. "Ordem PM12 2002349234 (OT 1003307220)"."""
+    rows = db.execute(
+        text(
+            """
+            SELECT DISTINCT
+                   COALESCE(l.service_order_type, p.order_type) AS order_type,
+                   COALESCE(l.service_order_number, p.service_order_number) AS order_number
+            FROM purchase_order_lines l JOIN purchase_orders p ON p.po_id = l.po_id
+            WHERE l.po_id = :po
+              AND (CAST(:items AS INT[]) IS NULL OR l.item_id = ANY(:items))
+            ORDER BY 2, 1
+            """
+        ),
+        {"po": ot.po_id, "items": list(item_ids) if item_ids is not None else None},
+    ).fetchall()
+    orders = [" ".join(x for x in (r.order_type, r.order_number) if x)
+              for r in rows if r.order_number]
+    if not orders:
+        return f"OT {ot.po_number}"
+    return f"{'Ordem' if len(orders) == 1 else 'Ordens'} {', '.join(orders)} (OT {ot.po_number})"
 
 
 def find_employee(db, user_id):
@@ -1071,7 +1061,8 @@ def notify_receipt(db, po, receipt_ids, username):
                    COUNT(DISTINCT r.item_id) AS materials,
                    string_agg(DISTINCT b.bin_code, ', ') AS bins,
                    COUNT(DISTINCT COALESCE(UPPER(i.uom), '')) AS units_of_measure,
-                   MAX(UPPER(i.uom)) AS uom
+                   MAX(UPPER(i.uom)) AS uom,
+                   array_agg(DISTINCT r.item_id) AS item_ids
             FROM item_receipts r JOIN bins b ON b.bin_id = r.bin_id
             JOIN items i ON i.item_id = r.item_id
             WHERE r.receipt_id = ANY(:ids)
@@ -1081,7 +1072,7 @@ def notify_receipt(db, po, receipt_ids, username):
     ).fetchone()
     notifications.create(
         db, kind=notifications.KIND_RECEIPT, warehouse_id=po.warehouse_id,
-        title=f"Recebimento de materiais: OT {po.po_number} ({po.order_type})",
+        title=f"Recebimento de materiais: {order_label(db, po, row.item_ids)}",
         # The unit is named when every material received shares it
         # ("18 KG de 1 material(is)"); mixed units stay as "unidade(s)".
         message=(f"{amount_label(int(row.units), row.uom if row.units_of_measure == 1 else None)} "
@@ -1123,8 +1114,8 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
     ).scalar()
     notifications.create(
         db, kind=notifications.KIND_STORAGE_DONE, warehouse_id=warehouse_id,
-        title=f"Armazenamento concluído: {order_label(ot)}",
-        message=(f"Todo o material recebido da {order_label(ot)} está armazenado em "
+        title=f"Armazenamento concluído: {order_label(db, ot)}",
+        message=(f"Todo o material recebido ({order_label(db, ot)}) está armazenado em "
                  f"{places}."),
         ot=ot.po_number, username=username,
     )
@@ -1143,14 +1134,16 @@ def item_stock(db, item_id, warehouse_ids=None):
     may use (``warehouse_ids``; None = all)."""
     rows = db.execute(
         text(
-            """
+            f"""
             SELECT inv.inventory_id, inv.bin_id, b.bin_code, b.bin_type, inv.warehouse_id,
                    w.warehouse_code, inv.lot_number, inv.quantity_on_hand,
-                   inv.quantity_allocated, i.uom, i.pack_weight_kg
+                   inv.quantity_allocated, i.uom, i.pack_weight_kg,
+                   {ORDER_OF_STOCK_COLUMNS}
             FROM inventory inv
             JOIN items i ON i.item_id = inv.item_id
             JOIN bins b ON b.bin_id = inv.bin_id
             JOIN warehouses w ON w.warehouse_id = inv.warehouse_id
+            {ORDER_OF_STOCK_JOIN}
             WHERE inv.item_id = :item AND inv.quantity_on_hand > 0
               AND (CAST(:wids AS INT[]) IS NULL OR inv.warehouse_id = ANY(:wids))
             ORDER BY w.warehouse_code, b.bin_code, inv.lot_number
@@ -1163,6 +1156,7 @@ def item_stock(db, item_id, warehouse_ids=None):
         {"inventory_id": r.inventory_id, "bin_id": r.bin_id, "bin_code": r.bin_code,
          "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code,
          "stored": r.bin_type not in STAGING_TYPES, "ot": r.lot_number,
+         "order_number": r.order_number, "order_type": r.order_type,
          "quantity_on_hand": r.quantity_on_hand, "quantity_allocated": r.quantity_allocated,
          "available": max(0, r.quantity_on_hand - r.quantity_allocated),
          "uom": r.uom, "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg)}
@@ -1282,6 +1276,161 @@ def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=No
                     dest.warehouse_id,
                     details={**summary, "to_bin_code": dest.bin_code, "reason": reason})
     return summary
+
+
+def pending_storage(db, warehouse_ids=None):
+    """What waits in the receiving areas, with the order of each material,
+    in the locations the user may use (``warehouse_ids``; None = all)."""
+    rows = db.execute(
+        text(
+            f"""
+            SELECT inv.inventory_id, inv.item_id, i.sku, i.item_name, i.uom, i.pack_weight_kg,
+                   inv.quantity_on_hand AS quantity, inv.bin_id, b.bin_code, inv.lot_number,
+                   inv.warehouse_id, w.warehouse_code,
+                   {ORDER_OF_STOCK_COLUMNS}
+            FROM inventory inv
+            JOIN items i ON i.item_id = inv.item_id
+            JOIN bins b ON b.bin_id = inv.bin_id
+            JOIN warehouses w ON w.warehouse_id = inv.warehouse_id
+            {ORDER_OF_STOCK_JOIN}
+            WHERE b.bin_type IN :staging AND inv.quantity_on_hand > 0
+              AND (CAST(:wids AS INT[]) IS NULL OR inv.warehouse_id = ANY(:wids))
+            ORDER BY order_number, i.sku, inv.inventory_id
+            """
+        ).bindparams(_staging_param()),
+        {"staging": list(STAGING_TYPES),
+         "wids": list(warehouse_ids) if warehouse_ids is not None else None},
+    ).fetchall()
+    return [
+        {"inventory_id": r.inventory_id, "item_id": r.item_id, "sku": r.sku,
+         "item_name": r.item_name, "uom": r.uom,
+         "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg),
+         "quantity": r.quantity, "bin_id": r.bin_id, "bin_code": r.bin_code,
+         "lot_number": r.lot_number, "ot": r.lot_number,
+         "order_number": r.order_number, "order_type": r.order_type,
+         "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code}
+        for r in rows
+    ]
+
+
+def order_rows(db, warehouse_id, *, order_type=None, status=None, q=None):
+    """The orders (PM11 / PM12) of a location, one row per order and OT:
+    what was expected and received, what waits for storage, what is
+    stored, what was withdrawn, where it is and when it came in.
+
+    An order belongs to a location when its OT was received there or part
+    of its stock is there.
+    """
+    lines = db.execute(
+        text(
+            """
+            SELECT p.po_id, p.po_number, p.status AS po_status,
+                   COALESCE(l.service_order_number, p.service_order_number, p.po_number)
+                       AS order_number,
+                   COALESCE(l.service_order_type, p.order_type) AS order_type,
+                   l.item_id, l.quantity_ordered, l.quantity_received
+            FROM purchase_orders p JOIN purchase_order_lines l ON l.po_id = p.po_id
+            WHERE p.order_type IS NOT NULL
+              AND (p.warehouse_id = :wid
+                   OR EXISTS (SELECT 1 FROM inventory x
+                              WHERE x.lot_number = p.po_number AND x.warehouse_id = :wid
+                                AND x.quantity_on_hand > 0))
+            ORDER BY p.po_id DESC, l.line_number
+            """
+        ),
+        {"wid": warehouse_id},
+    ).fetchall()
+    if not lines:
+        return []
+    po_ids = sorted({ln.po_id for ln in lines})
+    lots = sorted({ln.po_number for ln in lines})
+    stock = db.execute(
+        text(
+            """
+            SELECT inv.lot_number, inv.item_id, inv.quantity_on_hand, b.bin_code, b.bin_type,
+                   w.warehouse_code
+            FROM inventory inv JOIN bins b ON b.bin_id = inv.bin_id
+            JOIN warehouses w ON w.warehouse_id = inv.warehouse_id
+            WHERE inv.lot_number = ANY(:lots) AND inv.quantity_on_hand > 0
+            """
+        ),
+        {"lots": lots},
+    ).fetchall()
+    withdrawn = db.execute(
+        text(
+            """
+            SELECT w.po_id, wl.item_id, SUM(wl.quantity) AS quantity
+            FROM withdrawals w JOIN withdrawal_lines wl ON wl.withdrawal_id = w.withdrawal_id
+            WHERE w.po_id = ANY(:pos) AND w.status = 'DELIVERED'
+            GROUP BY w.po_id, wl.item_id
+            """
+        ),
+        {"pos": po_ids},
+    ).fetchall()
+    received = db.execute(
+        text("SELECT po_id, item_id, MAX(received_at) AS at FROM item_receipts "
+             "WHERE po_id = ANY(:pos) GROUP BY po_id, item_id"),
+        {"pos": po_ids},
+    ).fetchall()
+    out_by = {(r.po_id, r.item_id): int(r.quantity) for r in withdrawn}
+    at_by = {(r.po_id, r.item_id): r.at for r in received}
+
+    grouped = {}
+    for ln in lines:
+        key = (ln.po_id, ln.order_number, ln.order_type)
+        row = grouped.setdefault(key, {
+            "row_id": f"{ln.po_id}-{ln.order_number}", "po_id": ln.po_id, "ot": ln.po_number,
+            "order_number": ln.order_number, "order_type": ln.order_type,
+            "po_status": ln.po_status, "materials": 0, "qty_ordered": 0, "qty_received": 0,
+            "qty_staging": 0, "qty_stored": 0, "qty_withdrawn": 0, "_bins": set(),
+            "_received_at": None, "_items": set(),
+        })
+        row["materials"] += 1
+        row["qty_ordered"] += ln.quantity_ordered
+        row["qty_received"] += ln.quantity_received
+        row["qty_withdrawn"] += out_by.get((ln.po_id, ln.item_id), 0)
+        row["_items"].add(ln.item_id)
+        at = at_by.get((ln.po_id, ln.item_id))
+        if at and (row["_received_at"] is None or at > row["_received_at"]):
+            row["_received_at"] = at
+    by_lot_item = {}
+    for row in grouped.values():
+        for item_id in row["_items"]:
+            by_lot_item[(row["ot"], item_id)] = row
+    for s in stock:
+        row = by_lot_item.get((s.lot_number, s.item_id))
+        if row is None:
+            continue
+        if s.bin_type in STAGING_TYPES:
+            row["qty_staging"] += s.quantity_on_hand
+        else:
+            row["qty_stored"] += s.quantity_on_hand
+            row["_bins"].add(f"{s.warehouse_code} · {s.bin_code}")
+
+    wanted = (q or "").strip().casefold()
+    result = []
+    for row in grouped.values():
+        if row["po_status"] in PO_LOCKED_STATUSES:
+            row["status"] = row["po_status"]
+        elif row["qty_received"] <= 0:
+            row["status"] = "OPEN"
+        elif row["qty_received"] < row["qty_ordered"]:
+            row["status"] = "PARTIAL"
+        else:
+            row["status"] = "RECEIVED"
+        if order_type and row["order_type"] != order_type:
+            continue
+        if status and row["status"] != status:
+            continue
+        if wanted and wanted not in f"{row['order_number']} {row['ot']}".casefold():
+            continue
+        row["bins"] = ", ".join(sorted(row.pop("_bins"))) or None
+        at = row.pop("_received_at")
+        row["received_at"] = at.isoformat() if at else None
+        row.pop("_items")
+        row.pop("po_status")
+        result.append(row)
+    return result
 
 
 def order_stock(db, order_number, warehouse_ids=None):
@@ -1458,7 +1607,8 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
     )
     notifications.create(
         db, kind=notifications.KIND_WITHDRAWAL_REQUESTED, warehouse_id=stock_warehouse_id,
-        title=f"Retirada nº {withdrawal_id} solicitada: {order_label(ot)}",
+        title="Retirada nº {} solicitada: {}".format(
+            withdrawal_id, order_label(db, ot, {row.item_id for row in locked.values()})),
         message="Solicitada por {}: {}.".format(
             username,
             "; ".join(

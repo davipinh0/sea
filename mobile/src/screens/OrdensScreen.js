@@ -7,7 +7,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
 import { Card, Field, Message, ui } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { apiError, formatQuantity } from '../utils/sea';
+import { apiError, formatQuantity, orderName } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 
 // Ordens: the OTs of the selected location and, for each one, its
@@ -25,8 +25,8 @@ export default function OrdensScreen({ navigation }) {
   const load = useCallback(async () => {
     if (!warehouseId) return;
     try {
-      const resp = await client.get(`/api/sea/ots?warehouse_id=${warehouseId}`);
-      setList(resp.data?.ots || []);
+      const resp = await client.get(`/api/sea/ordens?warehouse_id=${warehouseId}`);
+      setList(resp.data?.orders || []);
     } catch (err) {
       setList((current) => current || []);
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível carregar as ordens.') });
@@ -48,19 +48,19 @@ export default function OrdensScreen({ navigation }) {
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="ORDENS" onBack={() => (detail ? setDetail(null) : navigation.goBack())} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
-        {!detail && <CodeInput placeholder="Código da OT" onSubmit={open} buttonLabel="ABRIR" />}
+        {!detail && <CodeInput placeholder="Código de barras da OT" onSubmit={open} buttonLabel="ABRIR" />}
         <Message message={message} />
 
         {!detail && list === null && <Text style={ui.empty}>Carregando…</Text>}
         {!detail && list && list.length === 0 && <Text style={ui.empty}>Nenhuma ordem neste local.</Text>}
         {!detail && (list || []).map((o) => (
-          <TouchableOpacity key={o.po_id} style={ui.line} onPress={() => open(o.ot)} accessibilityLabel={`Abrir OT ${o.ot}`}>
+          <TouchableOpacity key={o.row_id} style={ui.line} onPress={() => open(o.ot)} accessibilityLabel={`Abrir ordem ${o.order_number}`}>
             <View style={{ flex: 1 }}>
-              <Text style={ui.code}>{o.ot}{o.order_type ? ` · ${o.order_type}` : ''}</Text>
+              <Text style={ui.code}>{orderName(o)}</Text>
               <Text style={ui.meta}>
                 {STATUS[o.status] || o.status} · recebido {o.qty_received}/{o.qty_ordered} · armazenado {o.qty_stored} · retirado {o.qty_withdrawn}
               </Text>
-              {o.bins ? <Text style={ui.meta}>{o.bins}</Text> : null}
+              <Text style={ui.meta}>{o.bins ? `${o.bins} · ` : ''}OT {o.ot}</Text>
             </View>
           </TouchableOpacity>
         ))}

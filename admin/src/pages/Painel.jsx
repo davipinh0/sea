@@ -3,36 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import PageHeader from '../components/PageHeader.jsx';
-import { formatDateTime, readError } from '../utils/sea.js';
+import { actionLabel, formatDateTime, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Painel: operational overview of the SP12 sector. KPI tiles link to the
 // tab where the work happens; the activity feed reads the audit log.
 
 const REFRESH_MS = 30000;
-
-const ACTION_LABELS = {
-  RECEIVE: 'Recebimento',
-  RECEIVE_CANCEL: 'Estorno de recebimento',
-  PUTAWAY: 'Armazenagem',
-  STOCK_TRANSFERRED: 'Transferência entre endereços',
-  PO_STATUS_CHANGED: 'Status da ordem alterado',
-  WITHDRAWAL_REQUESTED: 'Retirada solicitada',
-  WITHDRAWAL_PICKING: 'Separação iniciada',
-  WITHDRAWAL_READY: 'Separação concluída',
-  WITHDRAWAL_DELIVERED: 'Retirada entregue (baixa)',
-  WITHDRAWAL_CANCELLED: 'Retirada cancelada',
-  ADJUST: 'Ajuste de estoque',
-  OT_REGISTERED: 'Ordem cadastrada',
-  SAP_BASE_IMPORTED: 'Base do SAP importada',
-  OT_MATERIAL_ADDED: 'Material adicionado à ordem',
-  OT_DATA_EDITED: 'Dados da ordem corrigidos',
-  OT_MATERIAL_EDITED: 'Material da ordem corrigido',
-  OT_MATERIAL_REMOVED: 'Material removido da ordem',
-  UNRECEIVE: 'Estorno de recebimento',
-  password_change: 'Senha alterada',
-  forced_password_change_completed: 'Senha inicial trocada',
-};
 
 function describe(entry) {
   const d = entry.details || {};
@@ -99,8 +76,7 @@ export default function Painel() {
         <>
           <div className="section-title">Recebimento e armazenagem</div>
           <div className="sea-kpis">
-            <Kpi to="/expedicao/recebimento" value={count('PM11', ['OPEN', 'PARTIAL'])} label="Ordens PM11 a receber" />
-            <Kpi to="/expedicao/recebimento" value={count('PM12', ['OPEN', 'PARTIAL'])} label="Ordens PM12 a receber" />
+            <Kpi to="/expedicao/recebimento" value={count('PM11', ['OPEN', 'PARTIAL']) + count('PM12', ['OPEN', 'PARTIAL'])} label="Ordens a receber" />
             <Kpi to="/expedicao/armazenagem" value={data.staging_units} label={`Unidades aguardando armazenagem (${data.staging_ots} ordem(ns))`} alert={data.staging_units > 0} />
             <Kpi to="/estoque/sp12" value={data.stored_units} label="Unidades armazenadas" />
             <Kpi to="/estoque/sp12" value={`${data.occupied_bins}/${data.storage_bins}`} label="Endereços ocupados" />
@@ -122,7 +98,7 @@ export default function Painel() {
                 {data.recent.map((r) => (
                   <tr key={r.log_id}>
                     <td>{formatDateTime(r.created_at)}</td>
-                    <td>{ACTION_LABELS[r.action_type] || r.action_type}</td>
+                    <td>{actionLabel(r.action_type)}</td>
                     <td>{describe(r)}</td>
                     <td>{r.user}</td>
                   </tr>

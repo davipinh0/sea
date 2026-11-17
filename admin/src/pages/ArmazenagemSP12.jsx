@@ -14,7 +14,7 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 // location and offers the storage addresses of all of them. The operator
 // confirms or picks another address; the API re-validates every rule.
 
-function Row({ row, destinations, otTypes, onDone }) {
+function Row({ row, destinations, onDone }) {
   const [suggestion, setSuggestion] = useState(null);
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState(String(row.quantity));
@@ -65,7 +65,7 @@ function Row({ row, destinations, otTypes, onDone }) {
 
   return (
     <tr>
-      <td className="mono">{row.lot_number || '-'} <OtTypeTag type={otTypes[row.lot_number]} /></td>
+      <td className="mono">{row.order_number || '-'} <OtTypeTag type={row.order_type} /></td>
       <td className="mono">{row.sku}</td>
       <td>{row.item_name}</td>
       <td className="mono">{row.warehouse_code ? `${row.warehouse_code} · ` : ''}{row.bin_code}</td>
@@ -77,7 +77,7 @@ function Row({ row, destinations, otTypes, onDone }) {
       <td>
         {suggestion === null && <span className="settings-note">Calculando…</span>}
         {suggestion && suggestion.bin_code && <strong className="mono">{suggestion.warehouse_code} · {suggestion.bin_code}</strong>}
-        {suggestion && !suggestion.bin_code && <span className="form-error">Nenhum endereço compatível</span>}
+        {suggestion && !suggestion.bin_code && <span className="form-error">Nenhum endereço disponível</span>}
         {suggestion && suggestion.rejected.length > 0 && (
           <div>
             <button type="button" className="btn btn-sm" onClick={() => setShowWhy((v) => !v)}>
@@ -96,12 +96,13 @@ function Row({ row, destinations, otTypes, onDone }) {
           <option value="">Escolha…</option>
           {destinations.map((g) => (
             <optgroup key={g.warehouse_id} label={`${g.warehouse_code} - ${g.warehouse_name}`}>
-              {g.bins.map((b) => <option key={b.bin_id} value={b.bin_id}>{b.bin_code}{b.size_class ? ` (${b.size_class})` : ''}</option>)}
+              {g.bins.map((b) => <option key={b.bin_id} value={b.bin_id}>{b.bin_code}</option>)}
             </optgroup>
           ))}
         </select>
         {error && <div className="form-error" style={{ marginTop: 4 }}>{error}</div>}
       </td>
+      <td className="mono">{row.lot_number || '-'}</td>
       <td>
         <button type="button" className="btn btn-primary btn-sm" disabled={saving} onClick={confirm}>
           {saving ? 'Salvando…' : 'Confirmar'}
@@ -126,10 +127,9 @@ function groupByLocation(bins) {
 }
 
 export default function ArmazenagemSP12() {
-  const { warehouseId, warehouses } = useWarehouse();
+  const { warehouseId } = useWarehouse();
   const [pending, setPending] = useState([]);
   const [destinations, setDestinations] = useState([]);
-  const [otTypes, setOtTypes] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
@@ -142,40 +142,23 @@ export default function ArmazenagemSP12() {
   // so an automatic refresh never erases a destination being chosen.
   const shown = useRef('');
 
-  // Every location the user sees; the selected one comes first. When the
-  // list of locations is not available, only the selected one is used.
-  const locationKey = (warehouses || []).map((w) => w.warehouse_id || w.id).join(',');
-
   useEffect(() => {
     if (!warehouseId) return undefined;
     let cancelled = false;
-    const known = (warehouses || []).map((w) => ({ id: w.warehouse_id || w.id, code: w.warehouse_code || w.code }));
-    const locations = known.length > 0 ? known : [{ id: warehouseId, code: '' }];
-    locations.sort((a, b) => (b.id === warehouseId) - (a.id === warehouseId));
     (async () => {
-      const [destRes, ...perLocation] = await Promise.all([
+      const [destRes, pendRes] = await Promise.all([
         api.get('/sea/armazenagem/destinos'),
-        ...locations.flatMap((loc) => [
-          api.get(`/putaway/pending/${loc.id}`),
-          api.get(`/sea/ots?warehouse_id=${loc.id}`),
-        ]),
+        api.get('/sea/armazenagem/pendentes'),
       ]);
       if (cancelled) return;
-      const rows = [];
-      const types = {};
-      for (let i = 0; i < locations.length; i += 1) {
-        const pendRes = perLocation[2 * i];
-        const otsRes = perLocation[2 * i + 1];
-        if (pendRes && !pendRes.ok) {
-          const msg = await readError(pendRes, 'Não foi possível carregar os materiais pendentes.');
-          if (!cancelled) setError(msg);
-          return;
-        }
-        if (pendRes?.ok) {
-          ((await pendRes.json()).pending_items || []).forEach((r) => rows.push({ ...r, warehouse_code: locations[i].code }));
-        }
-        if (otsRes?.ok) ((await otsRes.json()).ots || []).forEach((o) => { types[o.ot] = o.order_type; });
+      if (pendRes && !pendRes.ok) {
+        const msg = await readError(pendRes, 'Não foi possível carregar os materiais pendentes.');
+        if (!cancelled) setError(msg);
+        return;
       }
+      const rows = pendRes?.ok ? (await pendRes.json()).pending_items || [] : [];
+      // What waits in the selected location comes first.
+      rows.sort((a, b) => (b.warehouse_id === warehouseId) - (a.warehouse_id === warehouseId));
       const dest = destRes?.ok ? (await destRes.json()).bins || [] : null;
       if (cancelled) return;
       setError('');
@@ -184,11 +167,10 @@ export default function ArmazenagemSP12() {
       shown.current = signature;
       setPending(rows);
       if (dest) setDestinations(groupByLocation(dest));
-      setOtTypes(types);
       setVersion((v) => v + 1);
     })();
     return () => { cancelled = true; };
-  }, [warehouseId, locationKey, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [warehouseId, tick]);
 
   function done(text) {
     setMessage(text);
@@ -200,12 +182,6 @@ export default function ArmazenagemSP12() {
       <PageHeader title="Armazenagem">
         <button type="button" className="btn btn-sm" onClick={load}>Atualizar</button>
       </PageHeader>
-      <p className="settings-note" style={{ marginBottom: 12 }}>
-        O material recebido (na Expedição ou na área de recebimento de um local) é armazenado nas prateleiras
-        do SP12 ou no Contêiner de Solda: escolha o destino em qualquer local. Os materiais de uma
-        ordem podem ficar em endereços diferentes. Regras: materiais só compartilham endereço quando compatíveis; endereços com classe de
-        tamanho (ex.: A3 para peças pequenas) e capacidade configurada são respeitados.
-      </p>
       {message && <div className="tag tag-success" style={{ display: 'block', padding: 12, marginBottom: 12 }}>{message}</div>}
       {error && <div className="form-error">{error}</div>}
       {destinations.length === 0 && pending.length > 0 && (
@@ -217,11 +193,11 @@ export default function ArmazenagemSP12() {
         <div className="data-table-wrapper">
           <table className="data-table">
             <thead>
-              <tr><th>Ordem (OT)</th><th>Código</th><th>Descrição</th><th>Origem</th><th>Quantidade</th><th>Sugestão</th><th>Destino</th><th /></tr>
+              <tr><th>Ordem</th><th>Código</th><th>Descrição</th><th>Origem</th><th>Quantidade</th><th>Sugestão</th><th>Destino</th><th>OT</th><th /></tr>
             </thead>
             <tbody>
               {pending.map((r) => (
-                <Row key={`${r.inventory_id}-${version}`} row={r} destinations={destinations} otTypes={otTypes} onDone={done} />
+                <Row key={`${r.inventory_id}-${version}`} row={r} destinations={destinations} onDone={done} />
               ))}
             </tbody>
           </table>

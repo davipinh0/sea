@@ -270,10 +270,9 @@ describe('Armazenagem entre locais', () => {
       { warehouse_id: 7, warehouse_code: 'Expedição', warehouse_name: 'Área da Expedição' },
       { warehouse_id: 8, warehouse_code: 'SP12', warehouse_name: 'Setor SP12' },
     ];
-    const staged = { inventory_id: 40, item_id: 3, sku: 'MAT-1', item_name: 'Parafuso', quantity: 20, bin_id: 1, bin_code: 'EXPEDICAO', lot_number: '100000001' };
+    const staged = { inventory_id: 40, item_id: 3, sku: 'MAT-1', item_name: 'Parafuso', quantity: 20, bin_id: 1, bin_code: 'EXPEDICAO', lot_number: '100000001', ot: '100000001', order_number: '2000000011', order_type: 'PM12', warehouse_id: 7, warehouse_code: 'Expedição' };
     apiGet.mockImplementation((path) => {
-      if (path === '/putaway/pending/7') return ok({ pending_items: [staged] });
-      if (path.startsWith('/putaway/pending/')) return ok({ pending_items: [] });
+      if (path === '/sea/armazenagem/pendentes') return ok({ pending_items: [staged] });
       if (path === '/sea/armazenagem/destinos') {
         return ok({ bins: [
           { bin_id: 21, bin_code: 'A0', warehouse_id: 8, warehouse_code: 'SP12', warehouse_name: 'Setor SP12', size_class: null },
@@ -282,7 +281,6 @@ describe('Armazenagem entre locais', () => {
         ] });
       }
       if (path === '/sea/armazenagem/sugestao/40') return ok({ bin_id: 21, bin_code: 'A0', warehouse_code: 'SP12', quantity: 20, rejected: [] });
-      if (path.startsWith('/sea/ots')) return ok({ ots: [{ ot: '100000001', order_type: 'PM12' }] });
       return ok({});
     });
     apiPost.mockImplementation(() => ok({ quantity: 20, item: 'MAT-1', to_bin: 'A0' }));
@@ -291,7 +289,12 @@ describe('Armazenagem entre locais', () => {
     expect(await screen.findByText('Expedição · EXPEDICAO')).toBeInTheDocument();
     const select = screen.getByLabelText('Endereço de destino de MAT-1');
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
-    expect(options).toEqual(['Escolha…', 'A0', 'A3 (PEQUENO)', 'SOLDA']);
+    // Shelves are free: no size restriction next to the address.
+    expect(options).toEqual(['Escolha…', 'A0', 'A3', 'SOLDA']);
+    // The material is named by its order; the OT is a reference column.
+    expect(screen.getByText('2000000011')).toBeInTheDocument();
+    expect(screen.getByText('100000001')).toBeInTheDocument();
+    expect(screen.queryByText(/Regras:/)).toBeNull();
     expect(Array.from(select.querySelectorAll('optgroup')).map((g) => g.label)).toEqual(['SP12 - Setor SP12', 'Solda - Contêiner de Solda']);
     // The suggested shelf of the other location comes pre-selected.
     await waitFor(() => expect(select).toHaveValue('21'));

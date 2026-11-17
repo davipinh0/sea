@@ -81,10 +81,7 @@ armazenamento concluído) com aviso sonoro.
   por OT e rastrear cada unidade.
 * **Armazenagem SP12** (validada na API em toda armazenagem de OT):
   * a ordem pode ser distribuída livremente por vários endereços;
-  * materiais só dividem endereço se forem o mesmo material ou do mesmo grupo de compatibilidade;
-  * endereços com classe de tamanho (A3 = `PEQUENO`, A2 = `GRANDE`) só recebem materiais da classe;
-  * capacidade por endereço é opcional; em branco = não configurada (sem limite).
-    Nenhuma capacidade numérica é inventada.
+  * prateleiras livres: qualquer material, de qualquer ordem, em qualquer quantidade.
 * **Retirada**: solicitada → em separação → pronta → entregue (ou cancelada).
   A solicitação **reserva** o saldo; a **baixa** só ocorre quando quem solicitou confirma o
   recebimento no terminal. Cada transição trava as linhas no banco e confere o status atual,
@@ -194,6 +191,14 @@ Limites conhecidos do protótipo:
 * **Contador do Receber**: conta as ordens que ainda não tiveram nada recebido; uma ordem
   recebida em parte sai do contador e continua na lista "aguardando recebimento".
 * **Textos das notificações** citam a unidade do material (ex.: "18 KG de 1 material(is)").
+
+* **Ordem em primeiro lugar**: o material é identificado pela **Ordem** (PM11/PM12); a OT é o
+  documento com que ele chegou e aparece como referência. Estoque > Visão Geral lista uma linha por
+  ordem (`GET /api/sea/ordens`), e Armazenagem, Transferência, Retirada e notificações citam a ordem.
+* **Prateleiras livres** (migração `089`): qualquer material, de qualquer ordem, em qualquer
+  quantidade. Classe de tamanho, capacidade e compatibilidade deixaram de ser aplicadas; só a área
+  de recebimento e um endereço inativo são recusados como destino.
+* **Histórico de auditoria**: ação e entidade aparecem em português.
 
 ## Base do SAP
 

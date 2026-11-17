@@ -17,6 +17,12 @@ export function formatQuantity(quantity, uom, packWeightKg) {
   return uom ? `${quantity} ${uom}` : String(quantity);
 }
 
+// How a material is named on screen: by its order, e.g. "PM12 2002349234".
+export function orderName(row) {
+  if (!row) return '-';
+  return [row.order_type, row.order_number].filter(Boolean).join(' ') || '-';
+}
+
 // Modules of the app. A module shows when the user is an administrator,
 // holds one of its page permissions (Sistema > Usuários) or, for the two
 // original modules, the matching mobile function. ``onlyAt`` limits it to

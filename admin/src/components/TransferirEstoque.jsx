@@ -77,15 +77,16 @@ export default function TransferirEstoque({ itemId, onMoved }) {
       )}
       {stock.length === 0 ? <p className="settings-note">Sem saldo em estoque.</p> : (
         <table className="lines-table">
-          <thead><tr><th>Local · Endereço</th><th>Ordem (OT)</th><th>Em estoque</th><th>Reservado</th><th>Livre</th><th /></tr></thead>
+          <thead><tr><th>Local · Endereço</th><th>Ordem</th><th>Em estoque</th><th>Reservado</th><th>Livre</th><th>OT</th><th /></tr></thead>
           <tbody>
             {stock.map((s) => (
               <tr key={s.inventory_id}>
                 <td className="mono">{s.warehouse_code} · {s.bin_code}{!s.stored && ' (recebimento)'}</td>
-                <td className="mono">{s.ot || '-'}</td>
+                <td className="mono">{[s.order_type, s.order_number].filter(Boolean).join(' ') || '-'}</td>
                 <td>{formatQuantity(s.quantity_on_hand, s.uom, s.pack_weight_kg)}</td>
                 <td>{s.quantity_allocated}</td>
                 <td>{s.available}</td>
+                <td className="mono">{s.ot || '-'}</td>
                 <td>
                   {s.stored && s.available > 0 && (
                     <button type="button" className="btn btn-sm" aria-label={`Transferir de ${s.warehouse_code} · ${s.bin_code}`} onClick={() => start(s)}>Transferir</button>

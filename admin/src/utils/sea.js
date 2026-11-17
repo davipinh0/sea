@@ -62,6 +62,62 @@ export const OT_MATERIAL_FIELDS = [
   { key: 'expiry_date', label: 'Vencimento', type: 'date' },
 ];
 
+// Audit log in the operator's words. Unknown values (kept from the
+// original system) are shown in a readable form instead of raw codes.
+export const ACTION_LABELS = {
+  RECEIVE: 'Recebimento',
+  RECEIVE_CANCEL: 'Estorno de recebimento',
+  UNRECEIVE: 'Estorno de recebimento',
+  PUTAWAY: 'Armazenagem',
+  STOCK_TRANSFERRED: 'Transferência entre endereços',
+  TRANSFER: 'Transferência entre endereços',
+  ADJUST: 'Ajuste de estoque',
+  COUNT: 'Contagem de estoque',
+  PO_STATUS_CHANGED: 'Status da ordem alterado',
+  OT_REGISTERED: 'Ordem cadastrada',
+  OT_MATERIAL_ADDED: 'Material adicionado à ordem',
+  OT_DATA_EDITED: 'Dados da ordem corrigidos',
+  OT_MATERIAL_EDITED: 'Material da ordem corrigido',
+  OT_MATERIAL_REMOVED: 'Material removido da ordem',
+  OT_DELETED: 'Ordem excluída',
+  MATERIAL_DELETED: 'Material excluído',
+  SAP_BASE_IMPORTED: 'Base do SAP importada',
+  WITHDRAWAL_REQUESTED: 'Retirada solicitada',
+  WITHDRAWAL_PICKING: 'Separação iniciada',
+  WITHDRAWAL_READY: 'Separação concluída',
+  WITHDRAWAL_DELIVERED: 'Retirada entregue (baixa)',
+  WITHDRAWAL_CANCELLED: 'Retirada cancelada',
+  CANCEL: 'Cancelamento',
+  password_change: 'Senha alterada',
+  forced_password_change_completed: 'Senha inicial trocada',
+};
+
+export const ENTITY_LABELS = {
+  PO: 'Ordem',
+  ITEM: 'Material',
+  BIN: 'Endereço',
+  INVENTORY: 'Estoque',
+  WITHDRAWAL: 'Retirada',
+  SAP_BASE: 'Base do SAP',
+  WAREHOUSE: 'Local',
+  USER: 'Usuário',
+  user: 'Usuário',
+  SETTING: 'Configuração',
+};
+
+function readable(code) {
+  const text = String(code).replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function actionLabel(action) {
+  return action ? ACTION_LABELS[action] || readable(action) : '-';
+}
+
+export function entityLabel(entity) {
+  return entity ? ENTITY_LABELS[entity] || readable(entity) : '-';
+}
+
 export const MOVEMENT_LABELS = {
   RECEBIMENTO: 'Recebimento',
   ARMAZENAMENTO: 'Armazenamento',

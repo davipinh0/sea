@@ -155,25 +155,6 @@ class TestOtInTheBase:
         assert resp.status_code == 409 and "1000000991" in resp.get_json()["error"]
 
 
-class TestShelfSizes:
-    def test_large_shelf_takes_any_size_and_small_shelf_only_small(
-        self, client, auth_headers, sp12
-    ):
-        conn = sp12["conn"]
-        large = _bin(conn, "T-G1", size_class="GRANDE")
-        unsized = _item(conn, "SEA-SEM-TAMANHO")
-        po_id = _create_ot(client, auth_headers, "OT-TAM-1", [(sp12["small"], 2), (unsized, 2)])
-        for item in (sp12["small"], unsized):
-            assert _receive(client, auth_headers, po_id, item, 2).status_code == 200
-        # Small and unsized material both fit a large shelf...
-        assert _putaway(client, auth_headers, sp12["small"], large, 1, "OT-TAM-1").status_code == 200
-        other_large = _bin(conn, "T-G2", size_class="GRANDE")
-        assert _putaway(client, auth_headers, unsized, other_large, 1, "OT-TAM-1").status_code == 200
-        # ...while a small shelf stays for small material.
-        refused = _putaway(client, auth_headers, unsized, sp12["a3"], 1, "OT-TAM-1")
-        assert refused.status_code == 409 and "PEQUENO" in refused.get_json()["error"]
-
-
 class TestPhoneNotifications:
     def _register(self, client, headers, token="ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]"):
         return client.post("/api/sea/push/registrar", headers=headers, json={"token": token})

@@ -6,7 +6,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
-import { apiError, formatQuantity, parseQuantity, quantityProblem } from '../utils/sea';
+import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 
 // Armazenagem. Lists what waits in the receiving areas of every location
@@ -27,18 +27,13 @@ export default function ArmazenarScreen({ navigation }) {
 
   const load = useCallback(async () => {
     try {
-      const [locResp, binResp] = await Promise.all([
-        client.get('/api/sea/locais'),
+      // What waits in every location of the user, with the order of each material.
+      const [pendResp, binResp] = await Promise.all([
+        client.get('/api/sea/armazenagem/pendentes'),
         client.get('/api/sea/armazenagem/destinos'),
       ]);
       setBins(binResp.data?.bins || []);
-      const locations = locResp.data?.warehouses || [];
-      const lists = await Promise.all(locations.map((loc) => (
-        client.get(`/api/putaway/pending/${loc.warehouse_id}`)
-          .then((r) => (r.data?.pending_items || []).map((p) => ({ ...p, warehouse_code: loc.warehouse_code })))
-          .catch(() => [])
-      )));
-      setPending(lists.flat());
+      setPending(pendResp.data?.pending_items || []);
     } catch (err) {
       setPending([]);
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível carregar o que aguarda armazenagem.') });
@@ -105,7 +100,7 @@ export default function ArmazenarScreen({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={ui.code}>{p.sku}</Text>
                   <Text style={ui.name}>{p.item_name}</Text>
-                  <Text style={ui.meta}>OT {p.lot_number || '-'} · em {p.warehouse_code} · {p.bin_code}</Text>
+                  <Text style={ui.meta}>Ordem {orderName(p)} · em {p.warehouse_code} · {p.bin_code}</Text>
                 </View>
                 <Text style={ui.code}>{p.quantity}</Text>
               </TouchableOpacity>
@@ -116,7 +111,8 @@ export default function ArmazenarScreen({ navigation }) {
         {active && (
           <Card title={`${active.sku} · ${active.item_name}`}>
             <Field label="ORIGEM" value={`${active.warehouse_code} · ${active.bin_code}`} />
-            <Field label="ORDEM (OT)" value={active.lot_number} />
+            <Field label="ORDEM" value={orderName(active)} />
+            <Field label="OT" value={active.lot_number} />
             <Field label="AGUARDANDO" value={formatQuantity(active.quantity)} />
             {suggested && (
               <Button

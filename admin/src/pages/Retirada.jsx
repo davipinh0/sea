@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import PageHeader from '../components/PageHeader.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import Modal from '../components/Modal.jsx';
-import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
+import { OtDetailModal } from '../components/sea.jsx';
 import { formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
@@ -102,8 +102,8 @@ export default function Retirada() {
         <div key={w.withdrawal_id} className="card" style={{ marginBottom: 12 }}>
           <div className="card-title" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             Retirada nº {w.withdrawal_id}
-            <span>· Ordem <a href="#" className="mono" onClick={(e) => { e.preventDefault(); setDetail(w.ot); }}>{w.ot}</a></span>
-            <OtTypeTag type={w.order_type} />
+            <span>· {(w.orders || []).length === 1 ? 'Ordem' : 'Ordens'} <span className="mono">{(w.orders || []).join(', ') || '-'}</span></span>
+            <span className="settings-note">OT <a href="#" className="mono" onClick={(e) => { e.preventDefault(); setDetail(w.ot); }}>{w.ot}</a></span>
             <StatusTag status={w.status} />
             <span className="settings-note" style={{ marginLeft: 'auto' }}>
               Solicitada em {formatDateTime(w.requested_at)} por {w.requested_by_name || w.requested_by}{w.requested_by_email ? ` (${w.requested_by_email})` : ''}

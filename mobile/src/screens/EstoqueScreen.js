@@ -6,7 +6,7 @@ import client from '../api/client';
 import ScreenHeader from '../components/ScreenHeader';
 import { Card, Message, ui } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { apiError } from '../utils/sea';
+import { apiError, orderName } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 
 // Estoque: what is in each address of the selected location (read-only).
@@ -37,7 +37,7 @@ export default function EstoqueScreen({ navigation }) {
       ...b,
       shown: !wanted || b.bin_code.toUpperCase().includes(wanted)
         ? b.contents
-        : b.contents.filter((c) => `${c.sku} ${c.item_name} ${c.ot || ''}`.toUpperCase().includes(wanted)),
+        : b.contents.filter((c) => `${c.sku} ${c.item_name} ${c.order_number || ''} ${c.ot || ''}`.toUpperCase().includes(wanted)),
     }))
     .filter((b) => (wanted ? b.shown.length > 0 || b.bin_code.toUpperCase().includes(wanted) : true));
 
@@ -48,7 +48,7 @@ export default function EstoqueScreen({ navigation }) {
         <Message message={message} />
         <TextInput
           style={styles.filter} value={filter} onChangeText={setFilter} autoCapitalize="characters" autoCorrect={false}
-          placeholder="Filtrar por endereço, material ou OT" placeholderTextColor={colors.textPlaceholder}
+          placeholder="Filtrar por endereço, material ou ordem" placeholderTextColor={colors.textPlaceholder}
           accessibilityLabel="Filtrar o estoque"
         />
         {data === null && <Text style={ui.empty}>Carregando…</Text>}
@@ -66,7 +66,7 @@ export default function EstoqueScreen({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={ui.code}>{c.sku}</Text>
                   <Text style={ui.name}>{c.item_name}</Text>
-                  <Text style={ui.meta}>OT {c.ot || '-'}{c.quantity_allocated > 0 ? ` · ${c.quantity_allocated} reservado(s)` : ''}</Text>
+                  <Text style={ui.meta}>Ordem {orderName(c)}{c.quantity_allocated > 0 ? ` · ${c.quantity_allocated} reservado(s)` : ''}</Text>
                 </View>
                 <Text style={ui.code}>{c.quantity_on_hand}</Text>
               </View>

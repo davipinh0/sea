@@ -73,7 +73,7 @@ export default function RetiradaScreen({ navigation }) {
         {queue === null && <Text style={ui.empty}>Carregando…</Text>}
         {queue && queue.length === 0 && <Text style={ui.empty}>Nenhuma solicitação de retirada em aberto.</Text>}
         {(queue || []).map((w) => (
-          <Card key={w.withdrawal_id} title={`Nº ${w.withdrawal_id} · ORDEM ${w.service_order_number || w.ot}`}>
+          <Card key={w.withdrawal_id} title={`Nº ${w.withdrawal_id} · ${(w.orders || []).length > 1 ? 'ORDENS' : 'ORDEM'} ${(w.orders || []).join(', ') || w.ot}`}>
             <Text style={ui.tag}>{STATUS[w.status] || w.status}</Text>
             <Text style={[ui.meta, { marginTop: 6 }]}>Solicitada por {w.requested_by_name || w.requested_by}</Text>
             {w.lines.map((l) => (

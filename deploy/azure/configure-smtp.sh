@@ -38,7 +38,7 @@ $COMPOSE up -d api celery-worker >/dev/null 2>&1
 sleep 5
 
 echo "Testando o login no servidor SMTP..."
-docker exec sea-api python - <<'PY'
+docker exec -i sea-api python - <<'PY'
 import smtplib, ssl
 from services.notification_service import smtp_config
 c = smtp_config()

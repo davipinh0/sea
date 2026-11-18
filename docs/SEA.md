@@ -340,6 +340,7 @@ Em produção: VM `SEA` (grupo `SEA_group`, East US), endereço
 | `deploy.sh <domínio> [dump]` | envia o último commit para a VM e sobe o sistema; com um `.dump`, restaura o banco |
 | `setup-server.sh` | na VM: cria o `.env` com senhas aleatórias (só na VM), aplica as migrações do SEA e sobe tudo |
 | `docker-compose.azure.yml` + `Caddyfile` | Caddy com HTTPS automático (Let's Encrypt) na frente da API e do painel |
+| `configure-smtp.sh` | na VM: pergunta servidor, usuário e senha de e-mail (a senha não aparece nem sai da VM), grava `SEA_SMTP_*` no `.env`, reinicia a API e testa o login: `ssh -t -i ~/.ssh/sea_azure seaadmin@<domínio> 'sh /opt/sea/deploy/azure/configure-smtp.sh'` |
 | `backup.sh` | `pg_dump` diário às 03:00 UTC em `/var/backups/sea`, guardando 14 dias |
 
 API, painel, banco, Redis e Mailpit só escutam no `127.0.0.1` da VM; a única entrada é o Caddy.

@@ -209,16 +209,24 @@ def painel():
     ).fetchall()
     w_counts = {r.status: r.n for r in withdrawals}
 
+    # SEA (mig 094): the movements are shown only to who may see the
+    # history, from the moment the user last cleared the list.
+    history = _can_see_history()
+    cleared_at = g.db.execute(
+        text("SELECT movements_cleared_at FROM users WHERE user_id = :u"),
+        {"u": g.current_user["user_id"]},
+    ).scalar()
     recent = g.db.execute(
         text(
             """
             SELECT log_id, action_type, entity_type, entity_id, user_id, details, created_at
             FROM audit_log WHERE warehouse_id = :wid
+              AND (CAST(:cleared AS TIMESTAMPTZ) IS NULL OR created_at > :cleared)
             ORDER BY log_id DESC LIMIT 12
             """
         ),
-        params,
-    ).fetchall()
+        {**params, "cleared": cleared_at},
+    ).fetchall() if history else []
 
     open_ots = sum(n for t in ot_counts.values() for s, n in t.items() if s in ("OPEN", "PARTIAL"))
     pending_withdrawals = sum(w_counts.get(s, 0) for s in sea.W_OPEN_STATUSES)
@@ -245,14 +253,73 @@ def painel():
         "staging_ots": int(stock.staging_ots),
         "occupied_bins": int(stock.occupied_bins),
         "storage_bins": int(storage_bins),
-        "recent": [
-            {"log_id": r.log_id, "action_type": r.action_type, "entity_type": r.entity_type,
-             "entity_id": r.entity_id, "user": r.user_id,
-             "details": _public_details(r.details),
-             "created_at": _iso(r.created_at)}
-            for r in recent
-        ],
+        # None = this user may not see the movements (no "Histórico").
+        "recent": [_movement(r) for r in recent] if history else None,
+        "recent_cleared_at": _iso(cleared_at) if history else None,
     })
+
+
+def _movement(r):
+    return {"log_id": r.log_id, "action_type": r.action_type, "entity_type": r.entity_type,
+            "entity_id": r.entity_id, "user": r.user_id,
+            "details": _public_details(r.details), "created_at": _iso(r.created_at)}
+
+
+def _can_see_history():
+    """Administrators and users granted "Histórico" (page audit-log)."""
+    pages = g.current_user.get("allowed_pages")
+    return pages is None or "audit-log" in pages
+
+
+@sea_bp.route("/painel/movimentacoes/limpar", methods=["POST"])
+@require_auth
+@require_admin_or_page_permission("audit-log")
+@with_db
+def limpar_movimentacoes():
+    """The Painel of this user lists only what happens from now on. The
+    history itself (audit_log) keeps every row."""
+    g.db.execute(text("UPDATE users SET movements_cleared_at = NOW() WHERE user_id = :u"),
+                 {"u": g.current_user["user_id"]})
+    g.db.commit()
+    return jsonify({"message": "Lista limpa. O histórico continua completo."})
+
+
+@sea_bp.route("/painel/movimentacoes/restaurar", methods=["POST"])
+@require_auth
+@require_admin_or_page_permission("audit-log")
+@with_db
+def restaurar_movimentacoes():
+    g.db.execute(text("UPDATE users SET movements_cleared_at = NULL WHERE user_id = :u"),
+                 {"u": g.current_user["user_id"]})
+    g.db.commit()
+    return jsonify({"message": "Lista completa de novo."})
+
+
+@sea_bp.route("/historico")
+@require_auth
+@require_admin_or_page_permission("audit-log")
+@with_db
+def historico():
+    """Movements of one location, newest first (app: Histórico). Paged with
+    ?before=<log_id>; the full log stays in GET /api/admin/audit-log."""
+    warehouse_id, err = _warehouse_arg()
+    if err:
+        return err
+    before = request.args.get("before", type=int)
+    limit = min(max(request.args.get("limit", 30, type=int), 1), 100)
+    rows = g.db.execute(
+        text(
+            """
+            SELECT log_id, action_type, entity_type, entity_id, user_id, details, created_at
+            FROM audit_log WHERE warehouse_id = :wid
+              AND (CAST(:before AS BIGINT) IS NULL OR log_id < :before)
+            ORDER BY log_id DESC LIMIT :limit
+            """
+        ),
+        {"wid": warehouse_id, "before": before, "limit": limit},
+    ).fetchall()
+    return jsonify({"movements": [_movement(r) for r in rows],
+                    "next_before": rows[-1].log_id if len(rows) == limit else None})
 
 
 # ------------------------------------------------------- Estoque SP12

@@ -7,11 +7,11 @@ const keys = (me, code) => visibleModules(me, code).map((m) => m.key);
 
 describe('visibleModules', () => {
   it('shows everything to an administrator at the Expedição location', () => {
-    expect(keys({ role: 'ADMIN' }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens']);
+    expect(keys({ role: 'ADMIN' }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens', 'historico']);
   });
 
   it('offers receiving and storage only at the Expedição location', () => {
-    expect(keys({ role: 'ADMIN' }, 'SP12')).toEqual(['retirada', 'transfer', 'estoque', 'ordens']);
+    expect(keys({ role: 'ADMIN' }, 'SP12')).toEqual(['retirada', 'transfer', 'estoque', 'ordens', 'historico']);
     expect(keys({ role: 'ADMIN' }, 'Solda')).not.toContain('receive');
   });
 

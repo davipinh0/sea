@@ -108,3 +108,29 @@ describe('Foto em Sistema > Usuários', () => {
     expect(screen.queryByText('Colocar foto')).toBeNull();
   });
 });
+
+describe('reading the chosen photo', () => {
+  it('loads the picture from a data: URL, which the panel CSP allows', async () => {
+    // Regression: a blob: URL is refused by "img-src 'self' data:" and the
+    // photo was never loaded nor sent.
+    const { squareJpeg } = await import('../utils/userPhoto.js');
+    const sources = [];
+    const RealImage = globalThis.Image;
+    globalThis.Image = class {
+      set src(value) { sources.push(value); setTimeout(() => this.onerror?.(), 0); }
+    };
+    const createObjectURL = vi.fn(() => 'blob:x');
+    const realCreate = URL.createObjectURL;
+    URL.createObjectURL = createObjectURL;
+    try {
+      const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'foto.jpg', { type: 'image/jpeg' });
+      await expect(squareJpeg(file)).rejects.toThrow();
+      expect(sources).toHaveLength(1);
+      expect(sources[0].startsWith('data:image/jpeg')).toBe(true);
+      expect(createObjectURL).not.toHaveBeenCalled();
+    } finally {
+      globalThis.Image = RealImage;
+      URL.createObjectURL = realCreate;
+    }
+  });
+});

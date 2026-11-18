@@ -34,6 +34,7 @@ export const MODULES = [
   { key: 'transfer', label: 'TRANSFERIR', sub: 'Entre endereços e locais', screen: 'Transferir', accent: 'gray', pages: ['items', 'inventory', 'putaway'] },
   { key: 'estoque', label: 'ESTOQUE', sub: 'O que há em cada endereço', screen: 'Estoque', accent: 'copper', pages: ['inventory'] },
   { key: 'ordens', label: 'ORDENS', sub: 'Consulta de OTs e materiais', screen: 'Ordens', accent: 'gray', pages: ['inventory', 'purchase-orders', 'receiving', 'putaway', 'retirada'] },
+  { key: 'historico', label: 'HISTÓRICO', sub: 'Movimentações e log', screen: 'Historico', accent: 'gray', pages: ['audit-log'] },
 ];
 
 export function visibleModules(me, warehouseCode) {

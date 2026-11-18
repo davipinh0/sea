@@ -1512,3 +1512,9 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .login-approval-devices { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .login-approval-device { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; padding: 6px 10px; border: 1px solid var(--border, #ddd); border-radius: 6px; }
 .login-approval-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+
+/* SEA (mig 094): Painel "Últimas movimentações" with Ocultar / Limpar. */
+.sea-section-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sea-section-actions .btn + .btn { margin-left: 6px; }
+.btn-link { background: none; border: none; padding: 0; color: var(--primary, #c8102e); text-decoration: underline; cursor: pointer; font: inherit; }
+.btn-link:disabled { opacity: .6; cursor: default; }

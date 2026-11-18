@@ -19,6 +19,7 @@ import TransferirScreen from '../screens/TransferirScreen';
 import EstoqueScreen from '../screens/EstoqueScreen';
 import OrdensScreen from '../screens/OrdensScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
+import HistoricoScreen from '../screens/HistoricoScreen';
 import { onNotificationTap, registerDevice, startPolling } from '../notifications';
 import AppLock from '../components/AppLock';
 import LoginApproval from '../components/LoginApproval';
@@ -101,6 +102,7 @@ export default function AppNavigator() {
               <Stack.Screen name="Estoque" component={EstoqueScreen} />
               <Stack.Screen name="Ordens" component={OrdensScreen} />
               <Stack.Screen name="Notificacoes" component={NotificacoesScreen} />
+              <Stack.Screen name="Historico" component={HistoricoScreen} />
             </>
           )
         ) : (

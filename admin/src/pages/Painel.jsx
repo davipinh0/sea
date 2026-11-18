@@ -10,6 +10,12 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 // tab where the work happens; the activity feed reads the audit log.
 
 const REFRESH_MS = 30000;
+// "Ocultar" is a choice of this browser; "Limpar" is kept by the API.
+const HIDDEN_KEY = 'sea_painel_movimentacoes_ocultas';
+
+function readHidden() {
+  try { return localStorage.getItem(HIDDEN_KEY) === '1'; } catch { return false; }
+}
 
 function describe(entry) {
   const d = entry.details || {};
@@ -41,6 +47,23 @@ export default function Painel() {
 
   // Bumping ``tick`` re-runs the fetch (Atualizar button and auto-refresh).
   const [tick, setTick] = useState(0);
+  const [hidden, setHidden] = useState(readHidden);
+  const [busy, setBusy] = useState(false);
+
+  function toggleHidden() {
+    const next = !hidden;
+    setHidden(next);
+    try { localStorage.setItem(HIDDEN_KEY, next ? '1' : '0'); } catch { /* private mode */ }
+  }
+
+  // mig 094: "Limpar" restarts this user's list; the history keeps it all.
+  async function changeList(action) {
+    setBusy(true);
+    const res = await api.post(`/sea/painel/movimentacoes/${action}`, {});
+    setBusy(false);
+    if (res?.ok) setTick((n) => n + 1);
+    else setError(await readError(res, 'Não foi possível alterar a lista.'));
+  }
 
   useEffect(() => {
     if (!warehouseId) return undefined;
@@ -90,8 +113,24 @@ export default function Painel() {
             <Kpi to="/retirada" value={w.DELIVERED || 0} label="Entregues hoje" />
           </div>
 
-          <div className="section-title">Últimas movimentações</div>
-          {data.recent.length === 0 ? <p className="settings-note">Nenhuma movimentação registrada.</p> : (
+          {data.recent && (
+          <>
+          <div className="section-title sea-section-actions">
+            <span>Últimas movimentações</span>
+            <span>
+              <button type="button" className="btn btn-sm" onClick={toggleHidden}>{hidden ? 'Mostrar' : 'Ocultar'}</button>
+              {!hidden && (
+                <button type="button" className="btn btn-sm" disabled={busy || data.recent.length === 0} onClick={() => changeList('limpar')}>Limpar</button>
+              )}
+            </span>
+          </div>
+          {!hidden && data.recent_cleared_at && (
+            <p className="settings-note">
+              Lista limpa em {formatDateTime(data.recent_cleared_at)} (só para você; o histórico continua completo).{' '}
+              <button type="button" className="btn-link" disabled={busy} onClick={() => changeList('restaurar')}>Mostrar tudo de novo</button>
+            </p>
+          )}
+          {hidden ? null : data.recent.length === 0 ? <p className="settings-note">Nenhuma movimentação registrada.</p> : (
             <table className="lines-table">
               <thead><tr><th>Data/hora</th><th>Operação</th><th>Detalhe</th><th>Responsável</th></tr></thead>
               <tbody>
@@ -107,6 +146,8 @@ export default function Painel() {
             </table>
           )}
           <p style={{ marginTop: 8 }}><Link to="/estoque/historico">Ver histórico completo →</Link></p>
+          </>
+          )}
         </>
       )}
     </div>

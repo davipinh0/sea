@@ -2597,3 +2597,4 @@ CREATE TABLE IF NOT EXISTS sea_sessions (
 );
 CREATE INDEX IF NOT EXISTS ix_sea_sessions_user ON sea_sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_sea_sessions_expires ON sea_sessions(expires_at);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS movements_cleared_at TIMESTAMPTZ;

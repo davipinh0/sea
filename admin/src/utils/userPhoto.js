@@ -16,12 +16,24 @@ export function photoUrl(userId, version) {
 
 const SIZE = 256;
 
-function readImage(file) {
+function readDataUrl(file) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('arquivo ilegível'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Regression: a blob: URL is refused by the panel's CSP (img-src 'self'
+// data:), so the photo never loaded and was never sent. A data: URL is
+// allowed.
+async function readImage(file) {
+  const url = await readDataUrl(file);
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('imagem inválida'));
     img.src = url;
   });
 }

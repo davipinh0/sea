@@ -30,7 +30,10 @@ grep -q "^SEA_DOMAIN=$DOMAIN\$" .env || sed -i "s|^SEA_DOMAIN=.*|SEA_DOMAIN=$DOM
 
 $COMPOSE build
 $COMPOSE up -d db redis
-until docker exec sea-db pg_isready -q; do sleep 2; done
+# Na primeira subida o Postgres roda os scripts do esquema num servidor
+# temporário, só no socket local; pg_isready por TCP só responde quando o
+# servidor definitivo está no ar (e o esquema terminou).
+until docker exec sea-db pg_isready -q -h 127.0.0.1; do sleep 2; done
 
 if [ -n "$DUMP" ]; then
   echo "restaurando $DUMP"

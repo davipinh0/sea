@@ -165,7 +165,7 @@ def push_tokens(db, warehouse_id: int) -> list[str]:
         text(
             """
             SELECT t.token FROM sea_push_tokens t JOIN users u ON u.user_id = t.user_id
-            WHERE u.is_active = TRUE
+            WHERE u.is_active = TRUE AND t.signed_in = TRUE
               AND (u.role = 'ADMIN' OR :wid = ANY(u.warehouse_ids))
             ORDER BY t.token
             """
@@ -200,6 +200,38 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
          "channelId": "sea-avisos", "data": {"kind": row.kind, "notification_id": notification_id}}
         for token in tokens
     ])
+    return len(tokens)
+
+
+def send_login_approval_push(db, user_id: int, challenge_id: str, client: str,
+                             sender=_expo_send) -> int:
+    """Push to the user's registered phones: a login waits for confirmation.
+
+    Sent even to a phone whose user left the app (signed_in = FALSE): the
+    user logs in again in the app and then confirms. A push failure does
+    not stop the login: the app also finds the pending login by itself.
+    """
+    if not push_enabled():
+        return 0
+    from services.login_approval import trusted_tokens
+
+    tokens = trusted_tokens(db, user_id)
+    if not tokens:
+        return 0
+    messages = [
+        {"to": token, "title": "Tentativa de login no SEA",
+         "body": f"{client} quer entrar na sua conta. Toque para confirmar ou negar.",
+         "sound": "default", "priority": "high", "channelId": "sea-avisos",
+         "data": {"kind": "login_approval", "challenge_id": challenge_id}}
+        for token in tokens
+    ]
+    import requests
+
+    try:
+        sender(messages)
+    except requests.RequestException as exc:
+        logger.warning("push de confirmação de login não enviado: %s", type(exc).__name__)
+        return 0
     return len(tokens)
 
 

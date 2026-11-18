@@ -50,6 +50,20 @@ def authenticate_user(db_session, username, password):
     return user.to_dict()
 
 
+def active_user_dict(db_session, user_id):
+    """SEA: the same dict as authenticate_user, for a login confirmed on the
+    phone (the password was checked when the login started)."""
+    user = (
+        db_session.query(User)
+        .filter(User.user_id == user_id, User.is_active == True)  # noqa: E712
+        .first()
+    )
+    if not user:
+        return None
+    user.last_login = datetime.now(timezone.utc)
+    return user.to_dict()
+
+
 def generate_token(user_dict):
     now = datetime.now(timezone.utc)
     payload = {

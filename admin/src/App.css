@@ -1502,3 +1502,13 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .topbar-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .user-photo-row { display: flex; align-items: center; gap: 14px; }
 .user-photo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* SEA: login waiting for the confirmation on the phone (mig 092). */
+.login-approval { text-align: center; margin: 8px 0 20px; }
+.login-approval-icon { font-size: 40px; line-height: 1; margin-bottom: 8px; }
+.login-approval h2 { font-size: 18px; margin: 0 0 8px; }
+.login-approval p { font-size: 14px; color: var(--text-secondary, #555); margin: 0 0 10px; line-height: 1.45; }
+.login-approval-time { font-weight: 600; color: var(--text, #1F2328); }
+.login-approval-devices { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.login-approval-device { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; padding: 6px 10px; border: 1px solid var(--border, #ddd); border-radius: 6px; }
+.login-approval-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }

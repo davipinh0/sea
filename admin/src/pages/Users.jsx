@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import UserAvatar from '../components/UserAvatar.jsx';
 import UserPhotoField from '../components/UserPhotoField.jsx';
+import LoginApprovalField from '../components/LoginApprovalField.jsx';
 
 const ROLES = ['ADMIN', 'USER'];
 
@@ -245,6 +246,7 @@ export default function Users() {
       allowed_functions: form.allowed_functions || [],
       // Empty string clears the e-mail on edit; omitted on create when blank.
       email: (form.email || '').trim(),
+      web_login_approval: !!form.web_login_approval,
     };
     if (!editId && !body.email) delete body.email;
     if (!editId) {
@@ -439,6 +441,10 @@ export default function Users() {
             <div className="settings-note">{PASSWORD_RULES}</div>
             <FieldError message={problems.password} />
           </div>
+          <LoginApprovalField
+            userId={editId} enabled={form.web_login_approval}
+            onToggle={(value) => setForm({ ...form, web_login_approval: value })}
+          />
           <div className="form-group">
             <label>Função</label>
             <select className="form-select" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })}>

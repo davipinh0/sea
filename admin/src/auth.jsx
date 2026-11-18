@@ -46,12 +46,21 @@ export function AuthProvider({ children }) {
 
   async function login(username, password) {
     const res = await api.post('/auth/login', { username, password });
+    // SEA (mig 092): the password is right but the login waits for the
+    // confirmation in the app of the user's phone.
+    if (res && res.status === 202) {
+      return { approval: await res.json() };
+    }
     if (!res || !res.ok) {
       const data = res ? await res.json().catch(() => ({})) : {};
       // V-021: never echo the raw backend error string to the user.
       throw new Error(friendlyError(data, 'Falha no login. Tente novamente.'));
     }
-    const data = await res.json();
+    return finishLogin(await res.json());
+  }
+
+  // Session open (cookies set by the API): load the full user.
+  async function finishLogin(data) {
     // Page permissions (mig 061): USERs are allowed into the admin shell.
     // Per-page permissions decide what they can actually do; the
     // sidebar hides ungranted pages and the api gate returns 403 for
@@ -75,7 +84,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, finishLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

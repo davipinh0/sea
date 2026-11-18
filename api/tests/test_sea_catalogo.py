@@ -159,7 +159,7 @@ class TestPhoneNotifications:
     def _register(self, client, headers, token="ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]"):
         return client.post("/api/sea/push/registrar", headers=headers, json={"token": token})
 
-    def test_device_is_registered_once_and_removed_on_logout(self, client, auth_headers, sp12):
+    def test_device_is_registered_once_and_silenced_on_logout(self, client, auth_headers, sp12):
         conn = sp12["conn"]
         assert self._register(client, auth_headers).status_code == 200
         other = _user(client, conn, "sea.push.1", ["retirada"], [WAREHOUSE])
@@ -171,7 +171,10 @@ class TestPhoneNotifications:
         removed = client.post("/api/sea/push/remover", headers=other,
                               json={"token": "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]"})
         assert removed.status_code == 200
-        assert conn.execute(text("SELECT COUNT(*) FROM sea_push_tokens")).scalar() == 0
+        # mig 092: after logout the phone gets no notifications of the day but
+        # stays registered (it may still confirm the user's logins).
+        assert conn.execute(text("SELECT signed_in FROM sea_push_tokens")).scalars().all() == [False]
+        assert notifications.push_tokens(conn, WAREHOUSE) == []
         assert client.application.test_client().post(
             "/api/sea/push/registrar", json={"token": "ExponentPushToken[x1234567890]"}
         ).status_code == 401

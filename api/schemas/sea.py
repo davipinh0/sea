@@ -152,6 +152,19 @@ class RegisterPushTokenRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     token: str = Field(..., min_length=10, max_length=200)
+    # mig 092: the app lock (fingerprint or PIN/pattern) is on in this
+    # phone, so it can confirm logins of the user.
+    secure_lock: bool = False
+    device_name: Optional[str] = Field(None, max_length=100)
+
+
+class LoginDecisionRequest(BaseModel):
+    """The phone confirms (or denies) a login waiting for it (mig 092)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    approve: bool
+    device_token: str = Field(..., min_length=10, max_length=200)
 
 
 class TransferStockRequest(BaseModel):

@@ -25,12 +25,14 @@ from schemas.sea import (
     UpdateCatalogMaterialRequest,
     CreateWithdrawalRequest,
     InterpretLabelRequest,
+    LoginDecisionRequest,
     RegisterFromBaseRequest,
     RegisterOtRequest,
     TransferStockRequest,
     UpdateOtDataRequest,
     UpdateOtMaterialRequest,
 )
+from services import login_approval
 from services import notification_service as notifications
 from services import sap_base
 from services import sea_service as sea
@@ -899,15 +901,21 @@ def criar_ot_na_base(validated):
 @validate_body(RegisterPushTokenRequest)
 @with_db
 def registrar_push(validated):
-    """This device receives the SEA notifications of the logged-in user."""
+    """This device receives the SEA notifications of the logged-in user and,
+    with the app lock on, confirms the user's logins (mig 092)."""
     g.db.execute(
         text(
             """
-            INSERT INTO sea_push_tokens (token, user_id) VALUES (:t, :u)
-            ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, updated_at = NOW()
+            INSERT INTO sea_push_tokens (token, user_id, secure_lock, signed_in, device_name)
+            VALUES (:t, :u, :lock, TRUE, :name)
+            ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id,
+                secure_lock = EXCLUDED.secure_lock, signed_in = TRUE,
+                device_name = COALESCE(EXCLUDED.device_name, sea_push_tokens.device_name),
+                updated_at = NOW()
             """
         ),
-        {"t": validated.token, "u": g.current_user["user_id"]},
+        {"t": validated.token, "u": g.current_user["user_id"], "lock": validated.secure_lock,
+         "name": validated.device_name},
     )
     g.db.commit()
     return jsonify({"message": "Aparelho registrado"})
@@ -918,11 +926,49 @@ def registrar_push(validated):
 @validate_body(RegisterPushTokenRequest)
 @with_db
 def remover_push(validated):
-    """Called on logout: the device stops receiving notifications."""
-    g.db.execute(text("DELETE FROM sea_push_tokens WHERE token = :t AND user_id = :u"),
-                 {"t": validated.token, "u": g.current_user["user_id"]})
+    """Called on logout: the device stops receiving the notifications of
+    the day, but stays registered to confirm the user's logins (mig 092):
+    the user logs in again in the app and confirms."""
+    g.db.execute(
+        text("UPDATE sea_push_tokens SET signed_in = FALSE, updated_at = NOW() "
+             "WHERE token = :t AND user_id = :u"),
+        {"t": validated.token, "u": g.current_user["user_id"]},
+    )
     g.db.commit()
-    return jsonify({"message": "Aparelho removido"})
+    return jsonify({"message": "Aparelho sem avisos até o próximo login"})
+
+
+@sea_bp.route("/login/pendentes", methods=["GET"])
+@require_auth
+@with_db
+def logins_pendentes():
+    """Logins of this user waiting to be confirmed on the phone."""
+    pending = login_approval.pending_for_user(g.db, g.current_user["user_id"])
+    for item in pending:
+        item["client"] = login_approval.describe_client(item.pop("user_agent"))
+    return jsonify({"pending": pending})
+
+
+@sea_bp.route("/login/<challenge_id>/decidir", methods=["POST"])
+@require_auth
+@validate_body(LoginDecisionRequest)
+@with_db
+def decidir_login(challenge_id, validated):
+    """The registered phone confirms or denies a login of its user."""
+    user_id = g.current_user["user_id"]
+    if validated.device_token not in login_approval.trusted_tokens(g.db, user_id):
+        return jsonify({"error": "Este celular não está cadastrado para confirmar logins. "
+                                 "Ative o bloqueio do app (digital ou PIN) e tente de novo.",
+                        "user_facing": True}), 403
+    status = login_approval.decide(g.db, challenge_id, user_id, validated.approve)
+    if status is None:
+        return jsonify({"error": "Tentativa de login não encontrada.", "user_facing": True}), 404
+    if status == login_approval.EXPIRED:
+        return jsonify({"error": "O tempo para confirmar acabou.", "user_facing": True}), 410
+    write_audit_log(g.db, "LOGIN_APPROVED" if validated.approve else "LOGIN_DENIED", "USER",
+                    user_id, user_id, None, {"tentativa": challenge_id})
+    g.db.commit()
+    return jsonify({"status": status})
 
 
 @sea_bp.route("/sap/importar/<kind>", methods=["POST"])

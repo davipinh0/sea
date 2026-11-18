@@ -49,15 +49,17 @@ describe('withoutLock', () => {
 
 describe('unlockMode', () => {
   it('uses the fingerprint when the phone has one registered', () => {
-    expect(unlockMode({ hasHardware: true, isEnrolled: true })).toBe('biometric');
+    expect(unlockMode({ isEnrolled: true, securityLevel: 3 })).toBe('biometric');
   });
 
-  it('asks to register one in the phone settings when the sensor is empty', () => {
-    expect(unlockMode({ hasHardware: true, isEnrolled: false })).toBe('enroll-device');
+  it("uses the phone's PIN or pattern when there is no fingerprint", () => {
+    // Regression: a phone without fingerprint could not use the app.
+    expect(unlockMode({ isEnrolled: false, securityLevel: 1 })).toBe('device');
   });
 
-  it('falls back to the password without a sensor', () => {
-    expect(unlockMode({ hasHardware: false, isEnrolled: false })).toBe('password');
+  it('asks for a screen lock when the phone has none', () => {
+    expect(unlockMode({ isEnrolled: false, securityLevel: 0 })).toBe('none');
+    expect(unlockMode({ isEnrolled: false })).toBe('none');
   });
 });
 

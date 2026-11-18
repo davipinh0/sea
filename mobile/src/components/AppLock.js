@@ -17,13 +17,13 @@ import { colors, radii } from '../theme/styles';
 
 async function phoneMode() {
   try {
-    const [hasHardware, isEnrolled] = await Promise.all([
-      LocalAuthentication.hasHardwareAsync(),
+    const [isEnrolled, securityLevel] = await Promise.all([
       LocalAuthentication.isEnrolledAsync(),
+      LocalAuthentication.getEnrolledLevelAsync(),
     ]);
-    return unlockMode({ hasHardware, isEnrolled });
+    return unlockMode({ isEnrolled, securityLevel });
   } catch {
-    return 'password';
+    return 'none';
   }
 }
 
@@ -84,14 +84,14 @@ function Enroll() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function enroll(options) {
+  async function enroll() {
     setError('');
     setBusy(true);
     try {
-      const result = await enrollFingerprint(options);
-      if (!result.success) setError(biometricError(result) || 'Cadastro cancelado. Toque em CADASTRAR DIGITAL para tentar de novo.');
+      const result = await enrollFingerprint();
+      if (!result.success) setError(biometricError(result) || 'Ativação cancelada. Toque no botão para tentar de novo.');
     } catch {
-      setError('Não foi possível usar o leitor de digital. Tente de novo.');
+      setError('Não foi possível usar o bloqueio do celular. Tente de novo.');
     } finally {
       setBusy(false);
     }
@@ -103,31 +103,32 @@ function Enroll() {
 
   const name = user?.full_name || user?.username;
   return (
-    <Frame title="Cadastre sua digital">
+    <Frame title="Proteja o seu acesso">
       <Text style={styles.text}>
         {name ? `${name}, para` : 'Para'} a segurança do SEA, o app fica bloqueado sempre que for fechado ou ficar em
-        segundo plano, e abre com a sua digital. O que estiver em andamento continua lá depois de desbloquear.
+        segundo plano. O que estiver em andamento continua lá depois de desbloquear.
       </Text>
-      {mode === null && <Text style={styles.text}>Verificando o leitor de digital…</Text>}
+      {mode === null && <Text style={styles.text}>Verificando o bloqueio do celular…</Text>}
       {mode === 'biometric' && (
-        <Button label={busy ? 'AGUARDANDO A DIGITAL...' : 'CADASTRAR DIGITAL'} onPress={() => enroll()} disabled={busy} />
+        <Button label={busy ? 'AGUARDANDO A DIGITAL...' : 'CADASTRAR DIGITAL'} onPress={enroll} disabled={busy} />
       )}
-      {mode === 'enroll-device' && (
+      {mode === 'device' && (
         <>
           <Text style={styles.warning}>
-            Este celular ainda não tem nenhuma digital cadastrada. Cadastre uma nas configurações do aparelho
-            (Segurança › Biometria › Impressões digitais) e volte ao SEA.
+            Este celular não tem digital cadastrada. O SEA vai abrir com a senha do celular (PIN, padrão ou senha
+            de desbloqueio).
           </Text>
-          <Button label="ABRIR CONFIGURAÇÕES" onPress={openSettings} />
-          <Button label="JÁ CADASTREI" secondary onPress={refresh} style={{ marginTop: 10 }} />
+          <Button label={busy ? 'AGUARDANDO...' : 'USAR A SENHA DO CELULAR'} onPress={enroll} disabled={busy} />
         </>
       )}
-      {mode === 'password' && (
+      {mode === 'none' && (
         <>
           <Text style={styles.warning}>
-            Este celular não tem leitor de digital. O SEA vai ficar bloqueado da mesma forma e abre com a sua senha.
+            Este celular está sem bloqueio de tela. Para usar o SEA, configure um PIN, padrão ou digital nas
+            configurações do aparelho (Segurança › Bloqueio de tela) e volte ao app.
           </Text>
-          <Button label="CONTINUAR" onPress={() => enroll({ passwordOnly: true })} disabled={busy} />
+          <Button label="ABRIR CONFIGURAÇÕES" onPress={openSettings} />
+          <Button label="JÁ CONFIGUREI" secondary onPress={refresh} style={{ marginTop: 10 }} />
         </>
       )}
       {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
@@ -167,7 +168,7 @@ function Unlock() {
   // Asks for the fingerprint as soon as the app is in front: at once when
   // it already is, otherwise when the user comes back to it.
   useEffect(() => {
-    if (mode !== 'biometric' || usePassword) return undefined;
+    if ((mode !== 'biometric' && mode !== 'device') || usePassword) return undefined;
     if (AppState.currentState === 'active') fingerprint();
     const sub = AppState.addEventListener('change', (state) => { if (state === 'active') fingerprint(); });
     return () => sub.remove();
@@ -189,25 +190,29 @@ function Unlock() {
     }
   }
 
-  const showPassword = usePassword || (mode !== null && mode !== 'biometric');
+  const phoneUnlock = mode === 'biometric' || mode === 'device';
+  const showPassword = usePassword || (mode !== null && !phoneUnlock);
   return (
     <Frame title="SEA bloqueado">
       <Text style={styles.text}>{user?.full_name || user?.username}</Text>
-      {mode === 'biometric' && (
-        <Button label="DESBLOQUEAR COM DIGITAL" onPress={() => { setUsePassword(false); fingerprint(); }} disabled={busy} />
+      {phoneUnlock && (
+        <Button
+          label={mode === 'biometric' ? 'DESBLOQUEAR COM DIGITAL' : 'DESBLOQUEAR COM A SENHA DO CELULAR'}
+          onPress={() => { setUsePassword(false); fingerprint(); }} disabled={busy}
+        />
       )}
       {showPassword ? (
         <>
           <TextInput
-            style={[styles.input, mode === 'biometric' && { marginTop: 16 }]} value={password} onChangeText={setPassword}
-            placeholder="Senha" placeholderTextColor={colors.textPlaceholder} secureTextEntry autoCapitalize="none"
+            style={[styles.input, phoneUnlock && { marginTop: 16 }]} value={password} onChangeText={setPassword}
+            placeholder="Senha do SEA" placeholderTextColor={colors.textPlaceholder} secureTextEntry autoCapitalize="none"
             accessibilityLabel="Senha" returnKeyType="go" onSubmitEditing={submitPassword}
           />
-          <Button label={busy ? 'CONFERINDO...' : 'DESBLOQUEAR COM SENHA'} secondary={mode === 'biometric'} onPress={submitPassword} disabled={busy} />
+          <Button label={busy ? 'CONFERINDO...' : 'DESBLOQUEAR COM A SENHA DO SEA'} secondary={phoneUnlock} onPress={submitPassword} disabled={busy} />
         </>
       ) : (
         <TouchableOpacity style={styles.link} onPress={() => setUsePassword(true)} accessibilityRole="button">
-          <Text style={styles.linkText}>Usar senha</Text>
+          <Text style={styles.linkText}>Usar a senha do SEA</Text>
         </TouchableOpacity>
       )}
       {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}

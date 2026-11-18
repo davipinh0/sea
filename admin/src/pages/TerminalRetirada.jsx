@@ -55,6 +55,8 @@ export default function TerminalRetirada() {
   const [withdrawal, setWithdrawal] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // SEA (mig 092): seconds left for the employee to confirm on the phone.
+  const [waitingPhone, setWaitingPhone] = useState(null);
 
   const clearRequest = useCallback(() => {
     setCode(''); setOrder(null); setStock([]); setQty({}); setWithdrawal(null); setError(''); setBusy(false);
@@ -73,7 +75,7 @@ export default function TerminalRetirada() {
     if (!identifier.trim() || !password) return;
     setBusy(true); setError('');
     try {
-      const session = await terminalLogin(identifier.trim(), password);
+      const session = await terminalLogin(identifier.trim(), password, { onWaiting: setWaitingPhone });
       const me = session.user;
       if (me.must_change_password) {
         throw new Error('Este usuário precisa trocar a senha no painel antes de usar o terminal.');
@@ -88,6 +90,7 @@ export default function TerminalRetirada() {
     } catch (err) {
       setError(err.message);
     } finally {
+      setWaitingPhone(null);
       setBusy(false);
     }
   }
@@ -219,6 +222,11 @@ export default function TerminalRetirada() {
                 value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
               />
             </div>
+            {waitingPhone !== null && (
+              <div className="terminal-msg" role="status">
+                Confirme no app SEA do seu celular (digital ou senha do celular). Tempo restante: {waitingPhone} s.
+              </div>
+            )}
             <div className="terminal-actions">
               <button type="submit" className="terminal-btn" disabled={busy || !identifier.trim() || !password}>{busy ? 'Entrando…' : 'Entrar'}</button>
             </div>

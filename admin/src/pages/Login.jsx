@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import SeaLogo from '../components/SeaLogo.jsx';
+import { api } from '../api.js';
+import { LoginApprovalCancelled, waitForApproval } from '../utils/loginApproval.js';
 
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user, login, finishLogin } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // SEA (mig 092): seconds left to confirm on the phone (null = not waiting).
+  const [waiting, setWaiting] = useState(null);
+  const cancelled = useRef(false);
   // v1.4.2 #98: ChangePassword writes a flash message to sessionStorage
   // before resetting auth state, because React Router's location.state
   // does not survive the AuthProvider state flip that logout() triggers
@@ -35,8 +40,19 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    let approving = false;
     try {
-      const userData = await login(username, password);
+      let userData = await login(username, password);
+      if (userData?.approval) {
+        approving = true;
+        cancelled.current = false;
+        setWaiting(userData.approval.expires_in);
+        const approved = await waitForApproval((path, body) => api.post(path, body), userData.approval, {
+          onTick: setWaiting,
+          isCancelled: () => cancelled.current,
+        });
+        userData = await finishLogin(approved);
+      }
       if (userData && userData.role !== 'ADMIN') {
         // V-045: the login() context function already called /auth/logout
         // to clear the cookies for non-admin users. Just surface the error.
@@ -46,11 +62,39 @@ export default function Login() {
       }
       navigate('/');
     } catch (err) {
-      setError(err.message === 'Not authorized' ? 'Não autorizado, contate o administrador' : 'Usuário ou senha incorretos');
+      if (err instanceof LoginApprovalCancelled) {
+        setError('Login cancelado.');
+      } else if (approving) {
+        // Messages of the confirmation step (denied, time is over...).
+        setError(err.message);
+      } else {
+        setError(err.message === 'Not authorized' ? 'Não autorizado, contate o administrador' : 'Usuário ou senha incorretos');
+      }
       setPassword('');
     } finally {
+      setWaiting(null);
       setLoading(false);
     }
+  }
+
+  if (waiting !== null) {
+    return (
+      <div className="login-page">
+        <div className="login-card" role="status" aria-live="polite">
+          <div className="login-logo"><SeaLogo size={32} />SEA</div>
+          <div className="login-approval">
+            <div className="login-approval-icon" aria-hidden="true">📱</div>
+            <h2>Confirme no seu celular</h2>
+            <p>
+              Enviamos um aviso para o app SEA do seu celular. Abra o app e confirme que é você com a
+              digital ou a senha do celular (PIN ou padrão).
+            </p>
+            <p className="login-approval-time">Tempo restante: {Math.floor(waiting / 60)}:{String(waiting % 60).padStart(2, '0')}</p>
+          </div>
+          <button className="btn" type="button" onClick={() => { cancelled.current = true; }}>Cancelar</button>
+        </div>
+      </div>
+    );
   }
 
   return (

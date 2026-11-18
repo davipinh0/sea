@@ -97,7 +97,8 @@ describe('Terminal de retirada', () => {
     });
 
     await terminalSignIn();
-    expect(terminalLogin).toHaveBeenCalledWith('retirada@sea.example', 'Sea@2026');
+    // Third argument: the wait for the confirmation on the phone (mig 092).
+    expect(terminalLogin).toHaveBeenCalledWith('retirada@sea.example', 'Sea@2026', expect.objectContaining({ onWaiting: expect.any(Function) }));
     expect(screen.getByText(/Identificado: Usuário de Retirada/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
     fireEvent.click(screen.getByText('Consultar ordem'));

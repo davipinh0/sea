@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import client, { setLogoutHandler, initApiUrl } from '../api/client';
 import { BIOMETRIC_USER_KEY, sameUser, shouldLock, withoutLock } from './appLock';
+import { getDeviceToken } from '../notifications';
 import {
   clearAllAuth,
   getAuthItem,
@@ -105,9 +106,20 @@ export function AuthProvider({ children }) {
     return () => sub.remove();
   }, [checkSession]);
 
+  // Password login. Returns { approval } when the login waits for the
+  // confirmation on the user's registered phone (mig 092); the caller
+  // waits for it and then calls completeLogin.
   const login = async (username, password) => {
-    const resp = await client.post('/api/auth/login', { username, password });
-    const { token, user: userData } = resp.data;
+    const deviceToken = await getDeviceToken();
+    const resp = await client.post('/api/auth/login', {
+      username, password, ...(deviceToken ? { device_token: deviceToken } : {}),
+    });
+    if (resp.status === 202) return { approval: resp.data };
+    await completeLogin(resp.data);
+    return {};
+  };
+
+  const completeLogin = async ({ token, user: userData }) => {
     await setAuthItem('jwt_token', token);
     // userData already carries must_change_password from the backend; we
     // store the whole dict so the flag survives a force-kill + reopen and
@@ -121,17 +133,15 @@ export function AuthProvider({ children }) {
     // warehouseId stays null - HomeScreen will prompt for selection
   };
 
-  // Registers the fingerprint of the logged-in user on this phone. With
-  // ``passwordOnly`` (phone without a sensor) the lock uses the password.
-  const enrollFingerprint = useCallback(async ({ passwordOnly = false } = {}) => {
-    if (!passwordOnly) {
-      const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
-        promptMessage: 'Cadastrar a digital no SEA',
-        cancelLabel: 'Cancelar',
-        disableDeviceFallback: true,
-      }));
-      if (!result.success) return result;
-    }
+  // Turns the app lock on for the logged-in user on this phone, confirmed
+  // with the fingerprint or, without one, the phone's PIN/pattern.
+  const enrollFingerprint = useCallback(async () => {
+    const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+      promptMessage: 'Ativar o bloqueio do SEA',
+      cancelLabel: 'Cancelar',
+      disableDeviceFallback: false,
+    }));
+    if (!result.success) return result;
     await setAuthItem(BIOMETRIC_USER_KEY, user?.username || '');
     lockEnabled.current = true;
     setNeedsEnrollment(false);
@@ -141,8 +151,10 @@ export function AuthProvider({ children }) {
   const unlockWithFingerprint = useCallback(async () => {
     const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
       promptMessage: 'Desbloquear o SEA',
-      cancelLabel: 'Usar senha',
-      disableDeviceFallback: true,
+      cancelLabel: 'Usar senha do SEA',
+      // The phone's PIN or pattern also unlocks (phones without a
+      // fingerprint, or a finger that is not read).
+      disableDeviceFallback: false,
     }));
     if (result.success) setLocked(false);
     return result;
@@ -190,6 +202,7 @@ export function AuthProvider({ children }) {
         logout,
         switchWarehouse,
         completePasswordChange,
+        completeLogin,
         locked,
         needsEnrollment,
         enrollFingerprint,

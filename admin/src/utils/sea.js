@@ -67,6 +67,11 @@ export const OT_MATERIAL_FIELDS = [
 export const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
   USER_PHOTO: 'Foto do usuário',
+  LOGIN_APPROVAL_REQUESTED: 'Login aguardando o celular',
+  LOGIN_APPROVED: 'Login confirmado no celular',
+  LOGIN_DENIED: 'Login negado no celular',
+  LOGIN_APPROVAL_SETTING: 'Confirmação de login no celular',
+  USER_DEVICES_REMOVED: 'Celulares do usuário removidos',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',
   PUTAWAY: 'Armazenagem',

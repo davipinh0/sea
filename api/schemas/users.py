@@ -36,6 +36,9 @@ class CreateUserRequest(BaseModel):
     # SEA: corporate e-mail (login at the terminal and notification
     # recipient for administrators). Empty string clears it.
     email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
+    # SEA (mig 092): a password login outside the registered phone waits
+    # for confirmation in the app.
+    web_login_approval: bool = False
 
     @field_validator("role")
     @classmethod
@@ -56,6 +59,7 @@ class UpdateUserRequest(BaseModel):
     # SEA: corporate e-mail (login at the terminal and notification
     # recipient for administrators). Empty string clears it.
     email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
+    web_login_approval: Optional[bool] = None
 
     @field_validator("role")
     @classmethod

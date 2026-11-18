@@ -21,11 +21,12 @@ import OrdensScreen from '../screens/OrdensScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import { onNotificationTap, registerDevice, startPolling } from '../notifications';
 import AppLock from '../components/AppLock';
+import LoginApproval from '../components/LoginApproval';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, needsEnrollment } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
@@ -57,9 +58,13 @@ export default function AppNavigator() {
   // new ones are shown as they arrive and a tap opens the related screen.
   const navigation = useRef(null);
   const active = !!user && !forced;
+  // With the app lock on, the phone also confirms the user's logins (mig 092).
+  const secureLock = active && !needsEnrollment;
+  useEffect(() => {
+    if (active) registerDevice({ secureLock });
+  }, [active, secureLock]);
   useEffect(() => {
     if (!active) return undefined;
-    registerDevice();
     const stopPolling = startPolling();
     const stopTaps = onNotificationTap((screen) => {
       if (navigation.current?.isReady()) navigation.current.navigate(screen);
@@ -104,6 +109,7 @@ export default function AppNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
     <AppLock />
+    <LoginApproval />
     </>
   );
 }

@@ -262,15 +262,36 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
 
 **Bloqueio por digital** (`mobile/src/auth/appLock.js`, `mobile/src/components/AppLock.js`):
 
-- No primeiro login com senha de um usuário naquele celular, o app pede o cadastro da digital
-  (obrigatório; sem digital cadastrada no aparelho, leva às configurações; sem leitor, o bloqueio
-  usa a senha). Entrar com outro usuário no mesmo celular pede um novo cadastro.
+- No primeiro login com senha de um usuário naquele celular, o app pede para ativar o bloqueio
+  (obrigatório): com a digital ou, se o celular não tem digital, com a senha do celular (PIN, padrão
+  ou senha de desbloqueio). Celular sem nenhum bloqueio de tela precisa configurar um antes de usar
+  o app. Entrar com outro usuário no mesmo celular pede uma nova ativação.
 - Ao ir para segundo plano ou ser fechado, o app bloqueia. A tela de bloqueio cobre as telas sem
   desmontá-las: o que estava em andamento (tela, códigos lidos, quantidades) continua após o
   desbloqueio. Janelas de permissão do próprio app (câmera, notificações) não bloqueiam.
 - Desbloqueio pela digital ou pela senha da conta (conferida no servidor; senha errada mantém o
   bloqueio sem encerrar a sessão). "Sair da conta" encerra a sessão.
 - A sessão continua expirando em 8 horas; depois disso o login volta a ser com senha.
+
+**Login confirmado no celular** (migração `092`, `api/services/login_approval.py`):
+
+- Parâmetro por usuário em Sistema > Usuários: **Confirmar login no celular**. A tela também lista os
+  celulares cadastrados do usuário (sem mostrar o token) e tem **Remover celulares** para aparelho
+  perdido ou trocado.
+- Celular cadastrado = app SEA com o bloqueio ativo (digital ou PIN/padrão); o app informa isso ao
+  registrar o aparelho. Ao sair do app, o celular deixa de receber os avisos do dia a dia, mas continua
+  cadastrado para confirmar logins.
+- Com o parâmetro ligado e um celular cadastrado, o login com senha em qualquer outro lugar (painel web,
+  terminal de retirada, outro celular) responde `202` com uma tentativa pendente: o celular recebe o
+  push "Tentativa de login no SEA", o usuário entra no app (login normal) e vê **Você está entrando no
+  SEA?**, com origem, horário e IP. **Sim, sou eu** pede a digital ou o PIN do celular; **Não, negar**
+  recusa. O painel/terminal acompanha em `POST /api/auth/login/aprovacao` com um segredo que só ele tem;
+  aprovada, a sessão abre uma única vez. Prazo: 2 minutos.
+- O login no próprio celular cadastrado não pede confirmação (o app envia o token do aparelho).
+- Sem celular cadastrado, o login segue só com a senha mesmo com o parâmetro ligado.
+- Auditoria: "Login aguardando o celular", "Login confirmado/negado no celular", mudança do parâmetro e
+  remoção de celulares. Reinstalar o app troca o token do aparelho: se o celular antigo era o único
+  cadastrado, um administrador remove os celulares do usuário e ele cadastra de novo.
 
 **Foto do usuário** (migração `091`): só o administrador coloca, troca ou remove, em
 Sistema > Usuários (editar o usuário). O painel corta a foto em quadrado e reduz para 256 px (JPEG)

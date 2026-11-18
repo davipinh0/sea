@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../auth/AuthContext';
+import client from '../api/client';
+import { approvalEndMessage } from '../utils/loginApproval';
 import ServerDialog from '../components/ServerDialog';
 import { Button } from '../components/ui';
 import { colors, radii } from '../theme/styles';
@@ -13,12 +15,15 @@ import { colors, radii } from '../theme/styles';
 const LAST_USER_KEY = 'sea_last_username';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, completeLogin } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showServer, setShowServer] = useState(false);
+  // mig 092: seconds left while the login waits for the registered phone.
+  const [waiting, setWaiting] = useState(null);
+  const cancelled = useRef(false);
 
   useEffect(() => {
     AsyncStorage.getItem(LAST_USER_KEY).then((saved) => { if (saved) setUsername(saved); }).catch(() => {});
@@ -31,9 +36,13 @@ export default function LoginScreen() {
     setBusy(true);
     AsyncStorage.setItem(LAST_USER_KEY, user).catch(() => {});
     try {
-      await login(user, password);
+      const result = await login(user, password);
+      if (result.approval) await waitForPhone(result.approval);
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.approvalEnd) {
+        setError(err.message);
+        setPassword('');
+      } else if (err.response?.status === 401) {
         setError('Usuário ou senha inválidos.');
         setPassword('');
       } else if (err.response?.status === 429) {
@@ -44,7 +53,32 @@ export default function LoginScreen() {
         setError('Sem conexão com o servidor. Confira o Wi-Fi; se continuar, peça a um administrador para conferir o endereço do servidor.');
       }
     } finally {
+      setWaiting(null);
       setBusy(false);
+    }
+  }
+
+  // This phone is not the registered one: the login waits for the
+  // confirmation on the user's registered phone.
+  async function waitForPhone(challenge) {
+    cancelled.current = false;
+    setWaiting(challenge.expires_in);
+    const body = { challenge_id: challenge.challenge_id, poll_token: challenge.poll_token };
+    for (;;) {
+      if (cancelled.current) throw Object.assign(new Error('Login cancelado.'), { approvalEnd: true });
+      let resp;
+      try {
+        resp = await client.post('/api/auth/login/aprovacao', body, { keepSession: true });
+      } catch (err) {
+        if (err.response) throw Object.assign(new Error(approvalEndMessage(err.response.status)), { approvalEnd: true });
+        throw err;
+      }
+      if (resp.status === 200) {
+        await completeLogin(resp.data);
+        return;
+      }
+      setWaiting(resp.data?.expires_in ?? 0);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 
@@ -66,7 +100,18 @@ export default function LoginScreen() {
             returnKeyType="go" onSubmitEditing={submit}
           />
           {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
-          <Button label={busy ? 'ENTRANDO...' : 'ENTRAR'} onPress={submit} disabled={busy} />
+          {waiting !== null ? (
+            <View style={styles.waiting} accessibilityRole="alert">
+              <Text style={styles.waitingTitle}>Confirme no seu celular cadastrado</Text>
+              <Text style={styles.waitingText}>
+                Este celular ainda não é o cadastrado na sua conta. Abra o app SEA no seu celular e confirme o login.
+                Tempo restante: {waiting} s.
+              </Text>
+              <Button label="CANCELAR" secondary onPress={() => { cancelled.current = true; }} />
+            </View>
+          ) : (
+            <Button label={busy ? 'ENTRANDO...' : 'ENTRAR'} onPress={submit} disabled={busy} />
+          )}
 
           <TouchableOpacity style={styles.serverLink} onPress={() => setShowServer(true)} accessibilityRole="button">
             <Text style={styles.serverLinkText}>Servidor (administrador)</Text>
@@ -89,6 +134,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inputBg, borderWidth: 1.5, borderColor: colors.inputBorder, borderRadius: radii.input,
   },
   error: { fontSize: 14, color: colors.danger, marginBottom: 12 },
+  waiting: { padding: 14, borderRadius: radii.card, borderWidth: 1, borderColor: colors.cardBorder, backgroundColor: colors.cardBg },
+  waitingTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 6 },
+  waitingText: { fontSize: 14, color: colors.textSecondary, marginBottom: 12, lineHeight: 20 },
   serverLink: { marginTop: 28, alignSelf: 'center', padding: 8 },
   serverLinkText: { fontSize: 13, color: colors.textMuted, textDecorationLine: 'underline' },
 });

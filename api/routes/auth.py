@@ -10,8 +10,14 @@ from sqlalchemy import text
 
 from middleware.auth_middleware import require_auth
 from middleware.db import with_db
-from schemas.auth import ChangePasswordRequest, LoginRequest
-from services.auth_service import authenticate_user, decode_token, generate_token, validate_password
+from schemas.auth import ChangePasswordRequest, LoginApprovalPollRequest, LoginRequest
+from services.auth_service import (
+    active_user_dict,
+    authenticate_user,
+    decode_token,
+    generate_token,
+    validate_password,
+)
 from services.cookie_auth import (
     AUTH_COOKIE_NAME,
     clear_auth_cookies,
@@ -19,6 +25,9 @@ from services.cookie_auth import (
     generate_csrf_token,
     set_auth_cookies,
 )
+from services import login_approval
+from services import notification_service
+from services.audit_service import write_audit_log
 from services.identity_provider import get_identity_provider
 from utils.validation import validate_body
 
@@ -155,9 +164,67 @@ def login(validated):
     # Successful login - reset both trackers for this account.
     _reset_attempts(g.db, user_key)
     _reset_attempts(g.db, lock_key)
+
+    # SEA (mig 092): the password is right, but the session waits for the
+    # user to confirm on the registered phone.
+    if login_approval.approval_required(g.db, user["user_id"], validated.device_token):
+        return _start_login_approval(user)
+
     token = generate_token(user)
     # V-045: dual-path auth. The token is returned in the body (mobile)
     # and also set as HttpOnly + CSRF cookies (admin SPA).
+    csrf = generate_csrf_token()
+    response = jsonify({"token": token, "user": user})
+    set_auth_cookies(response, token, csrf)
+    return response
+
+
+def _start_login_approval(user):
+    user_agent = request.headers.get("User-Agent", "")
+    client = login_approval.describe_client(user_agent)
+    challenge_id, secret = login_approval.create_challenge(
+        g.db, user["user_id"], request.remote_addr or "", user_agent)
+    write_audit_log(g.db, "LOGIN_APPROVAL_REQUESTED", "USER", user["user_id"], user["user_id"], None,
+                    {"origem": client, "ip": request.remote_addr})
+    g.db.commit()
+    notification_service.send_login_approval_push(g.db, user["user_id"], challenge_id, client)
+    return jsonify({
+        "approval_required": True,
+        "challenge_id": challenge_id,
+        "poll_token": secret,
+        "expires_in": login_approval.APPROVAL_TTL_SECONDS,
+        "message": "Confirme o acesso no app SEA do seu celular.",
+    }), 202
+
+
+@auth_bp.route("/login/aprovacao", methods=["POST"])
+@validate_body(LoginApprovalPollRequest)
+@with_db
+def login_approval_status(validated):
+    """SEA: whoever started a login waiting for the phone asks how it is.
+
+    PENDING -> 202, DENIED -> 403, EXPIRED -> 410, unknown -> 404. Once
+    APPROVED the session is opened here (token in the body and cookies,
+    like /login) and the challenge cannot be used again.
+    """
+    state = login_approval.poll(g.db, validated.challenge_id, validated.poll_token)
+    if state is None:
+        return jsonify({"error": "Tentativa de login não encontrada. Entre de novo."}), 404
+    status, user_id, seconds_left = state
+    if status == login_approval.PENDING:
+        return jsonify({"status": status, "expires_in": seconds_left}), 202
+    if status == login_approval.DENIED:
+        return jsonify({"status": status, "error": "O acesso foi negado no celular."}), 403
+    if status != login_approval.APPROVED or login_approval.consume(g.db, validated.challenge_id) is None:
+        return jsonify({"status": login_approval.EXPIRED,
+                        "error": "O tempo para confirmar acabou. Entre de novo."}), 410
+
+    user = active_user_dict(g.db, user_id)
+    if user is None:
+        g.db.commit()
+        return jsonify({"error": "Conta desativada ou excluída"}), 401
+    g.db.commit()
+    token = generate_token(user)
     csrf = generate_csrf_token()
     response = jsonify({"token": token, "user": user})
     set_auth_cookies(response, token, csrf)

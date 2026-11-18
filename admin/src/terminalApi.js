@@ -6,6 +6,8 @@
 // neither send nor store cookies, so signing in or out at the terminal
 // never touches a panel session open in the same browser.
 
+import { waitForApproval } from './utils/loginApproval.js';
+
 const API_BASE = '/api';
 
 async function send(path, { method = 'GET', token, body } = {}) {
@@ -22,12 +24,20 @@ async function send(path, { method = 'GET', token, body } = {}) {
 
 // Identify the employee. Returns { token, user } where user carries
 // allowed_pages and must_change_password; throws an Error whose message
-// can be shown to the employee.
-export async function terminalLogin(identifier, password) {
+// can be shown to the employee. When the employee confirms logins on the
+// phone (mig 092), ``onWaiting(secondsLeft)`` is called while the
+// terminal waits for that confirmation.
+export async function terminalLogin(identifier, password, { onWaiting, isCancelled } = {}) {
   const res = await send('/auth/login', { method: 'POST', body: { username: identifier, password } });
   if (res.status === 429) throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
   if (!res.ok) throw new Error('E-mail, usuário ou senha inválidos.');
-  const { token } = await res.json();
+  let data = await res.json();
+  if (res.status === 202) {
+    onWaiting?.(data.expires_in);
+    data = await waitForApproval((path, body) => send(path, { method: 'POST', body }), data,
+      { onTick: onWaiting, isCancelled });
+  }
+  const { token } = data;
   const me = await send('/auth/me', { token });
   if (!me.ok) throw new Error('Não foi possível iniciar a sessão. Tente novamente.');
   return { token, user: await me.json() };

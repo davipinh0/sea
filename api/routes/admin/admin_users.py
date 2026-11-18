@@ -58,7 +58,7 @@ def list_users():
     pages = max(1, math.ceil(total / per_page))
 
     rows = g.db.execute(
-        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email, photo_updated_at FROM users ORDER BY user_id LIMIT :limit OFFSET :offset"),
+        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email, photo_updated_at, web_login_approval, (SELECT COUNT(*) FROM sea_push_tokens t WHERE t.user_id = users.user_id AND t.secure_lock) AS trusted_devices FROM users ORDER BY user_id LIMIT :limit OFFSET :offset"),
         {"limit": per_page, "offset": (page - 1) * per_page},
     ).fetchall()
     return jsonify({
@@ -71,7 +71,9 @@ def list_users():
              "created_at": r.created_at.isoformat() if r.created_at else None,
              "last_login": r.last_login.isoformat() if r.last_login else None,
              "email": r.email,
-             "photo_version": user_photo.photo_version(r.photo_updated_at)}
+             "photo_version": user_photo.photo_version(r.photo_updated_at),
+             "web_login_approval": bool(r.web_login_approval),
+             "trusted_devices": r.trusted_devices}
             for r in rows
         ],
         "total": total, "page": page, "per_page": per_page, "pages": pages,
@@ -113,13 +115,14 @@ def create_user(validated):
     pw_hash = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     result = g.db.execute(
         text("""
-            INSERT INTO users (username, password_hash, full_name, role, warehouse_id, warehouse_ids, allowed_functions, email, external_id)
-            VALUES (:u, :pw, :name, :role, :wid, :wids, :funcs, :email, :ext_id)
-            RETURNING user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, email
+            INSERT INTO users (username, password_hash, full_name, role, warehouse_id, warehouse_ids, allowed_functions, email, external_id, web_login_approval)
+            VALUES (:u, :pw, :name, :role, :wid, :wids, :funcs, :email, :ext_id, :approval)
+            RETURNING user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, email, web_login_approval
         """),
         {"u": data["username"], "pw": pw_hash, "name": data["full_name"],
          "role": data["role"], "wid": warehouse_id, "wids": warehouse_ids,
-         "funcs": allowed_functions, "email": email, "ext_id": str(uuid.uuid4())},
+         "funcs": allowed_functions, "email": email, "ext_id": str(uuid.uuid4()),
+         "approval": bool(data.get("web_login_approval"))},
     )
     row = result.fetchone()
     g.db.commit()
@@ -131,6 +134,7 @@ def create_user(validated):
         "is_active": row.is_active,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "email": row.email,
+        "web_login_approval": bool(row.web_login_approval),
     }), 201
 
 
@@ -174,7 +178,7 @@ def update_user(user_id, validated):
             if len(admins) <= 1:
                 return jsonify({"error": "Não é possível remover o último administrador ativo"}), 400
 
-    ALLOWED_FIELDS = {"full_name", "role", "warehouse_id", "is_active"}
+    ALLOWED_FIELDS = {"full_name", "role", "warehouse_id", "is_active", "web_login_approval"}
     fields, params = [], {"uid": user_id}
     for col in ALLOWED_FIELDS:
         if col in data:
@@ -213,13 +217,17 @@ def update_user(user_id, validated):
         return jsonify({"error": "Nenhum campo para atualizar"}), 400
 
     g.db.execute(text(f"UPDATE users SET {', '.join(fields)} WHERE user_id = :uid"), params)
+    if "web_login_approval" in data:
+        write_audit_log(g.db, "LOGIN_APPROVAL_SETTING", "USER", user_id, g.current_user["user_id"], None,
+                        {"confirmar_login_no_celular": bool(data["web_login_approval"])})
     g.db.commit()
 
     row = g.db.execute(
-        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email FROM users WHERE user_id = :uid"),
+        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email, web_login_approval FROM users WHERE user_id = :uid"),
         {"uid": user_id},
     ).fetchone()
     return jsonify({
+        "web_login_approval": bool(row.web_login_approval),
         "user_id": row.user_id, "username": row.username, "full_name": row.full_name,
         "role": row.role, "warehouse_id": row.warehouse_id,
         "warehouse_ids": list(row.warehouse_ids) if row.warehouse_ids else [],
@@ -263,6 +271,46 @@ def delete_user(user_id):
     g.db.execute(text("DELETE FROM users WHERE user_id = :uid"), {"uid": user_id})
     g.db.commit()
     return jsonify({"message": "Usuário excluído"})
+
+
+# ── SEA: phones that confirm the user's logins (mig 092) ─────────────────────
+
+
+@admin_bp.route("/users/<int:user_id>/aparelhos", methods=["GET"])
+@require_auth
+@require_admin_or_page_permission("users")
+@with_db
+def list_user_devices(user_id):
+    rows = g.db.execute(
+        text(
+            "SELECT token, device_name, secure_lock, signed_in, updated_at FROM sea_push_tokens "
+            "WHERE user_id = :u ORDER BY updated_at DESC"
+        ),
+        {"u": user_id},
+    ).fetchall()
+    # The push token is a credential of the phone: only its end is shown.
+    return jsonify({"devices": [
+        {"device": r.device_name or "Celular", "ending": r.token[-6:].strip("]"),
+         "secure_lock": bool(r.secure_lock), "signed_in": bool(r.signed_in),
+         "updated_at": r.updated_at.isoformat() if r.updated_at else None}
+        for r in rows
+    ]})
+
+
+@admin_bp.route("/users/<int:user_id>/aparelhos", methods=["DELETE"])
+@require_auth
+@require_admin_or_page_permission("users")
+@with_db
+def remove_user_devices(user_id):
+    """Phone lost or replaced: the user's phones stop confirming logins
+    (and receiving notifications) until the user logs in on the app again."""
+    removed = g.db.execute(
+        text("DELETE FROM sea_push_tokens WHERE user_id = :u RETURNING token"), {"u": user_id}
+    ).fetchall()
+    write_audit_log(g.db, "USER_DEVICES_REMOVED", "USER", user_id, g.current_user["user_id"], None,
+                    {"aparelhos": len(removed)})
+    g.db.commit()
+    return jsonify({"removed": len(removed)})
 
 
 # ── SEA: user photo (mig 091) ────────────────────────────────────────────────

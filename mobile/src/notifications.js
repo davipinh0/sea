@@ -30,6 +30,18 @@ export const KIND_SCREEN = {
   ARMAZENAGEM_CONCLUIDA: 'Estoque',
 };
 
+// Push of a login waiting for this phone (mig 092).
+export const LOGIN_APPROVAL = 'login_approval';
+
+// Calls ``onLoginApproval()`` when a push of a login to confirm arrives or
+// is tapped. Returns a function that stops listening.
+export function onLoginApprovalPush(onLoginApproval) {
+  const isApproval = (n) => n?.request?.content?.data?.kind === LOGIN_APPROVAL;
+  const received = Notifications.addNotificationReceivedListener((n) => { if (isApproval(n)) onLoginApproval(); });
+  const tapped = Notifications.addNotificationResponseReceivedListener((r) => { if (isApproval(r.notification)) onLoginApproval(); });
+  return () => { received.remove(); tapped.remove(); };
+}
+
 export const KIND_LABEL = {
   RETIRADA_SOLICITADA: 'Solicitação de retirada',
   RECEBIMENTO: 'Recebimento de materiais',
@@ -59,27 +71,37 @@ async function allowed() {
   return (await withoutLock(() => Notifications.requestPermissionsAsync())).granted;
 }
 
+// Push token of this phone saved at the last registration (the app sends
+// it at login: a registered phone confirms its own login, mig 092).
+export async function getDeviceToken() {
+  return AsyncStorage.getItem(TOKEN_KEY).catch(() => null);
+}
+
 // Register this phone to receive notifications while the app is closed.
+// ``secureLock``: the app lock (fingerprint or PIN/pattern) is on, so this
+// phone also confirms the logins of the user (mig 092).
 // Fails quietly when the build has no push key or the server refuses.
-export async function registerDevice() {
+export async function registerDevice({ secureLock = false } = {}) {
   try {
     if (!(await allowed())) return;
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) return;
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    await client.post('/api/sea/push/registrar', { token });
+    const deviceName = String(Platform.constants?.Model || Platform.OS).slice(0, 100);
+    await client.post('/api/sea/push/registrar', { token, secure_lock: !!secureLock, device_name: deviceName });
     await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch {
     // No push available here: notifications still work with the app open.
   }
 }
 
-// Called before logout, while the session is still valid.
+// Called before logout, while the session is still valid. The phone stops
+// receiving the notifications of the day but stays registered to confirm
+// the user's logins, so the token is kept here too (mig 092).
 export async function unregisterDevice() {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     if (!token) return;
-    await AsyncStorage.removeItem(TOKEN_KEY);
     await client.post('/api/sea/push/remover', { token });
   } catch {
     // The server drops the device at the next login on this phone.
@@ -148,6 +170,8 @@ function announce(list) {
 export function onNotificationTap(navigate) {
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
     const kind = response.notification.request.content.data?.kind;
+    // A login to confirm opens over any screen (LoginApproval).
+    if (kind === LOGIN_APPROVAL) return;
     navigate(KIND_SCREEN[kind] || 'Notificacoes');
   });
   return () => sub.remove();

@@ -46,13 +46,18 @@ export function shouldLock(nextState, { enabled }) {
   return !!enabled && nextState === 'background' && !isLockSuspended();
 }
 
-// How this phone can unlock: 'biometric' (sensor with a fingerprint
-// registered), 'enroll-device' (sensor without any fingerprint: the user
-// registers one in the phone settings) or 'password' (no sensor).
-export function unlockMode({ hasHardware, isEnrolled }) {
-  if (hasHardware && isEnrolled) return 'biometric';
-  if (hasHardware) return 'enroll-device';
-  return 'password';
+// SecurityLevel of expo-local-authentication: 0 none, 1 PIN/pattern/
+// password of the phone, 2-3 biometrics.
+export const SECURITY_SECRET = 1;
+
+// How this phone unlocks the app: 'biometric' (a fingerprint registered;
+// the phone's PIN/pattern also works in the same prompt), 'device' (no
+// fingerprint: the phone's PIN, pattern or password) or 'none' (the phone
+// has no screen lock at all: the user must set one up).
+export function unlockMode({ isEnrolled, securityLevel }) {
+  if (isEnrolled) return 'biometric';
+  if ((securityLevel ?? 0) >= SECURITY_SECRET) return 'device';
+  return 'none';
 }
 
 // The user that registered the fingerprint, compared without case.

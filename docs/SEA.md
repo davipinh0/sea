@@ -52,10 +52,10 @@ docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/seed-sea.sql
 |---|---|
 | `Expedição - Área da Expedição` | endereço único `EXPEDICAO` |
 | `SP12 - Setor SP12 - Almoxarifado` | recebimento `SP12-RECEB` e prateleiras A0–C3 |
-| `Solda - Contêiner de Solda` | recebimento `SOLDA-RECEB` e endereço geral `SOLDA` |
+| `SP13 - Setor SP13 - Almoxarifado` | recebimento `SP13-RECEB` e endereço geral `SP13` (até a migração `090`, "Solda - Contêiner de Solda") |
 
 O material é recebido em um local e pode ser armazenado em outro: uma ordem recebida na
-Expedição é armazenada nas prateleiras do SP12 ou no Contêiner de Solda. **Expedição >
+Expedição é armazenada nas prateleiras do SP12 ou no SP13. **Expedição >
 Armazenagem** lista o que aguarda em todos os locais e oferece os endereços de todos eles
 (agrupados por local). O estoque da ordem é localizado pelo número da OT em qualquer local;
 a retirada entra na fila do local onde o material está armazenado. Os materiais de uma ordem
@@ -140,7 +140,7 @@ Limites conhecidos do protótipo:
 ## Menu por local e exclusões
 
 * A seção **Expedição** (recebimento, armazenagem, ordens, SAP) só aparece no menu com o local
-  `Expedição` selecionado na barra superior; com SP12 ou Contêiner de Solda selecionado ela não é
+  `Expedição` selecionado na barra superior; com SP12 ou SP13 selecionado ela não é
   oferecida, e o endereço `/expedicao` volta para o Painel.
 * **Excluir ordem** (Expedição > Ordens) e **excluir material** (Estoque > Materiais) são ações do
   administrador, com confirmação. A ordem é excluída com seus recebimentos, o estoque que veio
@@ -167,12 +167,12 @@ Limites conhecidos do protótipo:
 
 * **Transferência entre endereços**: em Estoque > Materiais, ao abrir um material, "Localizações
   no estoque" traz o botão **Transferir** em cada endereço. O destino pode ser outra prateleira
-  do mesmo local (A1 para B2) ou outro local (SP12 para o Contêiner de Solda). Só o saldo livre
+  do mesmo local (A1 para B2) ou outro local (SP12 para o SP13). Só o saldo livre
   se move (o que está reservado para retirada fica); valem as regras de armazenagem e, para
   material com peso por caixa, caixas inteiras (`POST /api/sea/transferencias`).
 
 * **Terminal e locais**: no terminal a ordem traz o material de **qualquer local** (SP12,
-  Contêiner de Solda), mesmo que o funcionário não trabalhe nele. A solicitação vai para a fila
+  SP13), mesmo que o funcionário não trabalhe nele. A solicitação vai para a fila
   do local que guarda o material; separar é dos usuários daquele local, e confirmar ou cancelar
   é de quem solicitou.
 
@@ -271,6 +271,12 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
 - Desbloqueio pela digital ou pela senha da conta (conferida no servidor; senha errada mantém o
   bloqueio sem encerrar a sessão). "Sair da conta" encerra a sessão.
 - A sessão continua expirando em 8 horas; depois disso o login volta a ser com senha.
+
+**Foto do usuário** (migração `091`): só o administrador coloca, troca ou remove, em
+Sistema > Usuários (editar o usuário). O painel corta a foto em quadrado e reduz para 256 px (JPEG)
+antes de enviar; a API aceita só JPG, PNG ou WEBP (conferido pelo conteúdo) de até 1 MB e registra a
+troca na auditoria ("Foto do usuário"). A foto aparece na lista de usuários, na barra superior do
+painel e no app (cabeçalho e menu). Cada usuário vê a própria; quem gerencia usuários vê todas.
 
 **Servidor no app.** O endereço do servidor não aparece em nenhuma tela. Só um administrador o
 altera (tela de login > "Servidor (administrador)" ou menu do usuário > Servidor), confirmando com

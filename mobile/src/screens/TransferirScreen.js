@@ -10,7 +10,7 @@ import { screenStyles } from '../theme/styles';
 
 // Transferência entre endereços. Find a material by its code, see where
 // it is, and move it to another shelf of the same location (A1 to B2) or
-// to another location (SP12 to the Contêiner de Solda). The API applies
+// to another location (SP12 to the SP13). The API applies
 // the rules (free balance, whole boxes, size class, capacity, compatibility).
 
 export default function TransferirScreen({ navigation, route }) {

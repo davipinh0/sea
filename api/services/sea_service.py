@@ -20,7 +20,7 @@ carries the OT number as inventory.lot_number.
 
 An order's stock is found by its lot (the OT number, unique across the
 system) wherever it is: an order received in one location (Expedição)
-may be stored in another (SP12, Contêiner de Solda). The order keeps the
+may be stored in another (SP12, SP13). The order keeps the
 location where it was received; each stock row and each withdrawal
 carries the location where the material physically is.
 
@@ -1124,7 +1124,7 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
 # ------------------------------------------------- Stock transfers
 #
 # Moving stored material between addresses, in the same location (A1 to
-# B2) or to another one (SP12 to the Contêiner de Solda).
+# B2) or to another one (SP12 to the SP13).
 
 ACTION_STOCK_TRANSFERRED = "STOCK_TRANSFERRED"
 

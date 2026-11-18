@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import SeaLogo from './SeaLogo.jsx';
 import Notificacoes from './Notificacoes.jsx';
 import { currentTheme, setTheme } from '../utils/theme.js';
+import { photoUrl } from '../utils/userPhoto.js';
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -246,7 +247,9 @@ export default function TopBar({ forced = false }) {
       {!forced && <Notificacoes />}
       <div className="topbar-user" ref={menuRef} style={{ position: 'relative' }}>
         <div className="topbar-avatar" onClick={() => setShowMenu(!showMenu)} title={user?.full_name || user?.username}>
-          {initials}
+          {user?.photo_version
+            ? <img className="topbar-avatar-img" src={photoUrl(user.user_id, user.photo_version)} alt="" />
+            : initials}
         </div>
         {showMenu && (
           <div className="topbar-dropdown">

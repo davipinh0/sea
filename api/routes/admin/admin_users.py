@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 
 import bcrypt
-from flask import g, jsonify, request
+from flask import Response, g, jsonify, request
 from sqlalchemy import text
 
 from constants import (
@@ -16,7 +16,7 @@ from constants import (
     ALL_OVERRIDE_KEYS,
     ALL_PAGE_KEYS,
 )
-from middleware.auth_middleware import require_admin_or_page_permission, require_auth
+from middleware.auth_middleware import require_admin_or_page_permission, require_auth, require_role
 from middleware.db import with_db
 from routes.admin import VALID_ROLES, admin_bp
 from schemas.inventory_adjustments import DirectAdjustmentRequest, ReviewAdjustmentsRequest
@@ -25,7 +25,9 @@ from schemas.users import (
     CreateUserRequest,
     UpdateUserPagePermissionsRequest,
     UpdateUserRequest,
+    UserPhotoRequest,
 )
+from services import user_photo
 from services.audit_service import write_audit_log
 from services.events_service import emit_event, get_user_external_id, resolve_source_external_id
 from services.auth_service import validate_password
@@ -56,7 +58,7 @@ def list_users():
     pages = max(1, math.ceil(total / per_page))
 
     rows = g.db.execute(
-        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email FROM users ORDER BY user_id LIMIT :limit OFFSET :offset"),
+        text("SELECT user_id, username, full_name, role, warehouse_id, warehouse_ids, allowed_functions, is_active, created_at, last_login, email, photo_updated_at FROM users ORDER BY user_id LIMIT :limit OFFSET :offset"),
         {"limit": per_page, "offset": (page - 1) * per_page},
     ).fetchall()
     return jsonify({
@@ -68,7 +70,8 @@ def list_users():
              "is_active": r.is_active,
              "created_at": r.created_at.isoformat() if r.created_at else None,
              "last_login": r.last_login.isoformat() if r.last_login else None,
-             "email": r.email}
+             "email": r.email,
+             "photo_version": user_photo.photo_version(r.photo_updated_at)}
             for r in rows
         ],
         "total": total, "page": page, "per_page": per_page, "pages": pages,
@@ -260,6 +263,61 @@ def delete_user(user_id):
     g.db.execute(text("DELETE FROM users WHERE user_id = :uid"), {"uid": user_id})
     g.db.commit()
     return jsonify({"message": "Usuário excluído"})
+
+
+# ── SEA: user photo (mig 091) ────────────────────────────────────────────────
+# Only an administrator sets or removes it. Seeing it: the user, an
+# administrator or whoever manages users.
+
+
+@admin_bp.route("/users/<int:user_id>/foto", methods=["PUT"])
+@require_auth
+@require_role("ADMIN")
+@validate_body(UserPhotoRequest)
+@with_db
+def put_user_photo(user_id, validated):
+    try:
+        data, mime = user_photo.decode_photo(validated.image)
+    except user_photo.PhotoError as exc:
+        return jsonify({"error": str(exc), "user_facing": True}), 400
+    version = user_photo.save_photo(g.db, user_id, data, mime)
+    if version is None:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    write_audit_log(g.db, "USER_PHOTO", "USER", user_id, g.current_user["user_id"], None,
+                    {"acao": "foto colocada", "bytes": len(data)})
+    g.db.commit()
+    return jsonify({"message": "Foto salva", "photo_version": version})
+
+
+@admin_bp.route("/users/<int:user_id>/foto", methods=["DELETE"])
+@require_auth
+@require_role("ADMIN")
+@with_db
+def delete_user_photo(user_id):
+    if not user_photo.remove_photo(g.db, user_id):
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    write_audit_log(g.db, "USER_PHOTO", "USER", user_id, g.current_user["user_id"], None,
+                    {"acao": "foto removida"})
+    g.db.commit()
+    return jsonify({"message": "Foto removida", "photo_version": None})
+
+
+@admin_bp.route("/users/<int:user_id>/foto", methods=["GET"])
+@require_auth
+@with_db
+def get_user_photo(user_id):
+    me = g.current_user
+    allowed = me.get("allowed_pages")
+    if me["user_id"] != user_id and allowed is not None and "users" not in allowed:
+        return jsonify({"error": "Permission denied", "page_key": "users"}), 403
+    row = user_photo.load_photo(g.db, user_id)
+    if row is None:
+        return jsonify({"error": "Sem foto"}), 404
+    response = Response(bytes(row.photo), mimetype=row.photo_mime)
+    # The clients ask with ?v=<photo_version>: a new photo is a new URL.
+    response.headers["Cache-Control"] = "private, max-age=86400"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 # ── Per-page web-admin permission grants (P6.1) ──────────────────────────────

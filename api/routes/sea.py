@@ -1092,7 +1092,7 @@ def pendentes_de_armazenagem():
 def destinos():
     """Storage addresses of every location the user can use, for the
     put-away destination list (an order received in the Expedição is
-    stored in the SP12 or in the Contêiner de Solda)."""
+    stored in the SP12 or in the SP13)."""
     scope_clause, scope_params = warehouse_scope_clause("b.warehouse_id")
     rows = g.db.execute(
         text(

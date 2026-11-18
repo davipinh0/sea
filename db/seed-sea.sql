@@ -130,7 +130,7 @@ UPDATE users SET warehouse_id = (SELECT warehouse_id FROM warehouses WHERE wareh
 WHERE username = 'admin';
 
 -- ============================================================
--- Locais do SEA: Expedição, SP12 e Contêiner de Solda
+-- Locais do SEA: Expedição, SP12 e SP13 (Almoxarifado)
 -- ============================================================
 -- Requer db/migrations/084_sea_notificacoes.sql (users.email).
 
@@ -173,28 +173,28 @@ WHERE w.warehouse_id = z.warehouse_id AND w.warehouse_code = 'Expedição'
   AND z.zone_code IN ('PICK', 'STAGE')
   AND NOT EXISTS (SELECT 1 FROM bins x WHERE x.zone_id = z.zone_id);
 
--- Contêiner de Solda: área de recebimento e um endereço geral, sem
+-- SP13 - Almoxarifado: área de recebimento e um endereço geral, sem
 -- capacidade configurada. Outros endereços: Estoque > Endereços.
 INSERT INTO warehouses (warehouse_code, warehouse_name, address)
-VALUES ('Solda', 'Contêiner de Solda', 'Protótipo SEA - dados fictícios')
+VALUES ('SP13', 'Setor SP13 - Almoxarifado', 'Protótipo SEA - dados fictícios')
 ON CONFLICT (warehouse_code) DO NOTHING;
 
 INSERT INTO zones (warehouse_id, zone_code, zone_name, zone_type)
 SELECT w.warehouse_id, z.code, z.name, z.type
 FROM warehouses w
 CROSS JOIN (VALUES ('RECEB', 'Área de recebimento', 'RECEIVING'),
-                   ('CONT', 'Contêiner de Solda', 'STORAGE')) AS z(code, name, type)
-WHERE w.warehouse_code = 'Solda'
+                   ('CONT', 'Almoxarifado SP13', 'STORAGE')) AS z(code, name, type)
+WHERE w.warehouse_code = 'SP13'
   AND NOT EXISTS (SELECT 1 FROM zones x WHERE x.warehouse_id = w.warehouse_id AND x.zone_code = z.code);
 
 INSERT INTO bins (zone_id, warehouse_id, bin_code, bin_barcode, bin_type, description, external_id)
 SELECT z.zone_id, w.warehouse_id, b.code, b.code, b.type, b.description, gen_random_uuid()
 FROM warehouses w
-JOIN (VALUES ('RECEB', 'SOLDA-RECEB', 'Staging', 'Área de recebimento (aguardando armazenagem)'),
-             ('CONT', 'SOLDA', 'Pickable', 'Contêiner de Solda (endereço geral)'))
+JOIN (VALUES ('RECEB', 'SP13-RECEB', 'Staging', 'Área de recebimento (aguardando armazenagem)'),
+             ('CONT', 'SP13', 'Pickable', 'Almoxarifado SP13 (endereço geral)'))
      AS b(zone, code, type, description) ON TRUE
 JOIN zones z ON z.warehouse_id = w.warehouse_id AND z.zone_code = b.zone
-WHERE w.warehouse_code = 'Solda'
+WHERE w.warehouse_code = 'SP13'
   AND NOT EXISTS (SELECT 1 FROM bins x WHERE x.warehouse_id = w.warehouse_id AND x.bin_code = b.code);
 
 -- Usuário de teste do terminal de retirada: entra com o usuário
@@ -218,7 +218,7 @@ ON CONFLICT DO NOTHING;
 UPDATE users u
 SET warehouse_ids = ARRAY(
         SELECT w.warehouse_id FROM warehouses w
-        WHERE w.warehouse_code IN ('SP12', 'Expedição', 'Solda')
+        WHERE w.warehouse_code IN ('SP12', 'Expedição', 'SP13')
         ORDER BY (w.warehouse_code = 'SP12') DESC, w.warehouse_id)
 WHERE u.username IN ('almoxarife', 'retirada');
 

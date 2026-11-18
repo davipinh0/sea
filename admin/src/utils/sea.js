@@ -66,6 +66,7 @@ export const OT_MATERIAL_FIELDS = [
 // original system) are shown in a readable form instead of raw codes.
 export const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
+  USER_PHOTO: 'Foto do usuário',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',
   PUTAWAY: 'Armazenagem',

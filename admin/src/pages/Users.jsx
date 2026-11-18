@@ -4,6 +4,8 @@ import { useAuth } from '../auth.jsx';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
+import UserAvatar from '../components/UserAvatar.jsx';
+import UserPhotoField from '../components/UserPhotoField.jsx';
 
 const ROLES = ['ADMIN', 'USER'];
 
@@ -131,7 +133,8 @@ function FieldError({ message }) {
 const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 
 export default function Users() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
+  const isAdmin = currentUser?.role === 'ADMIN';
   const [users, setUsers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -351,7 +354,17 @@ export default function Users() {
       .join(', ');
   }
 
+  // A new photo shows at once in the list, the form and (own photo) the top bar.
+  function photoChanged(version) {
+    setForm((current) => ({ ...current, photo_version: version }));
+    setUsers((list) => list.map((u) => (u.user_id === editId ? { ...u, photo_version: version } : u)));
+    if (editId === currentUser?.user_id) refreshUser();
+  }
+
   const columns = [
+    { key: 'photo', label: '', render: (r) => (
+      <UserAvatar userId={r.user_id} version={r.photo_version} name={r.full_name || r.username} size={30} />
+    )},
     { key: 'username', label: 'Usuário', mono: true },
     { key: 'full_name', label: 'Nome completo' },
     { key: 'email', label: 'E-mail', render: (r) => r.email || '-' },
@@ -414,6 +427,12 @@ export default function Users() {
               <div className="settings-note">Serve para entrar no terminal de retirada. Administradores recebem neste e-mail os avisos de retirada, recebimento e armazenamento.</div>
             </div>
           </div>
+          {isAdmin && editId && (
+            <UserPhotoField userId={editId} name={form.full_name || form.username} version={form.photo_version} onChanged={photoChanged} />
+          )}
+          {isAdmin && !editId && (
+            <div className="settings-note" style={{ marginBottom: 12 }}>A foto é colocada depois de salvar: abra o usuário de novo para escolher a foto.</div>
+          )}
           <div className="form-group">
             <label htmlFor="user-password">{editId ? 'Nova senha (deixe em branco para manter a atual)' : 'Senha *'}</label>
             <input id="user-password" className={`form-input${problems.password ? ' input-invalid' : ''}`} type="password" value={form.password || ''} onChange={(e) => setForm({ ...form, password: e.target.value })} />

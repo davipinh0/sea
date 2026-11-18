@@ -18,6 +18,13 @@ class UpdateUserPagePermissionsRequest(BaseModel):
     page_keys: List[str] = Field(default_factory=list, max_length=200)
 
 
+class UserPhotoRequest(BaseModel):
+    """SEA: user photo as base64 (or a data: URL). The panel sends it
+    reduced to 256 px; services.user_photo checks type and size."""
+
+    image: str = Field(..., min_length=1, max_length=1_500_000)
+
+
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=150)
     password: str = Field(..., min_length=1, max_length=256)

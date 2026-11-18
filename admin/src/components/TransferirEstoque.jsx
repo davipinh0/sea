@@ -5,7 +5,7 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Estoque > Materiais > material: where the material is and the option to
 // move it to another address, in the same location (A1 to B2) or to
-// another one (SP12 to the Contêiner de Solda). The API applies the
+// another one (SP12 to the SP13). The API applies the
 // rules (free balance, whole boxes, size class, capacity, compatibility).
 
 export default function TransferirEstoque({ itemId, onMoved }) {

@@ -5,6 +5,7 @@ import { reloadAppAsync } from 'expo';
 import { useAuth } from '../auth/AuthContext';
 import client from '../api/client';
 import WarehouseSelector from '../components/WarehouseSelector';
+import UserPhoto from '../components/UserPhoto';
 import ServerDialog from '../components/ServerDialog';
 import { Button } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -19,7 +20,7 @@ const ACCENT = { red: colors.accentRed, copper: colors.copper, gray: colors.gray
 const THEMES = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']];
 
 export default function HomeScreen({ navigation }) {
-  const { user, warehouseId, logout, switchWarehouse } = useAuth();
+  const { user, warehouseId, logout, switchWarehouse, locked, needsEnrollment } = useAuth();
   const [me, setMe] = useState(user);
   const [warehouses, setWarehouses] = useState([]);
   const [counts, setCounts] = useState({});
@@ -98,8 +99,10 @@ export default function HomeScreen({ navigation }) {
   const { width, fontScale } = useWindowDimensions();
   const oneColumn = width < 340 || fontScale > 1.3;
   const cardWidth = oneColumn ? width - 32 : (width - 32 - spacing.cardGap) / 2;
-  const initial = (me?.full_name || me?.username || 'U').charAt(0).toUpperCase();
   const needsWarehouse = !warehouseId && warehouses.length > 1;
+  // The lock / fingerprint registration screen comes first: a window
+  // opened after it would cover it.
+  const covered = locked || needsEnrollment;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -114,7 +117,7 @@ export default function HomeScreen({ navigation }) {
             {unread > 0 && <View style={styles.bellBadge}><Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text></View>}
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatar} onPress={() => setMenu(true)} accessibilityLabel="Menu do usuário">
-            <Text style={styles.avatarText}>{initial}</Text>
+            <UserPhoto userId={me?.user_id} version={me?.photo_version} name={me?.full_name || me?.username} size={40} />
           </TouchableOpacity>
         </View>
       </View>
@@ -141,6 +144,9 @@ export default function HomeScreen({ navigation }) {
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <Pressable style={styles.overlay} onPress={() => setMenu(false)}>
           <Pressable style={styles.menu} onPress={() => {}}>
+            <View style={{ alignItems: 'center', marginBottom: 8 }}>
+              <UserPhoto userId={me?.user_id} version={me?.photo_version} name={me?.full_name || me?.username} size={64} />
+            </View>
             <Text style={styles.menuUser}>{me?.full_name || me?.username}</Text>
             <Text style={styles.menuRole}>{me?.role === 'ADMIN' ? 'Administrador' : 'Usuário'}</Text>
             <View style={styles.divider} />
@@ -171,7 +177,7 @@ export default function HomeScreen({ navigation }) {
       <PasswordDialog visible={changingPassword} onClose={() => setChangingPassword(false)} onChanged={logout} />
       <ServerDialog visible={showServer} onClose={() => setShowServer(false)} onChanged={signOut} />
       <WarehouseSelector
-        visible={picking || needsWarehouse} warehouses={warehouses} selected={warehouseId}
+        visible={!covered && (picking || needsWarehouse)} warehouses={warehouses} selected={warehouseId}
         onSelect={selectWarehouse} onClose={needsWarehouse ? undefined : () => setPicking(false)}
       />
     </SafeAreaView>
@@ -248,8 +254,7 @@ const styles = StyleSheet.create({
   bellIcon: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: 2, right: 0, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.buttonBg, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.onAccent, fontSize: 16, fontWeight: '800' },
+  avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   content: { padding: 16, paddingBottom: 32 },
   section: { fontSize: 11, fontWeight: '700', letterSpacing: 2, color: colors.textMuted, marginBottom: 10 },
   empty: { fontSize: 14, color: colors.textMuted, marginTop: 16 },

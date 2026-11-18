@@ -12,7 +12,7 @@ import { screenStyles } from '../theme/styles';
 // Armazenagem. Lists what waits in the receiving areas of every location
 // the user works in; the material goes to a shelf of any location (an
 // order received in the Expedição is stored in the SP12 or in the
-// Contêiner de Solda). The API applies the storage rules.
+// SP13). The API applies the storage rules.
 
 export default function ArmazenarScreen({ navigation }) {
   const [pending, setPending] = useState(null);

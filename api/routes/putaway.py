@@ -354,7 +354,7 @@ def confirm_putaway(validated):
         return denied
 
     # SEA: an order received in one location (Expedição) is stored in
-    # another (SP12, Contêiner de Solda). Only stock of an SEA order may
+    # another (SP12, SP13). Only stock of an SEA order may
     # change location here, and the user needs access to both. The move is
     # recorded in the destination, where the material ends up.
     warehouse_id = to_bin.warehouse_id

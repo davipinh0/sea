@@ -10,7 +10,7 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 // automatic address suggestion (whole order in one address, size class,
 // capacity, compatibility). Material is received in one location (the
 // Expedição has a single address) and stored in the shelves of another
-// (SP12, Contêiner de Solda), so the page lists what is waiting in every
+// (SP12, SP13), so the page lists what is waiting in every
 // location and offers the storage addresses of all of them. The operator
 // confirms or picks another address; the API re-validates every rule.
 

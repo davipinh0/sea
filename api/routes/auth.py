@@ -202,7 +202,7 @@ def me():
     row = g.db.execute(
         text(
             "SELECT user_id, username, full_name, role, warehouse_id, allowed_functions, "
-            "must_change_password FROM users WHERE user_id = :uid"
+            "must_change_password, photo_updated_at FROM users WHERE user_id = :uid"
         ),
         {"uid": user_id},
     ).fetchone()
@@ -258,6 +258,8 @@ def me():
         "allowed_overrides": allowed_overrides,
         "require_packing": require_packing,
         "must_change_password": bool(row.must_change_password),
+        # SEA: photo set by an administrator (None = no photo).
+        "photo_version": int(row.photo_updated_at.timestamp()) if row.photo_updated_at else None,
     })
 
 

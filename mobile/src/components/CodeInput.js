@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
     minHeight: 48, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center',
     backgroundColor: colors.copper, borderRadius: radii.button,
   },
-  camera: { backgroundColor: colors.textPrimary },
+  // Fixed dark grey: in the dark theme textPrimary is white, like the label.
+  camera: { backgroundColor: '#455A64' },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 12, letterSpacing: 0.5 },
   disabled: { opacity: 0.5 },
   note: { marginTop: 6, fontSize: 12, color: colors.danger },

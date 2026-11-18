@@ -9,7 +9,13 @@ describe('approvalSummary', () => {
       client: 'Chrome no Windows', client_ip: '200.1.2.3',
       created_at: new Date(2026, 10, 18, 10, 29).toISOString(), seconds_left: 95,
     }, now);
-    expect(info).toEqual({ client: 'Chrome no Windows', ip: '200.1.2.3', when: 'Hoje às 10:29', timeLeft: '1 min 35 s' });
+    expect(info).toEqual({
+      title: 'Você está entrando no SEA?', client: 'Chrome no Windows', ip: '200.1.2.3', when: 'Hoje às 10:29', timeLeft: '1 min 35 s',
+    });
+  });
+
+  it('names the process of the web panel waiting for the phone', () => {
+    expect(approvalSummary({ purpose: 'armazenagem', seconds_left: 60 }, now).title).toBe('Liberar Armazenagem no painel web?');
   });
 
   it('copes with missing data', () => {

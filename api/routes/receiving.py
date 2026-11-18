@@ -13,7 +13,7 @@ from constants import (
     POL_PENDING, POL_PARTIAL, POL_RECEIVED,
     ACTION_RECEIVE, ACTION_RECEIVE_CANCEL,
 )
-from middleware.auth_middleware import require_auth, warehouse_scope_clause
+from middleware.auth_middleware import require_auth, require_step_up, warehouse_scope_clause
 from middleware.db import with_db
 from schemas.receiving import CancelReceivingRequest, ReceiveItemsRequest
 from services import notification_service, sea_service
@@ -113,6 +113,7 @@ def lookup_po(barcode):
 
 @receiving_bp.route("/receive", methods=["POST"])
 @require_auth
+@require_step_up("recebimento")
 @validate_body(ReceiveItemsRequest)
 @with_db
 def receive_items(validated):

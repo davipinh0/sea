@@ -84,3 +84,20 @@ export function biometricError(result) {
       return 'Digital não reconhecida. Tente de novo ou use a senha.';
   }
 }
+
+// Why the identity check before a process (receive, store, withdrawal)
+// failed, in the operator's words; null when it succeeded.
+export function identityError(result) {
+  if (result?.success) return null;
+  switch (result?.error) {
+    case 'user_cancel':
+    case 'system_cancel':
+    case 'app_cancel':
+      return 'Confirmação cancelada. Confirme com a digital ou o PIN do celular para continuar.';
+    case 'passcode_not_set':
+    case 'not_enrolled':
+      return 'Ative a senha de tela (PIN ou padrão) do celular para usar este processo.';
+    default:
+      return biometricError(result) || 'Não foi possível confirmar. Tente de novo.';
+  }
+}

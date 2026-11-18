@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  biometricError, isLockSuspended, sameUser, shouldLock, suspendLock, unlockMode, withoutLock,
+  biometricError, identityError, isLockSuspended, sameUser, shouldLock, suspendLock, unlockMode, withoutLock,
 } from '../appLock';
 
 describe('shouldLock', () => {
@@ -82,5 +82,15 @@ describe('biometricError', () => {
   it('explains the other failures', () => {
     expect(biometricError({ success: false, error: 'lockout' })).toMatch(/Muitas tentativas/);
     expect(biometricError({ success: false, error: 'authentication_failed' })).toMatch(/não reconhecida/);
+  });
+});
+
+describe('identityError', () => {
+  it('lets the process go on only when confirmed', () => {
+    expect(identityError({ success: true })).toBeNull();
+    expect(identityError({ success: false, error: 'user_cancel' })).toMatch(/cancelada/);
+    expect(identityError({ success: false, error: 'passcode_not_set' })).toMatch(/PIN ou padrão/);
+    expect(identityError({ success: false, error: 'lockout' })).toMatch(/Muitas tentativas/);
+    expect(identityError(undefined)).toMatch(/Não foi possível/);
   });
 });

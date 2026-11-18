@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import client from '../api/client';
+import { confirmIdentity } from '../auth/confirmIdentity';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
@@ -43,7 +44,10 @@ export default function ArmazenarScreen({ navigation }) {
   // Not while a material is being stored: the form stays as it is.
   useAutoRefresh(load, { paused: !!active });
 
+  // Choosing where to store a material asks for the fingerprint or PIN.
   async function select(row) {
+    const problem = await confirmIdentity('Confirme para armazenar o material');
+    if (problem) { setMessage({ type: 'error', text: problem }); return; }
     setActive(row);
     setTarget(null);
     setSuggested(null);

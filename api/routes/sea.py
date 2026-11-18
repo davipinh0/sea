@@ -14,6 +14,7 @@ from middleware.auth_middleware import (
     require_admin_or_page_permission,
     require_auth,
     require_role,
+    require_step_up,
     warehouse_scope_clause,
 )
 from middleware.db import with_db
@@ -33,6 +34,7 @@ from schemas.sea import (
     UpdateOtMaterialRequest,
 )
 from services import login_approval
+from services import step_up
 from services import notification_service as notifications
 from services import sap_base
 from services import sea_service as sea
@@ -811,6 +813,7 @@ def interpretar_etiqueta(validated):
 
 @sea_bp.route("/recebimentos", methods=["POST"])
 @require_auth
+@require_step_up("recebimento")
 @require_any_page(*RECEIVING_PAGE_KEYS)
 @validate_body(RegisterOtRequest)
 @with_db
@@ -839,6 +842,7 @@ def registrar_recebimento(validated):
 
 @sea_bp.route("/recebimentos/base", methods=["POST"])
 @require_auth
+@require_step_up("recebimento")
 @require_any_page(*RECEIVING_PAGE_KEYS)
 @validate_body(RegisterFromBaseRequest)
 @with_db
@@ -1032,10 +1036,94 @@ def decidir_login(challenge_id, validated):
         return jsonify({"error": "Tentativa de login não encontrada.", "user_facing": True}), 404
     if status == login_approval.EXPIRED:
         return jsonify({"error": "O tempo para confirmar acabou.", "user_facing": True}), 410
-    write_audit_log(g.db, "LOGIN_APPROVED" if validated.approve else "LOGIN_DENIED", "USER",
-                    user_id, user_id, None, {"tentativa": challenge_id})
+    # mig 095: a process of the web panel is released for the session that asked.
+    purpose = step_up.on_decision(g.db, challenge_id)
+    if purpose:
+        action = "PROCESS_APPROVED" if validated.approve else "PROCESS_DENIED"
+        details = {"tentativa": challenge_id, "processo": step_up.label(purpose)}
+    else:
+        action = "LOGIN_APPROVED" if validated.approve else "LOGIN_DENIED"
+        details = {"tentativa": challenge_id}
+    write_audit_log(g.db, action, "USER", user_id, user_id, None, details)
     g.db.commit()
     return jsonify({"status": status})
+
+
+def _step_up_purpose(purpose):
+    if purpose not in step_up.PURPOSES:
+        return _user_error("Processo desconhecido", 404)
+    return None
+
+
+@sea_bp.route("/confirmacao/<purpose>", methods=["GET"])
+@require_auth
+@with_db
+def confirmacao_estado(purpose):
+    """mig 095: is this panel session released in ``purpose``?"""
+    bad = _step_up_purpose(purpose)
+    if bad:
+        return bad
+    if getattr(g, "auth_source", None) != "cookie":
+        return jsonify({"required": False, "granted": True, "seconds_left": None})
+    left = step_up.seconds_left(g.db, g.current_user.get("jti"), purpose)
+    return jsonify({
+        "required": True, "granted": left > 0, "seconds_left": left,
+        "has_phone": bool(login_approval.trusted_tokens(g.db, g.current_user["user_id"])),
+    })
+
+
+@sea_bp.route("/confirmacao/<purpose>", methods=["POST"])
+@require_auth
+@with_db
+def confirmacao_pedir(purpose):
+    """Send the request to release ``purpose`` to the user's phone."""
+    bad = _step_up_purpose(purpose)
+    if bad:
+        return bad
+    if getattr(g, "auth_source", None) != "cookie":
+        return _user_error("A confirmação pelo celular é só para o painel web.", 400)
+    user_id = g.current_user["user_id"]
+    user_agent = request.headers.get("User-Agent", "")
+    challenge_id = step_up.start(g.db, user_id, g.current_user.get("jti"), purpose,
+                                 request.remote_addr or "", user_agent)
+    if challenge_id is None:
+        return _user_error(
+            f"Para usar {step_up.label(purpose)} no painel, cadastre o app SEA no seu celular "
+            "(entre no app e ative o bloqueio com digital ou PIN).", 409)
+    write_audit_log(g.db, "PROCESS_APPROVAL_REQUESTED", "USER", user_id, user_id, None,
+                    {"processo": step_up.label(purpose), "ip": request.remote_addr})
+    g.db.commit()
+    client = login_approval.describe_client(user_agent)
+    notifications.send_login_approval_push(
+        g.db, user_id, challenge_id, client,
+        title=f"Liberar {step_up.label(purpose)} no painel",
+        body=f"{client} quer usar {step_up.label(purpose)} no painel web. Toque para confirmar.",
+    )
+    return jsonify({"challenge_id": challenge_id,
+                    "expires_in": login_approval.APPROVAL_TTL_SECONDS}), 202
+
+
+@sea_bp.route("/confirmacao/<purpose>/<challenge_id>", methods=["GET"])
+@require_auth
+@with_db
+def confirmacao_acompanhar(purpose, challenge_id):
+    """The panel follows its request: 202 pending, 200 released, 403
+    denied, 410 expired."""
+    bad = _step_up_purpose(purpose)
+    if bad:
+        return bad
+    state = step_up.status(g.db, challenge_id, g.current_user["user_id"], g.current_user.get("jti"))
+    if state is None:
+        return _user_error("Pedido de confirmação não encontrado.", 404)
+    status, left = state
+    if status == login_approval.PENDING:
+        return jsonify({"status": status, "expires_in": left}), 202
+    if status == login_approval.DENIED:
+        return _user_error("A liberação foi negada no celular.", 403)
+    if status == login_approval.APPROVED:
+        return jsonify({"status": status, "granted": True,
+                        "seconds_left": step_up.seconds_left(g.db, g.current_user.get("jti"), purpose)})
+    return _user_error("O tempo para confirmar acabou. Peça de novo.", 410)
 
 
 @sea_bp.route("/sap/importar/<kind>", methods=["POST"])
@@ -1455,6 +1543,7 @@ def _transition(withdrawal_id, fn, *args, message, own=False):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/separar", methods=["POST"])
 @require_auth
+@require_step_up("retirada")
 @require_admin_or_page_permission("retirada")
 @with_db
 def separar(withdrawal_id):
@@ -1465,6 +1554,7 @@ def separar(withdrawal_id):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/pronta", methods=["POST"])
 @require_auth
+@require_step_up("retirada")
 @require_admin_or_page_permission("retirada")
 @with_db
 def pronta(withdrawal_id):

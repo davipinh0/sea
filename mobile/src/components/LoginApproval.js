@@ -65,7 +65,8 @@ export default function LoginApproval() {
         return;
       }
       await client.post(`/api/sea/login/${current.challenge_id}/decidir`, { approve, device_token: deviceToken });
-      setMessage({ text: approve ? 'Login confirmado.' : 'Login negado. Se não foi você, troque a sua senha.' });
+      const done = current.purpose ? 'Processo liberado no painel.' : 'Login confirmado.';
+      setMessage({ text: approve ? done : 'Negado. Se não foi você, troque a sua senha.' });
       await load();
     } catch (err) {
       setMessage({ error: true, text: apiError(err, 'Não foi possível responder. Tente de novo.') });
@@ -81,7 +82,7 @@ export default function LoginApproval() {
       <Modal visible={!!current} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
         <View style={styles.overlay}>
           <View style={styles.card} accessibilityRole="alert">
-            <Text style={styles.title}>Você está entrando no SEA?</Text>
+            <Text style={styles.title}>{info?.title || 'Você está entrando no SEA?'}</Text>
             {info && (
               <>
                 <Text style={styles.line}>{info.client}</Text>

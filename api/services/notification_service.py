@@ -204,7 +204,8 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
 
 
 def send_login_approval_push(db, user_id: int, challenge_id: str, client: str,
-                             sender=_expo_send) -> int:
+                             sender=_expo_send, title: str | None = None,
+                             body: str | None = None) -> int:
     """Push to the user's registered phones: a login waits for confirmation.
 
     Sent even to a phone whose user left the app (signed_in = FALSE): the
@@ -219,8 +220,8 @@ def send_login_approval_push(db, user_id: int, challenge_id: str, client: str,
     if not tokens:
         return 0
     messages = [
-        {"to": token, "title": "Tentativa de login no SEA",
-         "body": f"{client} quer entrar na sua conta. Toque para confirmar ou negar.",
+        {"to": token, "title": title or "Tentativa de login no SEA",
+         "body": body or f"{client} quer entrar na sua conta. Toque para confirmar ou negar.",
          "sound": "default", "priority": "high", "channelId": "sea-avisos",
          "data": {"kind": "login_approval", "challenge_id": challenge_id}}
         for token in tokens

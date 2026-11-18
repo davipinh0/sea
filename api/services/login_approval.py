@@ -122,7 +122,7 @@ def pending_for_user(db, user_id: int) -> list[dict]:
     rows = db.execute(
         text(
             """
-            SELECT challenge_id, client_ip, user_agent, created_at,
+            SELECT challenge_id, client_ip, user_agent, created_at, purpose,
                    GREATEST(0, EXTRACT(EPOCH FROM expires_at - NOW()))::int AS seconds_left
             FROM sea_login_challenges
             WHERE user_id = :u AND status = 'PENDING' AND expires_at > NOW()
@@ -133,7 +133,9 @@ def pending_for_user(db, user_id: int) -> list[dict]:
     ).fetchall()
     return [
         {"challenge_id": str(r.challenge_id), "client_ip": r.client_ip, "user_agent": r.user_agent,
-         "created_at": r.created_at.isoformat(), "seconds_left": r.seconds_left}
+         "created_at": r.created_at.isoformat(), "seconds_left": r.seconds_left,
+         # mig 095: a process of the web panel instead of a login.
+         "purpose": r.purpose}
         for r in rows
     ]
 

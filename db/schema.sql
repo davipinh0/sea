@@ -2598,3 +2598,15 @@ CREATE TABLE IF NOT EXISTS sea_sessions (
 CREATE INDEX IF NOT EXISTS ix_sea_sessions_user ON sea_sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_sea_sessions_expires ON sea_sessions(expires_at);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS movements_cleared_at TIMESTAMPTZ;
+ALTER TABLE sea_login_challenges ADD COLUMN IF NOT EXISTS purpose VARCHAR(20)
+    CHECK (purpose IS NULL OR purpose IN ('recebimento', 'armazenagem', 'retirada'));
+ALTER TABLE sea_login_challenges ADD COLUMN IF NOT EXISTS session_jti UUID;
+
+CREATE TABLE IF NOT EXISTS sea_step_up (
+    jti           UUID NOT NULL REFERENCES sea_sessions(jti) ON DELETE CASCADE,
+    purpose       VARCHAR(20) NOT NULL
+                  CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada')),
+    granted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (jti, purpose)
+);

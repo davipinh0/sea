@@ -128,6 +128,9 @@ def require_auth(f):
         payload["allowed_functions"] = list(row.allowed_functions or [])
 
         g.current_user = payload
+        # SEA (mig 095): processes of the web panel (cookie) are released by
+        # the phone; Bearer clients (app, terminal) are not gated there.
+        g.auth_source = source
 
         # Forced password change: when the flag is set the user can only
         # hit change-password / logout / me. Everything else is 403 until
@@ -187,6 +190,39 @@ def require_auth(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+def require_step_up(purpose):
+    """SEA (mig 095): in the web panel (session in the cookie) the process
+    ``purpose`` must have been released on the user's registered phone.
+    Place after @require_auth. Bearer clients pass: the app confirms with
+    the fingerprint/PIN itself and the terminal only requests.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if getattr(g, "auth_source", None) != "cookie":
+                return f(*args, **kwargs)
+            from services import step_up
+            import models.database as _db
+            db = _db.SessionLocal()
+            try:
+                released = step_up.use(db, g.current_user.get("jti"), purpose)
+                db.commit()
+            finally:
+                db.close()
+            if not released:
+                return jsonify({
+                    "error": f"Confirme no app SEA do seu celular para usar {step_up.label(purpose)} "
+                             "no painel.",
+                    "step_up_required": purpose,
+                    "user_facing": True,
+                }), 403
+            return f(*args, **kwargs)
+
+        return decorated
+
+    return decorator
 
 
 def check_warehouse_access(warehouse_id):

@@ -41,6 +41,7 @@ from middleware.auth_middleware import (
     require_admin_or_page_permission,
     require_auth,
     require_role,
+    require_step_up,
 )
 from middleware.db import with_db
 from routes.admin import admin_bp
@@ -815,6 +816,7 @@ def list_po_receipts(po_id):
 
 @admin_bp.route("/receipts/<int:receipt_id>/unreceive", methods=["POST"])
 @require_auth
+@require_step_up("recebimento")
 @require_admin_or_page_permission("receiving")
 @with_db
 def unreceive_receipt(receipt_id):

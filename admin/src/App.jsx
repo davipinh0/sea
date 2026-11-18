@@ -18,6 +18,7 @@ import BaseSap from './pages/BaseSap.jsx';
 import ArmazenagemSP12 from './pages/ArmazenagemSP12.jsx';
 import PurchaseOrders from './pages/PurchaseOrders.jsx';
 import Retirada from './pages/Retirada.jsx';
+import ProcessGate from './components/ProcessGate.jsx';
 import TerminalRetirada from './pages/TerminalRetirada.jsx';
 import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
@@ -97,13 +98,13 @@ export default function App() {
         </Route>
 
         <Route path="/expedicao" element={page(<OnlyAtExpedicao><SectionTabs basePath="/expedicao" tabs={EXPEDICAO_TABS} /></OnlyAtExpedicao>, 'Não foi possível carregar a expedição.')}>
-          <Route path="recebimento" element={<RecebimentoOT />} />
-          <Route path="armazenagem" element={<ArmazenagemSP12 />} />
+          <Route path="recebimento" element={<ProcessGate purpose="recebimento" label="Recebimento"><RecebimentoOT /></ProcessGate>} />
+          <Route path="armazenagem" element={<ProcessGate purpose="armazenagem" label="Armazenagem"><ArmazenagemSP12 /></ProcessGate>} />
           <Route path="ots" element={<PurchaseOrders />} />
           <Route path="base-sap" element={<BaseSap />} />
         </Route>
 
-        <Route path="/retirada" element={page(<RequirePage pageKey="retirada"><Retirada /></RequirePage>, 'Não foi possível carregar a retirada.')} />
+        <Route path="/retirada" element={page(<RequirePage pageKey="retirada"><ProcessGate purpose="retirada" label="Retirada"><Retirada /></ProcessGate></RequirePage>, 'Não foi possível carregar a retirada.')} />
 
         <Route path="/users" element={page(<RequirePage pageKey="users"><Users /></RequirePage>, 'Não foi possível carregar os usuários.')} />
         <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />

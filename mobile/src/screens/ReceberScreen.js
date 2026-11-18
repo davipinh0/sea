@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import { confirmIdentity } from '../auth/confirmIdentity';
 import client from '../api/client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
@@ -80,9 +81,16 @@ export default function ReceberScreen({ navigation, route }) {
     }
   }, []);
 
+  // Opening an OT to receive asks for the fingerprint or the phone's PIN.
+  const openOt = useCallback(async (code) => {
+    const problem = await confirmIdentity('Confirme para receber a OT');
+    if (problem) { setMessage({ type: 'error', text: problem }); return; }
+    await load(code);
+  }, [load]);
+
   // Opened from a code read on the home screen.
   const initialCode = route?.params?.code;
-  useEffect(() => { if (initialCode) load(initialCode); }, [initialCode, load]);
+  useEffect(() => { if (initialCode) openOt(initialCode); }, [initialCode, openOt]);
 
   async function registerFromBase() {
     setBusy(true);
@@ -129,7 +137,7 @@ export default function ReceberScreen({ navigation, route }) {
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="RECEBER" onBack={() => navigation.goBack()} />
       <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
-        <CodeInput placeholder="Código de barras da OT" onSubmit={load} disabled={busy} buttonLabel="CONSULTAR" />
+        <CodeInput placeholder="Código de barras da OT" onSubmit={openOt} disabled={busy} buttonLabel="CONSULTAR" />
         <Message message={message} />
 
         {fromBase && (

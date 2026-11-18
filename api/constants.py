@@ -354,8 +354,12 @@ ALL_PAGE_KEYS = (
     # can CRUD + test-send destinations. Distinct from 'webhooks'
     # (signed-envelope HTTP subscribers).
     "webhooks", "notifications", "audit-log", "imports", "integrations", "settings",
-    # SEA: withdrawal queue + touchscreen terminal (Retirada).
+    # SEA: Retirada. "retirada" = request at the terminal and follow the
+    # own requests; "retirada-avaliar" = approve or deny the requests;
+    # "retirada-fazer" = accept an approved request and separate it (mig 096).
     "retirada",
+    "retirada-avaliar",
+    "retirada-fazer",
     # SEA: Sistema > Cadastro de materiais (create, change and delete the
     # materials consulted when an OT is put together).
     "material-catalog",

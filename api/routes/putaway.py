@@ -8,7 +8,7 @@ import uuid
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import bindparam, text
 
-from middleware.auth_middleware import require_auth, check_warehouse_access
+from middleware.auth_middleware import require_auth, require_step_up, check_warehouse_access
 from middleware.db import with_db
 from schemas.putaway import ConfirmPutawayRequest, UpdatePreferredRequest
 from services.audit_service import write_audit_log
@@ -317,6 +317,7 @@ def suggest_bin(item_id):
 
 @putaway_bp.route("/confirm", methods=["POST"])
 @require_auth
+@require_step_up("armazenagem")
 @validate_body(ConfirmPutawayRequest)
 @with_db
 def confirm_putaway(validated):

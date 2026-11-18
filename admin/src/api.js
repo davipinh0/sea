@@ -42,6 +42,15 @@ async function apiFetch(path, options = {}) {
   // ({error: "Permission denied", page_key: "..."}). Peek at the body
   // without consuming the stream (clone first) so the caller can
   // still .json() the response.
+  // SEA (mig 095): the phone release of a process ended; its gate closes.
+  if (res.status === 403) {
+    try {
+      const peek = await res.clone().json();
+      if (peek?.step_up_required) {
+        window.dispatchEvent(new CustomEvent('sea:step-up', { detail: { purpose: peek.step_up_required } }));
+      }
+    } catch { /* non-JSON 403 */ }
+  }
   if (res.status === 403 && !silentPermissionDenied) {
     try {
       const peek = await res.clone().json();

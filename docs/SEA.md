@@ -327,17 +327,23 @@ Testes específicos do SEA: `api/tests/test_sea.py`, `api/tests/test_sea_etiquet
 
 ## Hospedagem no Azure
 
-Uma VM Linux (Ubuntu 24.04, `Standard_B2s`, região Central US) roda o mesmo `docker compose`
-do ambiente local. Arquivos em `deploy/azure/`:
+Uma VM Linux (Ubuntu 24.04, 2 vCPU, 4 GB) roda o mesmo `docker compose` do ambiente local.
+Em produção: VM `SEA` (grupo `SEA_group`, East US), endereço
+`https://sea-expedicao.eastus.cloudapp.azure.com`, usuário de implantação `seaadmin`
+(chave `~/.ssh/sea_azure`). Arquivos em `deploy/azure/`:
 
 | Arquivo | Função |
 |---|---|
 | `provision.sh <rótulo>` | cria grupo `rg-sea`, VM `vm-sea`, IP com DNS `<rótulo>.centralus.cloudapp.azure.com` e firewall (80/443 abertas; SSH só do IP de quem provisionou) |
 | `cloud-init.yml` | prepara a VM: Docker, atualizações automáticas, 2 GB de troca, backup diário |
+| `prepare-vm.sh` | a mesma preparação para uma VM criada pelo portal: `ssh seaadmin@<domínio> 'sh -s' < deploy/azure/prepare-vm.sh` |
 | `deploy.sh <domínio> [dump]` | envia o último commit para a VM e sobe o sistema; com um `.dump`, restaura o banco |
 | `setup-server.sh` | na VM: cria o `.env` com senhas aleatórias (só na VM), aplica as migrações do SEA e sobe tudo |
 | `docker-compose.azure.yml` + `Caddyfile` | Caddy com HTTPS automático (Let's Encrypt) na frente da API e do painel |
 | `backup.sh` | `pg_dump` diário às 03:00 UTC em `/var/backups/sea`, guardando 14 dias |
 
 API, painel, banco, Redis e Mailpit só escutam no `127.0.0.1` da VM; a única entrada é o Caddy.
+Atualizar o sistema: `git commit` e `sh deploy/azure/deploy.sh sea-expedicao.eastus.cloudapp.azure.com`
+(sem o dump, o banco da VM é mantido). Se o IP deste PC mudar, a regra `ssh-admin` do
+grupo de segurança `SEA-nsg` precisa do IP novo.
 O Mailpit não entrega e-mail para fora: para e-mails reais, configure `SEA_SMTP_*` no `.env` da VM.

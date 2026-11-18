@@ -166,10 +166,21 @@ export function AuthProvider({ children }) {
   // The account password, checked by the server, also unlocks; the
   // session is renewed. A wrong password keeps the app locked (and the
   // session alive): the caller shows the error.
+  // Regression (mig 092): this login did not send the phone's token, so the
+  // registered phone itself was asked to confirm the login (202, no token),
+  // an empty token was saved and the app logged out.
   const unlockWithPassword = useCallback(async (password) => {
+    const deviceToken = await getDeviceToken();
     const resp = await client.post(
-      '/api/auth/login', { username: user?.username, password }, { keepSession: true },
+      '/api/auth/login',
+      { username: user?.username, password, ...(deviceToken ? { device_token: deviceToken } : {}) },
+      { keepSession: true },
     );
+    if (resp.status === 202 || !resp.data?.token) {
+      throw Object.assign(new Error('not trusted'), {
+        userMessage: 'Este celular não está cadastrado para confirmar logins. Desbloqueie com a digital ou o PIN do celular.',
+      });
+    }
     await setAuthItem('jwt_token', resp.data.token);
     await setAuthItem('login_timestamp', String(Date.now()));
     setLocked(false);

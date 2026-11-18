@@ -218,3 +218,41 @@ class TestPush:
         assert login_approval.describe_client("Mozilla/5.0 (Windows NT 10.0) Chrome/131 Edg/131") == "Edge no Windows"
         assert login_approval.describe_client("okhttp/4.12.0") == "App SEA"
         assert login_approval.describe_client("") == "Navegador"
+
+
+class TestLockedAppUnlockingWithThePassword:
+    """Regression: "Desbloquear com a senha" on the registered phone sent no
+    device token, got 202 and logged the app out (deadlock with the web)."""
+
+    def _unlock(self, client, username, headers):
+        return client.post("/api/auth/login", json={"username": username, "password": "Senha123"},
+                           headers=headers)
+
+    def test_the_open_app_session_unlocks_without_confirmation(self, client, _db_transaction):
+        _setup(client, _db_transaction, "sea.conf.desbloq")
+        phone = _phone(client, "sea.conf.desbloq")
+        resp = self._unlock(client, "sea.conf.desbloq", phone)
+        assert resp.status_code == 200 and resp.get_json()["token"]
+
+    def test_a_session_of_another_user_does_not_count(self, client, _db_transaction):
+        _setup(client, _db_transaction, "sea.conf.alvo")
+        _setup(client, _db_transaction, "sea.conf.intruso", flag=False, trusted=False)
+        other = _login(client, "sea.conf.intruso").get_json()["token"]
+        resp = self._unlock(client, "sea.conf.alvo", {"Authorization": f"Bearer {other}"})
+        assert resp.status_code == 202
+
+    def test_an_ended_session_does_not_count(self, client, _db_transaction):
+        _setup(client, _db_transaction, "sea.conf.encerrada")
+        phone = _phone(client, "sea.conf.encerrada")
+        assert client.post("/api/auth/logout", json={}, headers=phone).status_code == 200
+        assert self._unlock(client, "sea.conf.encerrada", phone).status_code == 202
+
+    def test_the_audit_says_whether_the_app_sent_its_device(self, client, _db_transaction):
+        uid = _setup(client, _db_transaction, "sea.conf.audit")
+        _login(client, "sea.conf.audit", OTHER)
+        details = _db_transaction.execute(
+            text("SELECT details FROM audit_log WHERE action_type = 'LOGIN_APPROVAL_REQUESTED' "
+                 "AND entity_id = :u ORDER BY log_id DESC LIMIT 1"),
+            {"u": uid},
+        ).scalar()
+        assert details["aparelho_informado"] is True

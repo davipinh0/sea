@@ -288,6 +288,11 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   recusa. O painel/terminal acompanha em `POST /api/auth/login/aprovacao` com um segredo que só ele tem;
   aprovada, a sessão abre uma única vez. Prazo: 2 minutos.
 - O login no próprio celular cadastrado não pede confirmação (o app envia o token do aparelho).
+- Desbloquear o app com a senha do SEA também não pede confirmação: o app já tem a sessão aberta do
+  mesmo usuário (vale mesmo para o APK 16).
+- Se o único celular cadastrado não conseguir entrar, outro administrador desliga o parâmetro do
+  usuário ou remove os celulares dele. A auditoria "Login aguardando o celular" mostra se o app
+  informou o aparelho (`aparelho_informado`).
 - Sem celular cadastrado, o login segue só com a senha mesmo com o parâmetro ligado.
 - Auditoria: "Login aguardando o celular", "Login confirmado/negado no celular", mudança do parâmetro e
   remoção de celulares. Reinstalar o app troca o token do aparelho: se o celular antigo era o único

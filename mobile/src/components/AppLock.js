@@ -182,7 +182,8 @@ function Unlock() {
       await unlockWithPassword(password);
     } catch (err) {
       setPassword('');
-      if (err.response?.status === 401) setError('Senha incorreta.');
+      if (err.userMessage) setError(err.userMessage);
+      else if (err.response?.status === 401) setError('Senha incorreta.');
       else if (err.response?.status === 429) setError('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
       else setError(apiError(err, 'Não foi possível conferir a senha.'));
     } finally {

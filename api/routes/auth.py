@@ -167,8 +167,9 @@ def login(validated):
 
     # SEA (mig 092): the password is right, but the session waits for the
     # user to confirm on the registered phone.
-    if login_approval.approval_required(g.db, user["user_id"], validated.device_token):
-        return _start_login_approval(user)
+    if (login_approval.approval_required(g.db, user["user_id"], validated.device_token)
+            and not _holds_open_session(user["user_id"])):
+        return _start_login_approval(user, device_token_sent=bool(validated.device_token))
 
     token = _open_session(user)
     g.db.commit()
@@ -186,13 +187,30 @@ def _open_session(user):
         g.db, user, request.remote_addr or "", request.headers.get("User-Agent", ""))
 
 
-def _start_login_approval(user):
+def _holds_open_session(user_id) -> bool:
+    """The caller already has an open session of this user (Bearer header).
+
+    The locked app re-checking the password sends its own session along:
+    asking the phone to confirm itself would only lock the user out
+    (regression of mig 092 on the app's "Desbloquear com a senha").
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return False
+    payload = decode_token(auth_header.split(" ", 1)[1])
+    if payload is None or payload.get("user_id") != user_id:
+        return False
+    return web_sessions.check(g.db, payload.get("jti"), web=False) is None
+
+
+def _start_login_approval(user, device_token_sent=False):
     user_agent = request.headers.get("User-Agent", "")
     client = login_approval.describe_client(user_agent)
     challenge_id, secret = login_approval.create_challenge(
         g.db, user["user_id"], request.remote_addr or "", user_agent)
     write_audit_log(g.db, "LOGIN_APPROVAL_REQUESTED", "USER", user["user_id"], user["user_id"], None,
-                    {"origem": client, "ip": request.remote_addr})
+                    {"origem": client, "ip": request.remote_addr,
+                     "aparelho_informado": device_token_sent})
     g.db.commit()
     notification_service.send_login_approval_push(g.db, user["user_id"], challenge_id, client)
     return jsonify({
@@ -266,10 +284,15 @@ def logout():
     response = jsonify({"message": "sessão encerrada"})
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        payload = decode_token(auth_header.split(" ", 1)[1])
+        bearer = auth_header.split(" ", 1)[1]
+        payload = decode_token(bearer)
         if payload is not None:
             web_sessions.end(g.db, payload.get("jti"), web_sessions.LOGOUT)
             g.db.commit()
+        # The app may also keep the login cookies (same token): drop them.
+        if request.cookies.get(AUTH_COOKIE_NAME) == bearer:
+            clear_auth_cookies(response)
+        return response
     auth_cookie = request.cookies.get(AUTH_COOKIE_NAME)
     if not auth_cookie:
         return response

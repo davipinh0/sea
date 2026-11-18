@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { colors, fonts, radii } from '../theme/styles';
+import { withoutLock } from '../auth/appLock';
 
 // Code entry for a phone: type the code or read the barcode with the
 // camera. ``onSubmit(code)`` receives the trimmed code.
@@ -27,7 +28,8 @@ export default function CodeInput({ placeholder, onSubmit, disabled = false, aut
   async function openCamera() {
     setCameraNote('');
     let granted = permission?.granted;
-    if (!granted) granted = (await requestPermission())?.granted;
+    // The permission window puts the app in the background: no lock for it.
+    if (!granted) granted = (await withoutLock(requestPermission))?.granted;
     if (!granted) {
       setCameraNote('Sem permissão para usar a câmera. Libere nas configurações do aparelho ou digite o código.');
       return;

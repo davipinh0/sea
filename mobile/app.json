@@ -22,14 +22,16 @@
         "backgroundColor": "#F26522"
       },
       "package": "br.sea.prototipo",
-      "versionCode": 13,
+      "versionCode": 14,
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",
         "VIBRATE",
         "CAMERA",
         "android.permission.CAMERA",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
       ]
     },
     "plugins": [
@@ -51,6 +53,12 @@
           "sounds": [
             "./assets/sea_aviso.wav"
           ]
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "O SEA usa o Face ID para desbloquear o app."
         }
       ]
     ],

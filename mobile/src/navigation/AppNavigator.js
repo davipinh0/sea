@@ -20,6 +20,7 @@ import EstoqueScreen from '../screens/EstoqueScreen';
 import OrdensScreen from '../screens/OrdensScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import { onNotificationTap, registerDevice, startPolling } from '../notifications';
+import AppLock from '../components/AppLock';
 
 const Stack = createNativeStackNavigator();
 
@@ -72,7 +73,10 @@ export default function AppNavigator() {
     return null; // Splash screen stays visible
   }
 
+  // AppLock covers the screens (lock / fingerprint registration) without
+  // unmounting them, so whatever was in progress survives the lock.
   return (
+    <>
     <NavigationContainer ref={navigation}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
@@ -99,5 +103,7 @@ export default function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    <AppLock />
+    </>
   );
 }

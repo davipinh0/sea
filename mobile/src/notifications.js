@@ -2,6 +2,7 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { withoutLock } from './auth/appLock';
 import client from './api/client';
 
 // SEA notifications on the phone (withdrawal requested, materials
@@ -54,7 +55,8 @@ async function allowed() {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
-  return (await Notifications.requestPermissionsAsync()).granted;
+  // The permission window puts the app in the background: no lock for it.
+  return (await withoutLock(() => Notifications.requestPermissionsAsync())).granted;
 }
 
 // Register this phone to receive notifications while the app is closed.

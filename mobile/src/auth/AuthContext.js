@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import client, { setLogoutHandler, initApiUrl } from '../api/client';
+import { BIOMETRIC_USER_KEY, sameUser, shouldLock, withoutLock } from './appLock';
 import {
   clearAllAuth,
   getAuthItem,
@@ -12,14 +14,38 @@ const AuthContext = createContext(null);
 
 const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;
 
+// The browser build (only for checking screens on a computer) has no
+// fingerprint sensor nor background: it does not lock.
+const LOCK_SUPPORTED = Platform.OS !== 'web';
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [warehouseId, setWarehouseId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const appState = useRef(AppState.currentState);
+  // App lock (see appLock.js): ``locked`` covers the screens with the lock
+  // screen; ``needsEnrollment`` asks for the fingerprint after the first
+  // password login of this user on this phone.
+  const [locked, setLocked] = useState(false);
+  const [needsEnrollment, setNeedsEnrollment] = useState(false);
+  const lockEnabled = useRef(false);
+
+  // After a session starts (password login or reopening the app): lock
+  // from now on when this user already registered the fingerprint here,
+  // otherwise ask to register it.
+  const startLock = useCallback(async (username, { lockNow }) => {
+    if (!LOCK_SUPPORTED) return;
+    const registered = sameUser(await getAuthItem(BIOMETRIC_USER_KEY), username);
+    lockEnabled.current = registered;
+    setNeedsEnrollment(!registered);
+    setLocked(registered && lockNow);
+  }, []);
 
   const logout = useCallback(async () => {
     await clearAllAuth();
+    lockEnabled.current = false;
+    setLocked(false);
+    setNeedsEnrollment(false);
     setUser(null);
     setWarehouseId(null);
   }, []);
@@ -54,7 +80,10 @@ export function AuthProvider({ children }) {
         const userData = await getAuthItem('user_data');
         const wId = await getAuthItem('warehouse_id');
         if (token && userData) {
-          setUser(JSON.parse(userData));
+          const saved = JSON.parse(userData);
+          // Reopening the app with a session: it opens locked.
+          await startLock(saved.username, { lockNow: true });
+          setUser(saved);
           setWarehouseId(wId ? parseInt(wId, 10) : null);
         }
       } catch {
@@ -70,6 +99,7 @@ export function AuthProvider({ children }) {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         checkSession();
       }
+      if (shouldLock(nextState, { enabled: lockEnabled.current })) setLocked(true);
       appState.current = nextState;
     });
     return () => sub.remove();
@@ -84,9 +114,51 @@ export function AuthProvider({ children }) {
     // the navigator can enforce forced-mode on rehydrate.
     await setAuthItem('user_data', JSON.stringify(userData));
     await setAuthItem('login_timestamp', String(Date.now()));
+    // The password was just typed: no lock now, but the fingerprint is
+    // asked for when this user has not registered it on this phone.
+    await startLock(userData.username, { lockNow: false });
     setUser(userData);
     // warehouseId stays null - HomeScreen will prompt for selection
   };
+
+  // Registers the fingerprint of the logged-in user on this phone. With
+  // ``passwordOnly`` (phone without a sensor) the lock uses the password.
+  const enrollFingerprint = useCallback(async ({ passwordOnly = false } = {}) => {
+    if (!passwordOnly) {
+      const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+        promptMessage: 'Cadastrar a digital no SEA',
+        cancelLabel: 'Cancelar',
+        disableDeviceFallback: true,
+      }));
+      if (!result.success) return result;
+    }
+    await setAuthItem(BIOMETRIC_USER_KEY, user?.username || '');
+    lockEnabled.current = true;
+    setNeedsEnrollment(false);
+    return { success: true };
+  }, [user]);
+
+  const unlockWithFingerprint = useCallback(async () => {
+    const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+      promptMessage: 'Desbloquear o SEA',
+      cancelLabel: 'Usar senha',
+      disableDeviceFallback: true,
+    }));
+    if (result.success) setLocked(false);
+    return result;
+  }, []);
+
+  // The account password, checked by the server, also unlocks; the
+  // session is renewed. A wrong password keeps the app locked (and the
+  // session alive): the caller shows the error.
+  const unlockWithPassword = useCallback(async (password) => {
+    const resp = await client.post(
+      '/api/auth/login', { username: user?.username, password }, { keepSession: true },
+    );
+    await setAuthItem('jwt_token', resp.data.token);
+    await setAuthItem('login_timestamp', String(Date.now()));
+    setLocked(false);
+  }, [user]);
 
   const switchWarehouse = async (newWarehouseId) => {
     // The screen changes at once; saving the choice follows.
@@ -118,6 +190,11 @@ export function AuthProvider({ children }) {
         logout,
         switchWarehouse,
         completePasswordChange,
+        locked,
+        needsEnrollment,
+        enrollFingerprint,
+        unlockWithFingerprint,
+        unlockWithPassword,
       }}
     >
       {children}

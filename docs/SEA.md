@@ -260,6 +260,18 @@ Além desses, o app tem **Estoque** (o que há em cada endereço), **Ordens** (c
 materiais) e **Notificações**. As telas se atualizam sozinhas e o layout se ajusta à tela do
 aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` gera as imagens).
 
+**Bloqueio por digital** (`mobile/src/auth/appLock.js`, `mobile/src/components/AppLock.js`):
+
+- No primeiro login com senha de um usuário naquele celular, o app pede o cadastro da digital
+  (obrigatório; sem digital cadastrada no aparelho, leva às configurações; sem leitor, o bloqueio
+  usa a senha). Entrar com outro usuário no mesmo celular pede um novo cadastro.
+- Ao ir para segundo plano ou ser fechado, o app bloqueia. A tela de bloqueio cobre as telas sem
+  desmontá-las: o que estava em andamento (tela, códigos lidos, quantidades) continua após o
+  desbloqueio. Janelas de permissão do próprio app (câmera, notificações) não bloqueiam.
+- Desbloqueio pela digital ou pela senha da conta (conferida no servidor; senha errada mantém o
+  bloqueio sem encerrar a sessão). "Sair da conta" encerra a sessão.
+- A sessão continua expirando em 8 horas; depois disso o login volta a ser com senha.
+
 **Servidor no app.** O endereço do servidor não aparece em nenhuma tela. Só um administrador o
 altera (tela de login > "Servidor (administrador)" ou menu do usuário > Servidor), confirmando com
 usuário e senha válidos no novo endereço. O APK já sai com o endereço de `eas.json`

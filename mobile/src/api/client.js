@@ -105,7 +105,9 @@ async function request(method, path, body, requestOptions = {}) {
     }
   }
 
-  if (response.status === 401 && logoutHandler) {
+  // keepSession: a wrong password typed on the lock screen answers 401,
+  // which must not end the session (and lose what was in progress).
+  if (response.status === 401 && logoutHandler && !requestOptions.keepSession) {
     await logoutHandler();
   }
 

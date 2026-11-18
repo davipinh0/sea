@@ -1,0 +1,44 @@
+# SEA na VM do Azure. Usado junto com o compose principal:
+#   docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d
+#
+# O Caddy é a única porta aberta (80/443): obtém e renova o certificado
+# HTTPS sozinho (Let's Encrypt) e entrega /api à API e o resto ao painel.
+# API, painel, banco, Redis e Mailpit ficam presos ao 127.0.0.1 da VM.
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: sea-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SEA_DOMAIN: ${SEA_DOMAIN:?Set SEA_DOMAIN in .env}
+    volumes:
+      - ./deploy/azure/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - admin
+
+  db:
+    restart: unless-stopped
+
+  api:
+    restart: unless-stopped
+    environment:
+      # O Caddy, na mesma rede interna, informa o HTTPS e o IP real.
+      TRUST_PROXY: "true"
+      CORS_ORIGINS: https://${SEA_DOMAIN}
+
+  admin:
+    restart: unless-stopped
+
+  celery-worker:
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

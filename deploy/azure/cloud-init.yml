@@ -1,0 +1,24 @@
+#cloud-config
+# Preparação da VM do SEA (Ubuntu 24.04): Docker, atualizações de
+# segurança automáticas, memória de troca e backup diário do banco.
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - unattended-upgrades
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker seaadmin
+  - systemctl enable --now docker
+  # 2 GB de troca: a B2s tem 4 GB e a compilação das imagens consome memória.
+  - fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - mkdir -p /opt/sea /var/backups/sea
+  - chown seaadmin:seaadmin /opt/sea /var/backups/sea
+write_files:
+  # Backup diário às 03:00 (horário da VM, UTC), guardando 14 dias.
+  - path: /etc/cron.d/sea-backup
+    permissions: "0644"
+    content: |
+      0 3 * * * seaadmin /opt/sea/deploy/azure/backup.sh >> /var/backups/sea/backup.log 2>&1

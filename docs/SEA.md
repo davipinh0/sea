@@ -324,3 +324,20 @@ docker run --rm -v "$PWD/mobile:/app" -v sea_mobile_nm:/app/node_modules -w /app
 
 Testes específicos do SEA: `api/tests/test_sea.py`, `api/tests/test_sea_etiqueta.py`,
 `api/tests/test_sea_notificacoes.py` e `admin/src/test/sea.test.jsx`.
+
+## Hospedagem no Azure
+
+Uma VM Linux (Ubuntu 24.04, `Standard_B2s`, região Central US) roda o mesmo `docker compose`
+do ambiente local. Arquivos em `deploy/azure/`:
+
+| Arquivo | Função |
+|---|---|
+| `provision.sh <rótulo>` | cria grupo `rg-sea`, VM `vm-sea`, IP com DNS `<rótulo>.centralus.cloudapp.azure.com` e firewall (80/443 abertas; SSH só do IP de quem provisionou) |
+| `cloud-init.yml` | prepara a VM: Docker, atualizações automáticas, 2 GB de troca, backup diário |
+| `deploy.sh <domínio> [dump]` | envia o último commit para a VM e sobe o sistema; com um `.dump`, restaura o banco |
+| `setup-server.sh` | na VM: cria o `.env` com senhas aleatórias (só na VM), aplica as migrações do SEA e sobe tudo |
+| `docker-compose.azure.yml` + `Caddyfile` | Caddy com HTTPS automático (Let's Encrypt) na frente da API e do painel |
+| `backup.sh` | `pg_dump` diário às 03:00 UTC em `/var/backups/sea`, guardando 14 dias |
+
+API, painel, banco, Redis e Mailpit só escutam no `127.0.0.1` da VM; a única entrada é o Caddy.
+O Mailpit não entrega e-mail para fora: para e-mails reais, configure `SEA_SMTP_*` no `.env` da VM.

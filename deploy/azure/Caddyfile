@@ -1,0 +1,20 @@
+# HTTPS do SEA. {$SEA_DOMAIN} vem do .env da VM
+# (ex.: sea-davi.centralus.cloudapp.azure.com).
+{$SEA_DOMAIN} {
+	encode gzip
+
+	# API direto (painel web e app do celular).
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+
+	# Painel web.
+	handle {
+		reverse_proxy admin:8080
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

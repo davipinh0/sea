@@ -19,6 +19,7 @@ from services.cookie_auth import (
     csrf_token_matches,
 )
 from services import token_cache
+from services import web_sessions
 
 # v1.5.1 V-209 (#149): dedicated logger so operators can dial up
 # DEBUG to recover the specific auth failure mode (missing, unknown
@@ -96,11 +97,21 @@ def require_auth(f):
                     {"uid": payload["user_id"]},
                 ).fetchall()
                 allowed_pages = [r.page_key for r in page_rows]
+            # SEA (mig 093): the session must still be open on the server
+            # ("Sair" ends it) and, for the web panel, recently used.
+            session_problem = (
+                web_sessions.check(db, payload.get("jti"), web=source == "cookie")
+                if row and row.is_active else None
+            )
         finally:
             db.close()
 
         if not row or not row.is_active:
             return jsonify({"error": "Unauthorized"}), 401
+        if session_problem == "idle":
+            return jsonify({"error": "Sessão encerrada por inatividade"}), 401
+        if session_problem:
+            return jsonify({"error": "Sessão encerrada"}), 401
 
         # Reject tokens issued before the last password change
         if row.password_changed_at and payload.get("iat"):

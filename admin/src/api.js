@@ -1,3 +1,5 @@
+import { IDLE_MESSAGE, setLoginFlash } from './utils/sessionGuard.js';
+
 const API_BASE = '/api';
 
 function getCsrfToken() {
@@ -26,6 +28,11 @@ async function apiFetch(path, options = {}) {
     credentials: 'include',
   });
   if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/me')) {
+    // SEA (mig 093): tell the login screen why the session ended.
+    try {
+      const body = await res.clone().json();
+      if (/inatividade/i.test(body?.error || '')) setLoginFlash(IDLE_MESSAGE);
+    } catch { /* non-JSON 401 */ }
     window.location.href = '/login';
     return;
   }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { terminalApi, terminalLogin } from '../terminalApi.js';
+import { terminalApi, terminalLogin, terminalLogout } from '../terminalApi.js';
+import { watchIdle } from '../utils/sessionGuard.js';
 import SeaLogo from '../components/SeaLogo.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
 import { formatQuantity, readError } from '../utils/sea.js';
@@ -23,6 +24,10 @@ import { formatQuantity, readError } from '../utils/sea.js';
 
 const POLL_MS = 3000;
 const RESET_AFTER_MS = 12000;
+// SEA (mig 093): an employee who walks away before asking for material
+// is signed out, so the next person cannot act in their name.
+export const TERMINAL_IDLE_MS = 2 * 60 * 1000;
+const IDLE_STEPS = new Set(['ot', 'materials']);
 
 // A material kept in KG with a box weight goes box by box: each press adds
 // the weight of one box (0 > 18 KG > 36 KG). Everything else goes unit by
@@ -63,11 +68,18 @@ export default function TerminalRetirada() {
   }, []);
 
   // End the session: the next employee always starts at the login.
+  // The session also ends on the server (mig 093).
   const signOut = useCallback(() => {
+    if (token) terminalLogout(token);
     clearRequest();
     setEmployee(null); setToken(null); setIdentifier(''); setPassword('');
     setStep('login');
-  }, [clearRequest]);
+  }, [clearRequest, token]);
+
+  useEffect(() => {
+    if (!IDLE_STEPS.has(step)) return undefined;
+    return watchIdle({ onIdle: signOut, limitMs: TERMINAL_IDLE_MS, checkMs: 5000 });
+  }, [step, signOut]);
 
   // 0 -> 1: corporate login.
   async function signIn(e) {

@@ -22,7 +22,7 @@
         "backgroundColor": "#F26522"
       },
       "package": "br.sea.prototipo",
-      "versionCode": 16,
+      "versionCode": 17,
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",

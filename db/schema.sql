@@ -2583,3 +2583,17 @@ CREATE TABLE IF NOT EXISTS sea_login_challenges (
 );
 CREATE INDEX IF NOT EXISTS ix_sea_login_challenges_user
     ON sea_login_challenges(user_id, status, expires_at);
+CREATE TABLE IF NOT EXISTS sea_sessions (
+    jti           UUID PRIMARY KEY,
+    user_id       INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    client_ip     VARCHAR(64),
+    user_agent    VARCHAR(300),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at    TIMESTAMPTZ NOT NULL,
+    ended_at      TIMESTAMPTZ,
+    end_reason    VARCHAR(20)
+                  CHECK (end_reason IN ('LOGOUT', 'IDLE', 'REFRESH'))
+);
+CREATE INDEX IF NOT EXISTS ix_sea_sessions_user ON sea_sessions(user_id);
+CREATE INDEX IF NOT EXISTS ix_sea_sessions_expires ON sea_sessions(expires_at);

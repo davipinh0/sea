@@ -293,6 +293,22 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   remoção de celulares. Reinstalar o app troca o token do aparelho: se o celular antigo era o único
   cadastrado, um administrador remove os celulares do usuário e ele cadastra de novo.
 
+**Sessão do painel web** (migração `093`, `api/services/web_sessions.py`,
+`admin/src/utils/sessionGuard.js`):
+
+- Cada login abre uma sessão registrada no servidor (`sea_sessions`, pelo `jti` do token). **Sair**
+  encerra a sessão no servidor: uma cópia do cookie ou do token deixa de valer na hora. Vale também
+  para o terminal de retirada e para o app.
+- O cookie do painel é de sessão do navegador: fechar o navegador apaga o cookie.
+- A sessão pertence à aba que fez o login. Uma aba nova, o navegador reaberto ou uma aba
+  restaurada só continua logada se outra aba do painel estiver aberta; senão a sessão é encerrada
+  e aparece o login. Sair em uma aba tira todas as abas do painel.
+- Inatividade: 15 minutos sem usar mouse/teclado no painel encerram a sessão ("Sua sessão foi
+  encerrada por inatividade"). O servidor também encerra a sessão do painel que fica 15 minutos sem
+  nenhuma requisição (por exemplo, navegador fechado); ajuste com `SEA_WEB_IDLE_MINUTES`.
+- O app não sai por inatividade: ele tem o bloqueio por digital/PIN. O terminal de retirada volta
+  ao login após 2 minutos sem uso enquanto o funcionário ainda não pediu material.
+
 **Foto do usuário** (migração `091`): só o administrador coloca, troca ou remove, em
 Sistema > Usuários (editar o usuário). O painel corta a foto em quadrado e reduz para 256 px (JPEG)
 antes de enviar; a API aceita só JPG, PNG ou WEBP (conferido pelo conteúdo) de até 1 MB e registra a

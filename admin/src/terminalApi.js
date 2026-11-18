@@ -43,6 +43,12 @@ export async function terminalLogin(identifier, password, { onWaiting, isCancell
   return { token, user: await me.json() };
 }
 
+// Ends the terminal session on the server (mig 093). Best effort: the
+// screen is reset either way and an unused session dies with the token.
+export function terminalLogout(token) {
+  return send('/auth/logout', { method: 'POST', token }).catch(() => null);
+}
+
 export function terminalApi(token) {
   return {
     get: (path) => send(path, { token }),

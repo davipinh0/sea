@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from './api.js';
 import { friendlyError } from './utils/friendlyError.js';
+import {
+  IDLE_MESSAGE, announceLogout, askOtherTabs, clearTabSession, hasTabSession,
+  listenOtherTabs, markTabSession, setLoginFlash, watchIdle,
+} from './utils/sessionGuard.js';
 
 const AuthContext = createContext(null);
 
@@ -17,19 +21,57 @@ export function AuthProvider({ children }) {
     // identity (gated per page via user_page_permissions). The previous
     // role === 'ADMIN' guard would silently drop a valid USER session
     // and force them back to the login screen.
+    //
+    // SEA (mig 093): the session belongs to the tab that signed in. A new
+    // tab, a reopened browser or a restored tab only keeps it when another
+    // open panel tab vouches for it; otherwise it is ended here.
     let cancelled = false;
-    api.get('/auth/me').then(async (res) => {
-      if (cancelled) return;
-      if (res && res.ok) {
+    (async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if (cancelled || !res || !res.ok) return;
         const data = await res.json();
+        if (!hasTabSession() && !(await askOtherTabs())) {
+          await api.post('/auth/logout', {});
+          return;
+        }
+        if (cancelled) return;
+        markTabSession();
         setUser(data);
+      } catch {
+        // Network failure: stay on the login screen.
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
+    })();
     return () => { cancelled = true; };
   }, []);
+
+  // A page restored from the browser's back/forward cache keeps the old
+  // screen in memory: reload so the session is checked again.
+  useEffect(() => {
+    const onShow = (event) => { if (event.persisted) window.location.reload(); };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
+  // While signed in: answer other tabs, follow their "Sair", and end the
+  // session after IDLE_LIMIT_MS without use.
+  useEffect(() => {
+    if (!user) return undefined;
+    const stopTabs = listenOtherTabs({
+      onLogout: () => { clearTabSession(); setUser(null); },
+    });
+    const stopIdle = watchIdle({
+      onIdle: async () => {
+        setLoginFlash(IDLE_MESSAGE);
+        await endSession();
+        window.location.replace('/login');
+      },
+      onKeepAlive: () => { api.get('/auth/me').catch(() => {}); },
+    });
+    return () => { stopTabs(); stopIdle(); };
+  }, [user]);
 
   // Re-fetch /auth/me. Used after change-password to pick up the cleared
   // must_change_password flag so the router guard lets the user out of
@@ -71,13 +113,25 @@ export function AuthProvider({ children }) {
     // was reloaded.
     const me = await api.get('/auth/me');
     const full = me && me.ok ? await me.json() : data.user;
+    markTabSession();
     setUser(full);
     return full;
   }
 
-  async function logout() {
+  // Ends the session on the server and in every open panel tab.
+  async function endSession() {
+    clearTabSession();
+    announceLogout();
     try {
       await api.post('/auth/logout', {});
+    } catch {
+      // Offline: the server still ends the session when it goes idle.
+    }
+  }
+
+  async function logout() {
+    try {
+      await endSession();
     } finally {
       setUser(null);
     }

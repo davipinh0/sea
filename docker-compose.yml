@@ -95,6 +95,8 @@ services:
       SEA_SMTP_SECURITY: ${SEA_SMTP_SECURITY:-none}
       # SEA: avisos no celular com o app fechado (vazio = desligado; expo = liga).
       SEA_PUSH: ${SEA_PUSH:-}
+      # SEA (mig 093): minutos sem uso até o painel web pedir login de novo.
+      SEA_WEB_IDLE_MINUTES: ${SEA_WEB_IDLE_MINUTES:-15}
       # SEA: identificação do funcionário (local = usuários do SEA).
       SEA_IDENTITY_PROVIDER: ${SEA_IDENTITY_PROVIDER:-local}
       # SEA: onde o recebimento procura a OT (base = base do SAP no SEA).

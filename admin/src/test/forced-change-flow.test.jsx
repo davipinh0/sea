@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../auth.jsx';
+import { markTabSession } from '../utils/sessionGuard.js';
 import { WarehouseProvider } from '../warehouse.jsx';
 import App from '../App.jsx';
 
@@ -79,6 +80,9 @@ function mount(initialPath = '/') {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  // These tests start in the tab that signed in (mig 093: a fresh tab
+  // without this mark ends the session; see sea-sessao.test.jsx).
+  markTabSession();
   document.cookie.split(';').forEach((c) => {
     const name = c.split('=')[0].trim();
     if (name) document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;

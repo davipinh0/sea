@@ -27,9 +27,11 @@ vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
 // The terminal has its own session (terminalApi.js); its requests are
 // routed to the same mocks, tagged with the token they were made with.
 const terminalLogin = vi.fn();
+const terminalLogout = vi.fn();
 const terminalTokens = [];
 vi.mock('../terminalApi.js', () => ({
   terminalLogin: (...a) => terminalLogin(...a),
+  terminalLogout: (...a) => terminalLogout(...a),
   terminalApi: (token) => ({
     get: (path) => { terminalTokens.push(token); return apiGet(path); },
     post: (path, body) => { terminalTokens.push(token); return apiPost(path, body); },
@@ -40,7 +42,7 @@ const TERMINAL_USER = { username: 'retirada', full_name: 'Usuário de Retirada',
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const fail = (status, body) => Promise.resolve({ ok: false, status, json: () => Promise.resolve(body) });
 
-import TerminalRetirada from '../pages/TerminalRetirada.jsx';
+import TerminalRetirada, { TERMINAL_IDLE_MS } from '../pages/TerminalRetirada.jsx';
 import Retirada from '../pages/Retirada.jsx';
 import Items from '../pages/Items.jsx';
 import ArmazenagemSP12 from '../pages/ArmazenagemSP12.jsx';
@@ -67,6 +69,7 @@ beforeEach(() => {
   apiPost.mockReset();
   terminalLogin.mockReset().mockResolvedValue({ token: 'tok-terminal', user: TERMINAL_USER });
   terminalTokens.length = 0;
+  terminalLogout.mockReset().mockResolvedValue(null);
   warehouseList = [];
   currentUser = { username: 'terminal', full_name: 'Terminal SP12', role: 'USER', allowed_pages: ['retirada'] };
 });
@@ -126,7 +129,21 @@ describe('Terminal de retirada', () => {
     // Ending the session returns to the login screen.
     fireEvent.click(screen.getByText('Encerrar sessão'));
     await screen.findByLabelText('E-mail corporativo ou usuário');
+    // ...and ends the session on the server too (mig 093).
+    expect(terminalLogout).toHaveBeenCalledWith('tok-terminal');
   }, 15000);
+
+  it('signs out an employee who walks away before asking for material', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await terminalSignIn();
+      await vi.advanceTimersByTimeAsync(TERMINAL_IDLE_MS + 6000);
+      expect(await screen.findByLabelText('E-mail corporativo ou usuário')).toBeInTheDocument();
+      expect(terminalLogout).toHaveBeenCalledWith('tok-terminal');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('refuses a wrong login and a user without the retirada permission', async () => {
     terminalLogin.mockRejectedValueOnce(new Error('E-mail, usuário ou senha inválidos.'));

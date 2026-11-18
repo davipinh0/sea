@@ -43,6 +43,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // mig 093: the session also ends on the server, so a copy of the token
+    // stops working. Best effort: offline, it still dies with the token.
+    await client.post('/api/auth/logout', {}, { keepSession: true, timeout: 4000 }).catch(() => {});
     await clearAllAuth();
     lockEnabled.current = false;
     setLocked(false);

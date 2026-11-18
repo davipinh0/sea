@@ -64,7 +64,7 @@ def active_user_dict(db_session, user_id):
     return user.to_dict()
 
 
-def generate_token(user_dict):
+def generate_token(user_dict, jti=None):
     now = datetime.now(timezone.utc)
     payload = {
         "user_id": user_dict["user_id"],
@@ -73,7 +73,7 @@ def generate_token(user_dict):
         "warehouse_id": user_dict["warehouse_id"],
         "warehouse_ids": user_dict.get("warehouse_ids", []),
         "iat": int(now.timestamp()),
-        "jti": str(uuid.uuid4()),
+        "jti": jti or str(uuid.uuid4()),
         "exp": now + timedelta(hours=TOKEN_EXPIRY_HOURS),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)

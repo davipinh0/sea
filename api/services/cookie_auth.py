@@ -11,8 +11,6 @@ import secrets
 
 from flask import request
 
-from services.auth_service import TOKEN_EXPIRY_HOURS
-
 AUTH_COOKIE_NAME = "sea_auth"
 CSRF_COOKIE_NAME = "sea_csrf"
 CSRF_HEADER_NAME = "X-CSRF-Token"
@@ -40,12 +38,14 @@ def set_auth_cookies(response, token: str, csrf_token: str) -> None:
     # deployment model. Revisit if SSO / external-link integration is
     # scoped (clicks from external providers would be cross-site nav
     # and would not carry the cookie under Strict).
+    #
+    # SEA: no max_age/expires -- browser-session cookies. Closing the
+    # browser drops them; the token's own 8 h expiry and the server-side
+    # idle timeout (services/web_sessions.py, mig 093) still apply.
     secure = _cookie_secure()
-    max_age = TOKEN_EXPIRY_HOURS * 3600
     response.set_cookie(
         AUTH_COOKIE_NAME,
         token,
-        max_age=max_age,
         httponly=True,
         secure=secure,
         samesite="Strict",
@@ -54,7 +54,6 @@ def set_auth_cookies(response, token: str, csrf_token: str) -> None:
     response.set_cookie(
         CSRF_COOKIE_NAME,
         csrf_token,
-        max_age=max_age,
         httponly=False,
         secure=secure,
         samesite="Strict",

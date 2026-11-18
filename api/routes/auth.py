@@ -15,7 +15,6 @@ from services.auth_service import (
     active_user_dict,
     authenticate_user,
     decode_token,
-    generate_token,
     validate_password,
 )
 from services.cookie_auth import (
@@ -26,6 +25,7 @@ from services.cookie_auth import (
     set_auth_cookies,
 )
 from services import login_approval
+from services import web_sessions
 from services import notification_service
 from services.audit_service import write_audit_log
 from services.identity_provider import get_identity_provider
@@ -170,13 +170,20 @@ def login(validated):
     if login_approval.approval_required(g.db, user["user_id"], validated.device_token):
         return _start_login_approval(user)
 
-    token = generate_token(user)
+    token = _open_session(user)
+    g.db.commit()
     # V-045: dual-path auth. The token is returned in the body (mobile)
     # and also set as HttpOnly + CSRF cookies (admin SPA).
     csrf = generate_csrf_token()
     response = jsonify({"token": token, "user": user})
     set_auth_cookies(response, token, csrf)
     return response
+
+
+def _open_session(user):
+    """Token for ``user`` with its session recorded (mig 093). Caller commits."""
+    return web_sessions.open_session(
+        g.db, user, request.remote_addr or "", request.headers.get("User-Agent", ""))
 
 
 def _start_login_approval(user):
@@ -223,8 +230,8 @@ def login_approval_status(validated):
     if user is None:
         g.db.commit()
         return jsonify({"error": "Conta desativada ou excluída"}), 401
+    token = _open_session(user)
     g.db.commit()
-    token = generate_token(user)
     csrf = generate_csrf_token()
     response = jsonify({"token": token, "user": user})
     set_auth_cookies(response, token, csrf)
@@ -232,6 +239,7 @@ def login_approval_status(validated):
 
 
 @auth_bp.route("/logout", methods=["POST"])
+@with_db
 def logout():
     # V-100: the previous version cleared cookies on every POST, which
     # meant an attacker-origin form submission could force a victim's
@@ -250,13 +258,27 @@ def logout():
     #   - Expired / invalid auth cookie -> clear cookies silently. The
     #     session is already dead, so stale-cleanup keeps working without
     #     demanding a CSRF token the client no longer has.
+    #
+    # SEA (mig 093): the session also ends on the server, so the token stops
+    # working even if it was copied. A Bearer client (terminal, app) ends
+    # its own session the same way; no CSRF there, the header does not
+    # travel cross-origin.
     response = jsonify({"message": "sessão encerrada"})
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        payload = decode_token(auth_header.split(" ", 1)[1])
+        if payload is not None:
+            web_sessions.end(g.db, payload.get("jti"), web_sessions.LOGOUT)
+            g.db.commit()
     auth_cookie = request.cookies.get(AUTH_COOKIE_NAME)
     if not auth_cookie:
         return response
     payload = decode_token(auth_cookie)
     if payload is not None and not csrf_token_matches():
         return jsonify({"error": "Token CSRF ausente ou inválido"}), 403
+    if payload is not None:
+        web_sessions.end(g.db, payload.get("jti"), web_sessions.LOGOUT)
+        g.db.commit()
     clear_auth_cookies(response)
     return response
 
@@ -351,7 +373,10 @@ def refresh():
         "warehouse_id": row.warehouse_id,
         "warehouse_ids": list(row.warehouse_ids) if row.warehouse_ids else [],
     }
-    token = generate_token(user_dict)
+    # SEA (mig 093): the old session ends; the new token opens its own.
+    web_sessions.end(g.db, g.current_user.get("jti"), web_sessions.REFRESH)
+    token = _open_session(user_dict)
+    g.db.commit()
     csrf = generate_csrf_token()
     response = jsonify({"token": token})
     set_auth_cookies(response, token, csrf)

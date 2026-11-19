@@ -8,7 +8,7 @@ formula. Codes are text: leading zeros are part of the identifier.
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import AliasChoices, ConfigDict, Field, field_validator
 
 from schemas.csv_import import _BaseImportRow, _reject_formula_prefix
 
@@ -42,6 +42,9 @@ class SapReservationRow(_SapRow):
     material_code: str = Field(..., min_length=1, max_length=50)
     quantity: int = Field(..., gt=0, le=1000000)
     uom: Optional[str] = Field(None, max_length=10)
+    # mig 097: batch of the material ("lote" in the spreadsheet is accepted).
+    lot_number: Optional[str] = Field(
+        None, max_length=50, validation_alias=AliasChoices("lot_number", "lote", "Lote"))
     reservation_number: Optional[str] = Field(None, max_length=40)
     requester_name: Optional[str] = Field(None, max_length=120)
     needed_date: Optional[date] = None

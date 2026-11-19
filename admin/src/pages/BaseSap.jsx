@@ -79,7 +79,7 @@ export default function BaseSap() {
             <div><span className="detail-label">Data necessária</span> {formatDate(r.needed_date)}</div>
           </div>
           <table className="lines-table">
-            <thead><tr><th>Ordem</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Quantidade</th><th>Unidade</th></tr></thead>
+            <thead><tr><th>Ordem</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Lote</th><th>Quantidade</th><th>Unidade</th></tr></thead>
             <tbody>
               {r.materials.map((m) => (
                 <tr key={m.material_code}>
@@ -87,6 +87,7 @@ export default function BaseSap() {
                   <td><OtTypeTag type={m.service_order_type} /></td>
                   <td className="mono">{m.material_code}</td>
                   <td>{m.description}</td>
+                  <td className="mono">{m.lot_number || '-'}</td>
                   <td>{m.quantity}</td>
                   <td>{m.uom || '-'}</td>
                 </tr>

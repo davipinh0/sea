@@ -280,6 +280,11 @@ para administradores e quem tem a permissão **Histórico**. **Ocultar** recolhe
 navegador; **Limpar** recomeça a lista só para quem limpou (nada é apagado do histórico; "Mostrar
 tudo de novo" desfaz).
 
+**Lote do material** (migração `097`): a planilha de OTs / reservas da base do SAP traz o lote de
+cada material (coluna `lot_number` ou `lote`). Ao registrar a entrega pela base, o lote segue para o
+material da ordem e aparece na coluna **Lote** (painel: recebimento, base do SAP e detalhe da OT;
+app: Receber e Ordens).
+
 **Foto do usuário:** o painel lê a foto escolhida como `data:` (a política de segurança do site
 bloqueia `blob:`, o que impedia a foto de ser salva).
 

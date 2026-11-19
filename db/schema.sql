@@ -2622,3 +2622,5 @@ ALTER TABLE sea_notifications DROP CONSTRAINT IF EXISTS sea_notifications_kind_c
 ALTER TABLE sea_notifications ADD CONSTRAINT sea_notifications_kind_check
     CHECK (kind IN ('RETIRADA_SOLICITADA', 'RETIRADA_APROVADA', 'RECEBIMENTO',
                     'ARMAZENAGEM_CONCLUIDA'));
+
+ALTER TABLE sap_reservation_items ADD COLUMN IF NOT EXISTS lot_number VARCHAR(50);

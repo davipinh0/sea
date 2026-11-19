@@ -31,7 +31,7 @@ def _items(db, ot_number: str):
         text(
             """
             SELECT ri.order_number, o.order_type, ri.material_code, m.description,
-                   ri.quantity, COALESCE(ri.uom, m.uom) AS uom
+                   ri.quantity, COALESCE(ri.uom, m.uom) AS uom, ri.lot_number
             FROM sap_reservation_items ri
             JOIN sap_orders o ON o.order_number = ri.order_number
             JOIN sap_materials m ON m.material_code = ri.material_code
@@ -79,7 +79,7 @@ def lookup(db, ot_code: str) -> OtData | None:
         materials=tuple(
             OtMaterialData(
                 material_code=i.material_code, description=i.description,
-                quantity=i.quantity, uom=i.uom,
+                quantity=i.quantity, uom=i.uom, lot_number=i.lot_number,
                 service_order_type=i.order_type, service_order_number=i.order_number,
             )
             for i in items
@@ -139,7 +139,7 @@ def list_reservations(db, q: str = "", limit: int = 200) -> list[dict]:
             "materials": [
                 {"service_order_number": i.order_number, "service_order_type": i.order_type,
                  "material_code": i.material_code, "description": i.description,
-                 "quantity": i.quantity, "uom": i.uom}
+                 "quantity": i.quantity, "uom": i.uom, "lot_number": i.lot_number}
                 for i in _items(db, h.ot_number)
             ],
         })
@@ -392,14 +392,16 @@ def _import_reservation(db, row: SapReservationRow) -> None:
     db.execute(
         text(
             """
-            INSERT INTO sap_reservation_items (ot_number, order_number, material_code, quantity, uom)
-            VALUES (:ot, :n, :c, :q, :u)
+            INSERT INTO sap_reservation_items
+                (ot_number, order_number, material_code, quantity, uom, lot_number)
+            VALUES (:ot, :n, :c, :q, :u, :lot)
             ON CONFLICT (ot_number, material_code) DO UPDATE
-            SET quantity = EXCLUDED.quantity, uom = EXCLUDED.uom
+            SET quantity = EXCLUDED.quantity, uom = EXCLUDED.uom,
+                lot_number = EXCLUDED.lot_number
             """
         ),
         {"ot": row.ot_number, "n": row.order_number, "c": row.material_code,
-         "q": row.quantity, "u": row.uom},
+         "q": row.quantity, "u": row.uom, "lot": row.lot_number},
     )
 
 

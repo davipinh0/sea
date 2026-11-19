@@ -249,7 +249,7 @@ export default function RecebimentoOT() {
             <div><span className="detail-label">Recebedor</span> {user?.full_name || user?.username}</div>
           </div>
           <table className="lines-table">
-            <thead><tr><th>Ordem</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Quantidade</th><th>Unidade</th></tr></thead>
+            <thead><tr><th>Ordem</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Lote</th><th>Quantidade</th><th>Unidade</th></tr></thead>
             <tbody>
               {unknown.prefill.materials.map((m) => (
                 <tr key={m.material_code}>
@@ -257,6 +257,7 @@ export default function RecebimentoOT() {
                   <td><OtTypeTag type={m.service_order_type} /></td>
                   <td className="mono">{m.material_code}</td>
                   <td>{m.description}</td>
+                  <td className="mono">{m.lot_number || '-'}</td>
                   <td>{m.quantity}</td>
                   <td>{m.uom || '-'}</td>
                 </tr>

@@ -187,3 +187,28 @@ class TestReceivingFromTheBase:
         changed = client.put(f"/api/sea/ots/{po_id}/dados", headers=auth_headers,
                              json={"receiver_name": "OUTRA PESSOA"})
         assert changed.status_code == 400
+
+
+class TestMaterialBatch:
+    """mig 097: the batch (lote) of each material comes with the OT."""
+
+    def test_the_batch_goes_from_the_base_to_the_order(self, client, auth_headers):
+        rows = [
+            {**RESERVATIONS[0], "lot_number": "L2026-0457"},
+            {**RESERVATIONS[1], "lote": "L2026-0458"},  # Portuguese header
+        ]
+        for kind, records in (("ordens", ORDERS), ("materiais", MATERIALS), ("reservas", rows)):
+            assert _import(client, auth_headers, kind, records).get_json()["errors"] == []
+
+        listed = client.get("/api/sea/sap/base", headers=auth_headers).get_json()["reservations"][0]
+        assert [m["lot_number"] for m in listed["materials"]] == ["L2026-0457", "L2026-0458"]
+        found = _lookup(client, auth_headers)["integration"]["data"]["materials"]
+        assert [m["lot_number"] for m in found] == ["L2026-0457", "L2026-0458"]
+
+        assert _register(client, auth_headers).status_code == 201
+        detail = client.get("/api/sea/ots/1000000901", headers=auth_headers).get_json()
+        assert sorted(m["lot_number"] for m in detail["materials"]) == ["L2026-0457", "L2026-0458"]
+
+    def test_without_a_batch_it_stays_blank(self, client, auth_headers, base):
+        listed = client.get("/api/sea/sap/base", headers=auth_headers).get_json()["reservations"][0]
+        assert [m["lot_number"] for m in listed["materials"]] == [None, None]

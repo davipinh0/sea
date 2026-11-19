@@ -150,7 +150,7 @@ export default function ReceberScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={ui.code}>{m.material_code}</Text>
                   <Text style={ui.name}>{m.description}</Text>
-                  <Text style={ui.meta}>Ordem {m.service_order_type} {m.service_order_number}</Text>
+                  <Text style={ui.meta}>Ordem {m.service_order_type} {m.service_order_number} · Lote {m.lot_number || '-'}</Text>
                 </View>
                 <Text style={ui.code}>{formatQuantity(m.quantity, m.uom)}</Text>
               </View>
@@ -189,7 +189,7 @@ export default function ReceberScreen({ navigation, route }) {
                     <Text style={ui.name}>{l.item_name}</Text>
                     <Text style={ui.meta}>
                       {m.service_order_number ? `Ordem ${m.service_order_type || ''} ${m.service_order_number} · ` : ''}
-                      previsto {formatQuantity(l.quantity_ordered, m.uom)} · recebido {l.quantity_received} · falta {l.quantity_remaining}
+                      Lote {m.lot_number || '-'} · previsto {formatQuantity(l.quantity_ordered, m.uom)} · recebido {l.quantity_received} · falta {l.quantity_remaining}
                     </Text>
                   </View>
                   {receivable && l.quantity_remaining > 0 && (

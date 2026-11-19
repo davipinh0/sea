@@ -82,7 +82,7 @@ export default function OrdensScreen({ navigation }) {
                     <Text style={ui.name}>{m.item_name}</Text>
                     <Text style={ui.meta}>
                       {m.service_order_number ? `Ordem ${m.service_order_type || ''} ${m.service_order_number} · ` : ''}
-                      previsto {formatQuantity(m.quantity_ordered, m.uom)} · recebido {m.quantity_received}
+                      Lote {m.lot_number || '-'} · previsto {formatQuantity(m.quantity_ordered, m.uom)} · recebido {m.quantity_received}
                     </Text>
                     <Text style={ui.meta}>
                       em estoque {m.quantity_in_stock} · retirado {m.quantity_withdrawn}

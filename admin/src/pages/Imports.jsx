@@ -31,9 +31,9 @@ D3,D3,PRAT,1,D,3,Pickable,43,43,,PEQUENO,Prateleira D nível 3 (peças pequenas)
   'sap-materiais': `material_code,description,uom
 74165325,Arame de solda (fictício),KG
 74165326,Luva de proteção (fictício),PAR`,
-  'sap-reservas': `ot_number,reservation_number,requester_name,needed_date,order_number,material_code,quantity,uom
-1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113840,74165325,54,KG
-1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113841,74165326,10,PAR`,
+  'sap-reservas': `ot_number,reservation_number,requester_name,needed_date,order_number,material_code,quantity,uom,lot_number
+1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113840,74165325,54,KG,L2026-0457
+1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113841,74165326,10,PAR,L2026-0458`,
 };
 
 // Imports that load the SAP base go to their own endpoint.
@@ -56,7 +56,7 @@ const IMPORT_TYPES = [
   { value: 'bins', label: 'Endereços', desc: 'Endereços do SP12 com zona, prateleira, nível, capacidade (opcional) e classe de tamanho.' },
   { value: 'sap-ordens', label: 'Base SAP: ordens', desc: 'Ordens do SAP: número e tipo (PM11 ou PM12). Uma ordem já existente é atualizada.' },
   { value: 'sap-materiais', label: 'Base SAP: materiais', desc: 'Materiais do SAP: código, descrição e unidade (PC, KG, PAR). Um material já existente é atualizado.' },
-  { value: 'sap-reservas', label: 'Base SAP: OTs / reservas', desc: 'OTs / reservas abertas no SAP. Uma linha por material, com a ordem a que pertence, a quantidade e a unidade; linhas com o mesmo ot_number formam uma OT. As ordens e os materiais precisam estar na base antes.' },
+  { value: 'sap-reservas', label: 'Base SAP: OTs / reservas', desc: 'OTs / reservas abertas no SAP. Uma linha por material, com a ordem a que pertence, a quantidade, a unidade e o lote; linhas com o mesmo ot_number formam uma OT. As ordens e os materiais precisam estar na base antes.' },
   { value: 'purchase-orders', label: 'Ordens', desc: 'Ordens PM11/PM12 com seus materiais e quantidades previstas. Uma linha por material; linhas com o mesmo número formam uma ordem. warehouse_id é o número do local (veja em Sistema > Configurações).' },
 ];
 

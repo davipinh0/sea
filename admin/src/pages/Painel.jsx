@@ -107,7 +107,8 @@ export default function Painel() {
 
           <div className="section-title">Retirada</div>
           <div className="sea-kpis">
-            <Kpi to="/retirada" value={w.REQUESTED || 0} label="Solicitações aguardando separação" alert={(w.REQUESTED || 0) > 0} />
+            <Kpi to="/retirada" value={w.REQUESTED || 0} label="Aguardando avaliação" alert={(w.REQUESTED || 0) > 0} />
+            <Kpi to="/retirada" value={w.APPROVED || 0} label="Aprovadas, aguardando quem faça" alert={(w.APPROVED || 0) > 0} />
             <Kpi to="/retirada" value={w.PICKING || 0} label="Em separação" />
             <Kpi to="/retirada" value={w.READY || 0} label="Prontas, aguardando a confirmação no terminal" />
             <Kpi to="/retirada" value={w.DELIVERED || 0} label="Entregues hoje" />

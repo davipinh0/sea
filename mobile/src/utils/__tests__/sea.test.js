@@ -15,6 +15,12 @@ describe('visibleModules', () => {
     expect(keys({ role: 'ADMIN' }, 'Solda')).not.toContain('receive');
   });
 
+  it('offers RETIRADA to who requests, evaluates or does withdrawals', () => {
+    for (const page of ['retirada', 'retirada-avaliar', 'retirada-fazer']) {
+      expect(keys({ role: 'USER', allowed_pages: [page] }, 'SP12')).toContain('retirada');
+    }
+  });
+
   it('follows the page permissions of the user', () => {
     const me = { role: 'USER', allowed_pages: ['retirada'], allowed_functions: [] };
     expect(keys(me, EXPEDICAO_CODE)).toEqual(['retirada', 'ordens']);

@@ -203,8 +203,8 @@ def require_step_up(purpose):
         def decorated(*args, **kwargs):
             if getattr(g, "auth_source", None) != "cookie":
                 return f(*args, **kwargs)
-            from services import step_up
             import models.database as _db
+            from services import step_up
             db = _db.SessionLocal()
             try:
                 released = step_up.use(db, g.current_user.get("jti"), purpose)
@@ -212,9 +212,9 @@ def require_step_up(purpose):
             finally:
                 db.close()
             if not released:
+                label = step_up.label(purpose)
                 return jsonify({
-                    "error": f"Confirme no app SEA do seu celular para usar {step_up.label(purpose)} "
-                             "no painel.",
+                    "error": f"Confirme no app SEA do seu celular para usar {label} no painel.",
                     "step_up_required": purpose,
                     "user_facing": True,
                 }), 403

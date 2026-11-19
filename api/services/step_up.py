@@ -54,8 +54,10 @@ def use(db, jti, purpose: str) -> bool:
     if seconds_left(db, jti, purpose) <= 0:
         return False
     db.execute(
-        text("UPDATE sea_step_up SET last_used_at = NOW() "
-             "WHERE jti = CAST(:j AS uuid) AND purpose = :p"),
+        text(
+            "UPDATE sea_step_up SET last_used_at = NOW() "
+            "WHERE jti = CAST(:j AS uuid) AND purpose = :p"
+        ),
         {"j": str(jti), "p": purpose},
     )
     return True
@@ -83,18 +85,27 @@ def start(db, user_id: int, jti, purpose: str, client_ip: str, user_agent: str):
     # Nobody polls this challenge with a secret: the panel follows it by
     # its own session (``status``). The hash only fills the column.
     filler = login_approval._hash(secrets.token_urlsafe(32))
-    return str(db.execute(
-        text(
-            """
+    return str(
+        db.execute(
+            text(
+                """
             INSERT INTO sea_login_challenges
                 (user_id, poll_hash, client_ip, user_agent, expires_at, purpose, session_jti)
             VALUES (:u, :h, :ip, :ua, NOW() + make_interval(secs => :ttl), :p, CAST(:j AS uuid))
             RETURNING challenge_id
             """
-        ),
-        {"u": user_id, "h": filler, "ip": (client_ip or "")[:64], "ua": (user_agent or "")[:300],
-         "ttl": login_approval.APPROVAL_TTL_SECONDS, "p": purpose, "j": str(jti)},
-    ).scalar())
+            ),
+            {
+                "u": user_id,
+                "h": filler,
+                "ip": (client_ip or "")[:64],
+                "ua": (user_agent or "")[:300],
+                "ttl": login_approval.APPROVAL_TTL_SECONDS,
+                "p": purpose,
+                "j": str(jti),
+            },
+        ).scalar()
+    )
 
 
 def status(db, challenge_id, user_id: int, jti) -> tuple[str, int] | None:

@@ -1,21 +1,24 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
 import client from '../api/client';
+import { confirmIdentity } from '../auth/confirmIdentity';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Button, Card, ConfirmModal, Message, ui } from '../components/ui';
-import { apiError, formatQuantity } from '../utils/sea';
+import { apiError, formatQuantity, withdrawalActions } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 
-// Fila de retirada (stock keeper). Requests of every location the user
-// works in: start separating, mark as ready, or cancel with a reason. The
-// employee confirms receipt at the terminal; the stock is only
-// decremented there.
+// Fila de retirada. Requests of every location the user works in (mig 096):
+// the evaluator approves or denies; someone with "Fazer retirada" accepts
+// an approved request, separates it and marks it ready. Every step asks
+// for the fingerprint or the phone's PIN. The employee confirms receipt at
+// the terminal; the stock is only decremented there.
 
-const OPEN = 'REQUESTED,PICKING,READY';
+const OPEN = 'REQUESTED,APPROVED,PICKING,READY';
 const STATUS = {
-  REQUESTED: 'Aguardando separação',
+  REQUESTED: 'Aguardando avaliação',
+  APPROVED: 'Aprovada, aguardando quem faça',
   PICKING: 'Em separação',
   READY: 'Pronta, aguardando o funcionário',
 };
@@ -27,10 +30,16 @@ export default function RetiradaScreen({ navigation }) {
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [reason, setReason] = useState('');
+  // 'cancel' or 'deny': both ask for the reason.
+  const [mode, setMode] = useState('cancel');
+  const [me, setMe] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const resp = await client.get(`/api/sea/retiradas?status=${OPEN}`);
+      const [resp, meResp] = await Promise.all([
+        client.get(`/api/sea/retiradas?status=${OPEN}`), client.get('/api/auth/me'),
+      ]);
+      setMe(meResp.data);
       // Oldest request first: it is the next one to separate.
       setQueue([...(resp.data?.withdrawals || [])].reverse());
     } catch (err) {
@@ -43,6 +52,8 @@ export default function RetiradaScreen({ navigation }) {
   useAutoRefresh(load, { intervalMs: REFRESH_MS, paused: !!cancelling });
 
   async function act(withdrawal, action, body, done) {
+    const problem = await confirmIdentity('Confirme para continuar a retirada');
+    if (problem) { setMessage({ type: 'error', text: problem }); return false; }
     setBusy(true);
     try {
       await client.post(`/api/sea/retiradas/${withdrawal.withdrawal_id}/${action}`, body || {});
@@ -58,11 +69,21 @@ export default function RetiradaScreen({ navigation }) {
   }
 
   async function confirmCancel() {
-    if (!reason.trim()) { setMessage({ type: 'error', text: 'Informe o motivo do cancelamento.' }); return; }
+    if (!reason.trim()) { setMessage({ type: 'error', text: 'Informe o motivo.' }); return; }
     const target = cancelling;
     setCancelling(null);
-    await act(target, 'cancelar', { reason: reason.trim() }, `Retirada nº ${target.withdrawal_id} cancelada.`);
+    if (mode === 'deny') {
+      await act(target, 'avaliar', { approve: false, note: reason.trim() }, `Retirada nº ${target.withdrawal_id} negada.`);
+    } else {
+      await act(target, 'cancelar', { reason: reason.trim() }, `Retirada nº ${target.withdrawal_id} cancelada.`);
+    }
     setReason('');
+  }
+
+  function askReason(w, nextMode) {
+    setReason('');
+    setMode(nextMode);
+    setCancelling(w);
   }
 
   return (
@@ -76,6 +97,7 @@ export default function RetiradaScreen({ navigation }) {
           <Card key={w.withdrawal_id} title={`Nº ${w.withdrawal_id} · ${(w.orders || []).length > 1 ? 'ORDENS' : 'ORDEM'} ${(w.orders || []).join(', ') || w.ot}`}>
             <Text style={ui.tag}>{STATUS[w.status] || w.status}</Text>
             <Text style={[ui.meta, { marginTop: 6 }]}>Solicitada por {w.requested_by_name || w.requested_by}</Text>
+            {w.picked_by ? <Text style={ui.meta}>Aceita por {w.picked_by_name || w.picked_by}</Text> : null}
             {w.lines.map((l) => (
               <View key={l.inventory_id} style={ui.line}>
                 <View style={{ flex: 1 }}>
@@ -86,28 +108,24 @@ export default function RetiradaScreen({ navigation }) {
               </View>
             ))}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              {w.status === 'REQUESTED' && (
-                <Button label="INICIAR SEPARAÇÃO" disabled={busy} style={{ flex: 2 }}
-                  onPress={() => act(w, 'separar', null, `Separação da retirada nº ${w.withdrawal_id} iniciada.`)} />
-              )}
-              {w.status === 'PICKING' && (
-                <Button label="PRONTA PARA ENTREGA" disabled={busy} style={{ flex: 2 }}
-                  onPress={() => act(w, 'pronta', null, `Retirada nº ${w.withdrawal_id} pronta. O funcionário confirma no terminal.`)} />
-              )}
-              <Button label="CANCELAR" secondary disabled={busy} style={{ flex: 1 }} onPress={() => { setReason(''); setCancelling(w); }} />
+              {withdrawalActions(w, me).map((a) => (
+                <Button key={a.label} label={a.label} disabled={busy} danger={a.deny} style={{ flex: 2 }}
+                  onPress={() => (a.deny ? askReason(w, 'deny') : act(w, a.action, a.body, a.done))} />
+              ))}
+              <Button label="CANCELAR" secondary disabled={busy} style={{ flex: 1 }} onPress={() => askReason(w, 'cancel')} />
             </View>
           </Card>
         ))}
       </ScrollView>
 
       <ConfirmModal
-        visible={!!cancelling} title={`CANCELAR RETIRADA Nº ${cancelling?.withdrawal_id || ''}`} danger
-        confirmLabel="CANCELAR RETIRADA" onConfirm={confirmCancel} onClose={() => setCancelling(null)}
+        visible={!!cancelling} title={`${mode === 'deny' ? 'NEGAR' : 'CANCELAR'} RETIRADA Nº ${cancelling?.withdrawal_id || ''}`} danger
+        confirmLabel={mode === 'deny' ? 'NEGAR RETIRADA' : 'CANCELAR RETIRADA'} onConfirm={confirmCancel} onClose={() => setCancelling(null)}
         message="O material volta a ficar disponível. Informe o motivo (obrigatório):"
       >
         <TextInput
-          style={styles.reason} value={reason} onChangeText={setReason} multiline accessibilityLabel="Motivo do cancelamento"
-          placeholder="Motivo do cancelamento" placeholderTextColor={colors.textPlaceholder}
+          style={styles.reason} value={reason} onChangeText={setReason} multiline accessibilityLabel="Motivo"
+          placeholder="Motivo" placeholderTextColor={colors.textPlaceholder}
         />
       </ConfirmModal>
     </SafeAreaView>

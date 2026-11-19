@@ -66,10 +66,14 @@ function OnlyAtExpedicao({ children }) {
   return children;
 }
 
-function RequirePage({ pageKey, children }) {
+function RequirePage({ pageKey, pageKeys, children }) {
   const { user } = useAuth();
-  return canSee(user, pageKey) ? children : <Navigate to="/" replace />;
+  const keys = pageKeys || [pageKey];
+  return keys.some((key) => canSee(user, key)) ? children : <Navigate to="/" replace />;
 }
+
+// mig 096: request / evaluate / do withdrawals.
+const WITHDRAWAL_PAGES = ['retirada', 'retirada-avaliar', 'retirada-fazer'];
 
 function page(element, fallbackMessage) {
   return <ErrorBoundary fallbackMessage={fallbackMessage}>{element}</ErrorBoundary>;
@@ -104,7 +108,7 @@ export default function App() {
           <Route path="base-sap" element={<BaseSap />} />
         </Route>
 
-        <Route path="/retirada" element={page(<RequirePage pageKey="retirada"><ProcessGate purpose="retirada" label="Retirada"><Retirada /></ProcessGate></RequirePage>, 'Não foi possível carregar a retirada.')} />
+        <Route path="/retirada" element={page(<RequirePage pageKeys={WITHDRAWAL_PAGES}><ProcessGate purpose="retirada" label="Retirada"><Retirada /></ProcessGate></RequirePage>, 'Não foi possível carregar a retirada.')} />
 
         <Route path="/users" element={page(<RequirePage pageKey="users"><Users /></RequirePage>, 'Não foi possível carregar os usuários.')} />
         <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />

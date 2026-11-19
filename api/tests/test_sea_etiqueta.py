@@ -493,8 +493,9 @@ class TestTraceability:
         )
         assert resp.status_code == 201, resp.get_json()
         wid = resp.get_json()["withdrawal"]["withdrawal_id"]
-        for step in ("separar", "pronta", "entregar"):
-            resp = client.post(f"/api/sea/retiradas/{wid}/{step}", headers=auth_headers, json={})
+        for step in ("avaliar", "separar", "pronta", "entregar"):
+            body = {"approve": True} if step == "avaliar" else {}
+            resp = client.post(f"/api/sea/retiradas/{wid}/{step}", headers=auth_headers, json=body)
             assert resp.status_code == 200, resp.get_json()
 
         material = _detail(client, auth_headers)["materials"][0]

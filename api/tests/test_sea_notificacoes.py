@@ -118,9 +118,10 @@ class TestEmail:
             assert status == "ENVIADO"
             assert _status(conn, nid).email_sent_at is not None
             subjects.add(sent[-1][1]["Subject"])
-        assert len(subjects) == 3
+        assert len(subjects) == len(notifications.SUBJECTS) == 4
         assert subjects == {
             "SEA - Solicitação de Retirada",
+            "SEA - Retirada Aprovada",
             "SEA - Recebimento de Materiais na Expedição",
             "SEA - Conclusão de Armazenamento",
         }
@@ -291,10 +292,10 @@ class TestStorageInAnotherLocation:
             f"/api/sea/retiradas?warehouse_id={other_location['warehouse_id']}", headers=auth_headers
         ).get_json()["withdrawals"]
         assert withdrawal["withdrawal_id"] in [w["withdrawal_id"] for w in queue]
-        for action in ("separar", "pronta", "entregar"):
+        for action in ("avaliar", "separar", "pronta", "entregar"):
             step = client.post(
                 f"/api/sea/retiradas/{withdrawal['withdrawal_id']}/{action}",
-                headers=auth_headers, json={},
+                headers=auth_headers, json={"approve": True} if action == "avaliar" else {},
             )
             assert step.status_code == 200, step.get_json()
         assert conn.execute(

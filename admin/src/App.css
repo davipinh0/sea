@@ -1525,3 +1525,8 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .process-gate-card h2 { margin: 8px 0 12px; font-size: 20px; }
 .process-gate-card p { margin: 0 0 14px; line-height: 1.5; }
 .process-gate-icon { font-size: 40px; }
+
+/* SEA (mig 096): who accepted the withdrawal, at the terminal. */
+.terminal-picker { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.terminal-picker-photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; flex: none; }
+.terminal-picker-initials { display: flex; align-items: center; justify-content: center; background: var(--primary, #c2410c); color: #fff; font-size: 40px; font-weight: 700; }

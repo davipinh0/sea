@@ -40,14 +40,20 @@ from services.inventory_service import move_inventory
 OT_TYPES = ("PM11", "PM12")
 STAGING_TYPES = (BIN_STAGING, BIN_PICKABLE_STAGING)
 
+# mig 096: REQUESTED waits for the evaluator; APPROVED waits for someone
+# with "Fazer retirada" to accept it (PICKING); REJECTED = denied.
 W_REQUESTED = "REQUESTED"
+W_APPROVED = "APPROVED"
 W_PICKING = "PICKING"
 W_READY = "READY"
 W_DELIVERED = "DELIVERED"
+W_REJECTED = "REJECTED"
 W_CANCELLED = "CANCELLED"
-W_OPEN_STATUSES = (W_REQUESTED, W_PICKING, W_READY)
+W_OPEN_STATUSES = (W_REQUESTED, W_APPROVED, W_PICKING, W_READY)
 
 ACTION_WITHDRAWAL_REQUESTED = "WITHDRAWAL_REQUESTED"
+ACTION_WITHDRAWAL_APPROVED = "WITHDRAWAL_APPROVED"
+ACTION_WITHDRAWAL_REJECTED = "WITHDRAWAL_REJECTED"
 ACTION_WITHDRAWAL_PICKING = "WITHDRAWAL_PICKING"
 ACTION_WITHDRAWAL_READY = "WITHDRAWAL_READY"
 ACTION_WITHDRAWAL_DELIVERED = "WITHDRAWAL_DELIVERED"
@@ -1641,7 +1647,9 @@ def _lock_withdrawal(db, withdrawal_id, scope_clause="", scope_params=None):
 
 
 _STATUS_TEXT = {
-    W_REQUESTED: "solicitada",
+    W_REQUESTED: "aguardando avaliação",
+    W_APPROVED: "aprovada, aguardando quem faça a retirada",
+    W_REJECTED: "negada",
     W_PICKING: "em separação",
     W_READY: "pronta para entrega",
     W_DELIVERED: "já entregue",
@@ -1658,9 +1666,47 @@ def _require_status(w, allowed, action):
         )
 
 
-def start_picking(db, withdrawal_id, username, scope=("", None)):
+def evaluate(db, withdrawal_id, username, approve, note=None, scope=("", None)):
+    """The evaluator approves (APPROVED: the users with "Fazer retirada"
+    are told) or denies (REJECTED, with the reason; the reservation is
+    undone) a request (mig 096)."""
+    note = (note or "").strip() or None
+    if not approve and not note:
+        raise SeaError("Informe o motivo para negar a retirada.", status=400)
     w = _lock_withdrawal(db, withdrawal_id, *scope)
-    _require_status(w, (W_REQUESTED,), "iniciar a separação")
+    _require_status(w, (W_REQUESTED,), "avaliar")
+    if not approve:
+        _release_reservation(db, withdrawal_id)
+    db.execute(
+        text(
+            """
+            UPDATE withdrawals SET status = :s, evaluated_by = :u, evaluated_at = NOW(),
+                   evaluation_note = :n
+            WHERE withdrawal_id = :id
+            """
+        ),
+        {"s": W_APPROVED if approve else W_REJECTED, "u": username, "n": note,
+         "id": withdrawal_id},
+    )
+    write_audit_log(
+        db, ACTION_WITHDRAWAL_APPROVED if approve else ACTION_WITHDRAWAL_REJECTED,
+        "WITHDRAWAL", withdrawal_id, username, w.warehouse_id,
+        details={"ot": w.po_number, "reason": note} if note else {"ot": w.po_number},
+    )
+    if approve:
+        notifications.create(
+            db, kind=notifications.KIND_WITHDRAWAL_APPROVED, warehouse_id=w.warehouse_id,
+            title=f"Retirada nº {withdrawal_id} aprovada: quem pode fazer?",
+            message=f"Solicitada por {w.requested_by}, OT {w.po_number}. Aceite para separar.",
+            ot=w.po_number, username=username,
+        )
+
+
+def start_picking(db, withdrawal_id, username, scope=("", None)):
+    """Someone with "Fazer retirada" accepts an approved request: their
+    name and photo show at the terminal while they prepare it."""
+    w = _lock_withdrawal(db, withdrawal_id, *scope)
+    _require_status(w, (W_APPROVED,), "aceitar a retirada")
     db.execute(
         text(
             """
@@ -1784,12 +1830,7 @@ def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
     return employee
 
 
-def cancel(db, withdrawal_id, username, reason, scope=("", None)):
-    reason = (reason or "").strip()
-    if not reason:
-        raise SeaError("Informe o motivo do cancelamento.", status=400)
-    w = _lock_withdrawal(db, withdrawal_id, *scope)
-    _require_status(w, W_OPEN_STATUSES, "cancelar")
+def _release_reservation(db, withdrawal_id):
     for line in _withdrawal_lines(db, withdrawal_id):
         db.execute(
             text(
@@ -1801,6 +1842,15 @@ def cancel(db, withdrawal_id, username, reason, scope=("", None)):
             ),
             {"q": line.quantity, "id": line.inventory_id},
         )
+
+
+def cancel(db, withdrawal_id, username, reason, scope=("", None)):
+    reason = (reason or "").strip()
+    if not reason:
+        raise SeaError("Informe o motivo do cancelamento.", status=400)
+    w = _lock_withdrawal(db, withdrawal_id, *scope)
+    _require_status(w, W_OPEN_STATUSES, "cancelar")
+    _release_reservation(db, withdrawal_id)
     db.execute(
         text(
             """

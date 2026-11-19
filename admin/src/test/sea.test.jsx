@@ -675,3 +675,84 @@ describe('OTs: status filter regression', () => {
     expect(option.value).toBe('All');
   });
 });
+
+describe('Retirada avaliada antes de ser feita (mig 096)', () => {
+  const request = (status, extra = {}) => ({ withdrawal_id: 9, ot: 'OT-1', order_type: 'PM11', status, requested_by: 'retirada', lines: [], ...extra });
+
+  it('the evaluator approves, or denies with a reason', async () => {
+    currentUser = { username: 'avaliador', role: 'USER', allowed_pages: ['retirada-avaliar'] };
+    apiGet.mockImplementation(() => ok({ withdrawals: [request('REQUESTED')] }));
+    apiPost.mockImplementation(() => ok({ message: 'ok' }));
+    render(<MemoryRouter><Retirada /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Aprovar'));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/9/avaliar', { approve: true }));
+
+    fireEvent.click(screen.getByText('Negar'));
+    const deny = screen.getByText('Negar retirada');
+    expect(deny).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: ' sem urgência ' } });
+    fireEvent.click(deny);
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/9/avaliar', { approve: false, note: 'sem urgência' }));
+    expect(screen.queryByText('Aceitar e separar')).toBeNull();
+  });
+
+  it('who does withdrawals accepts an approved request; others only wait', async () => {
+    currentUser = { username: 'almoxarife', role: 'USER', allowed_pages: ['retirada-fazer'] };
+    apiGet.mockImplementation(() => ok({ withdrawals: [request('APPROVED')] }));
+    apiPost.mockImplementation(() => ok({ message: 'ok' }));
+    const { unmount } = render(<MemoryRouter><Retirada /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Aceitar e separar'));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/9/separar', {}));
+    unmount();
+
+    currentUser = { username: 'avaliador', role: 'USER', allowed_pages: ['retirada-avaliar'] };
+    render(<MemoryRouter><Retirada /></MemoryRouter>);
+    expect(await screen.findByText(/aguardando alguém aceitar/)).toBeInTheDocument();
+    expect(screen.queryByText('Aceitar e separar')).toBeNull();
+  });
+
+  it('the terminal shows the name and photo of who accepted', async () => {
+    let status = 'REQUESTED';
+    const withdrawal = () => ({ withdrawal_id: 3, status, picked_by: status === 'PICKING' ? 'caique' : null, lines: [{ inventory_id: 11, item_name: 'Parafuso', bin_code: 'A3', quantity: 2 }] });
+    apiGet.mockImplementation((path) => {
+      if (path === '/sea/ordens/2000000011') return ok(ORDER);
+      if (path === '/sea/retiradas/3') return ok({ withdrawal: withdrawal() });
+      if (path === '/sea/retiradas/3/responsavel') return ok({ name: 'Caique Lima', photo: 'data:image/png;base64,AAAA' });
+      return ok({});
+    });
+    apiPost.mockImplementation((path) => (path === '/sea/retiradas' ? ok({ withdrawal: withdrawal() }) : ok({})));
+
+    await terminalSignIn();
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
+    fireEvent.click(screen.getByText('Consultar ordem'));
+    await screen.findByText('Parafuso');
+    fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
+    fireEvent.click(screen.getByText('Solicitar retirada'));
+    expect(await screen.findByText(/Aguardando a avaliação/)).toBeInTheDocument();
+
+    status = 'PICKING';
+    const photo = await screen.findByAltText('Foto de Caique Lima', {}, { timeout: 6000 });
+    expect(photo).toHaveAttribute('src', 'data:image/png;base64,AAAA');
+    expect(screen.getByText(/está preparando os seus materiais/)).toBeInTheDocument();
+  }, 15000);
+
+  it('the terminal tells the employee why a request was denied', async () => {
+    let status = 'REQUESTED';
+    const withdrawal = () => ({ withdrawal_id: 3, status, evaluation_note: 'Sem urgência', lines: [{ inventory_id: 11, item_name: 'Parafuso', bin_code: 'A3', quantity: 2 }] });
+    apiGet.mockImplementation((path) => {
+      if (path === '/sea/ordens/2000000011') return ok(ORDER);
+      if (path === '/sea/retiradas/3') return ok({ withdrawal: withdrawal() });
+      return ok({});
+    });
+    apiPost.mockImplementation((path) => (path === '/sea/retiradas' ? ok({ withdrawal: withdrawal() }) : ok({})));
+    await terminalSignIn();
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
+    fireEvent.click(screen.getByText('Consultar ordem'));
+    await screen.findByText('Parafuso');
+    fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
+    fireEvent.click(screen.getByText('Solicitar retirada'));
+    await screen.findByText(/Aguardando a avaliação/);
+    status = 'REJECTED';
+    expect(await screen.findByText(/negada: Sem urgência/, {}, { timeout: 6000 })).toBeInTheDocument();
+  }, 15000);
+});

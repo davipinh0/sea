@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
+import { canSee } from '../utils/permissions.js';
 import PageHeader from '../components/PageHeader.jsx';
 import StatusTag from '../components/StatusTag.jsx';
 import Modal from '../components/Modal.jsx';
@@ -8,19 +10,27 @@ import { OtDetailModal } from '../components/sea.jsx';
 import { formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Retirada: the stock keeper's queue. Requests made at the touchscreen
-// terminal arrive here (polled), are separated and marked ready; the
-// employee who requested then confirms the handover at the terminal.
+// Retirada: the queue of the requests made at the touchscreen terminal
+// (polled). mig 096: the evaluator ("Avaliar retirada") approves or
+// denies each request; someone with "Fazer retirada" accepts an approved
+// one, separates it and marks it ready; the employee who requested then
+// confirms the handover at the terminal.
 // Every request stays on record: the Histórico tab lists the delivered
 // and the cancelled ones, with who cancelled and why.
 
-const OPEN = ['REQUESTED', 'PICKING', 'READY'];
-const CLOSED = ['DELIVERED', 'CANCELLED'];
+const OPEN = ['REQUESTED', 'APPROVED', 'PICKING', 'READY'];
+const CLOSED = ['DELIVERED', 'REJECTED', 'CANCELLED'];
 const POLL_MS = 10000;
 
+// Next step of someone with "Fazer retirada".
 const NEXT = {
-  REQUESTED: { action: 'separar', label: 'Iniciar separação' },
+  APPROVED: { action: 'separar', label: 'Aceitar e separar' },
   PICKING: { action: 'pronta', label: 'Separação concluída' },
+};
+
+const WAITING = {
+  REQUESTED: 'Aguardando a avaliação',
+  APPROVED: 'Aprovada: aguardando alguém aceitar para separar',
 };
 
 export default function Retirada() {
@@ -34,6 +44,11 @@ export default function Retirada() {
   const [cancelling, setCancelling] = useState(null);
   const [reason, setReason] = useState('');
   const [detail, setDetail] = useState(null);
+  const [denying, setDenying] = useState(null);
+  const [note, setNote] = useState('');
+  const { user } = useAuth();
+  const canEvaluate = canSee(user, 'retirada-avaliar');
+  const canDo = canSee(user, 'retirada-fazer');
 
   // Bumping ``tick`` re-runs the fetch (after actions and every POLL_MS).
   const [tick, setTick] = useState(0);
@@ -57,15 +72,24 @@ export default function Retirada() {
 
   useLiveRefresh(() => setTick((n) => n + 1), POLL_MS);
 
-  async function step(w, action) {
+  async function step(w, action, body = {}) {
     setBusy(w.withdrawal_id);
-    const res = await api.post(`/sea/retiradas/${w.withdrawal_id}/${action}`, {});
+    const res = await api.post(`/sea/retiradas/${w.withdrawal_id}/${action}`, body);
     setBusy(null);
     if (!res) return;
     if (!res.ok) { setError(await readError(res, 'Não foi possível atualizar a retirada.')); load(); return; }
     setError('');
     setMessage((await res.json()).message);
     load();
+  }
+
+  async function confirmDeny() {
+    const clean = note.trim();
+    if (!clean) return;
+    const target = denying;
+    setDenying(null);
+    setNote('');
+    await step(target, 'avaliar', { approve: false, note: clean });
   }
 
   async function confirmCancel() {
@@ -87,14 +111,14 @@ export default function Retirada() {
 
       <div className="data-tabs" role="tablist">
         <button type="button" role="tab" className={`data-tab${view === 'open' ? ' active' : ''}`} onClick={() => setView('open')}>Em andamento</button>
-        <button type="button" role="tab" className={`data-tab${view === 'closed' ? ' active' : ''}`} onClick={() => setView('closed')}>Histórico (entregues e canceladas)</button>
+        <button type="button" role="tab" className={`data-tab${view === 'closed' ? ' active' : ''}`} onClick={() => setView('closed')}>Histórico (entregues, negadas e canceladas)</button>
       </div>
 
       {message && <div className="tag tag-success" style={{ display: 'block', padding: 12, marginBottom: 12 }}>{message}</div>}
       {error && <div className="form-error">{error}</div>}
       {rows.length === 0 && (
         <p className="settings-note">
-          {view === 'open' ? 'Nenhuma solicitação em andamento. As solicitações feitas no terminal aparecem aqui automaticamente.' : 'Nenhuma retirada entregue ou cancelada.'}
+          {view === 'open' ? 'Nenhuma solicitação em andamento. As solicitações feitas no terminal aparecem aqui automaticamente.' : 'Nenhuma retirada entregue, negada ou cancelada.'}
         </p>
       )}
 
@@ -122,17 +146,27 @@ export default function Retirada() {
           </table>
           {w.requester_note && <p className="settings-note">Observação: {w.requester_note}</p>}
           <div className="settings-note" style={{ marginTop: 8 }}>
-            {w.picked_by && <>Separação: {w.picked_by} em {formatDateTime(w.picking_started_at)}. </>}
+            {w.evaluated_at && <>{w.status === 'REJECTED' ? 'Negada' : 'Aprovada'} por {w.evaluated_by} em {formatDateTime(w.evaluated_at)}{w.evaluation_note ? ` (${w.evaluation_note})` : ''}. </>}
+            {w.picked_by && <>Aceita por {w.picked_by_name || w.picked_by} em {formatDateTime(w.picking_started_at)}. </>}
             {w.ready_at && <>Pronta em {formatDateTime(w.ready_at)}. </>}
             {w.delivered_at && <>Entregue a <strong>{w.delivered_to}</strong> em {formatDateTime(w.delivered_at)}. </>}
             {w.cancelled_at && <>Cancelada por {w.cancelled_by} em {formatDateTime(w.cancelled_at)}. Motivo: {w.cancel_reason || 'não informado'}.</>}
           </div>
           {OPEN.includes(w.status) && (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              {NEXT[w.status] && (
+              {w.status === 'REQUESTED' && canEvaluate && (
+                <>
+                  <button type="button" className="btn btn-primary" disabled={busy === w.withdrawal_id} onClick={() => step(w, 'avaliar', { approve: true })}>Aprovar</button>
+                  <button type="button" className="btn btn-danger" disabled={busy === w.withdrawal_id} onClick={() => { setNote(''); setDenying(w); }}>Negar</button>
+                </>
+              )}
+              {NEXT[w.status] && canDo && (
                 <button type="button" className="btn btn-primary" disabled={busy === w.withdrawal_id} onClick={() => step(w, NEXT[w.status].action)}>
                   {NEXT[w.status].label}
                 </button>
+              )}
+              {WAITING[w.status] && !(w.status === 'REQUESTED' ? canEvaluate : canDo) && (
+                <span className="tag tag-info" style={{ alignSelf: 'center' }}>{WAITING[w.status]}</span>
               )}
               {w.status === 'READY' && <span className="tag tag-info" style={{ alignSelf: 'center' }}>Aguardando o solicitante confirmar o recebimento no terminal</span>}
               <button type="button" className="btn" onClick={() => setCancelling(w)}>Cancelar</button>
@@ -156,6 +190,22 @@ export default function Retirada() {
             <input className="form-input" autoFocus required value={reason} onChange={(e) => setReason(e.target.value)} />
           </label>
           {!reason.trim() && <div className="settings-note">Informe o motivo para cancelar.</div>}
+        </Modal>
+      )}
+      {denying && (
+        <Modal
+          title={`Negar retirada nº ${denying.withdrawal_id}`}
+          onClose={() => { setDenying(null); setNote(''); }}
+          footer={<>
+            <button type="button" className="btn" onClick={() => { setDenying(null); setNote(''); }}>Voltar</button>
+            <button type="button" className="btn btn-danger" disabled={!note.trim()} onClick={confirmDeny}>Negar retirada</button>
+          </>}
+        >
+          <p>A reserva dos materiais será liberada e o solicitante verá o motivo no terminal.</p>
+          <label className="form-group" style={{ display: 'block' }}>
+            <span>Motivo (obrigatório, fica registrado)</span>
+            <input className="form-input" autoFocus required value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
         </Modal>
       )}
       {detail && <OtDetailModal code={detail} onClose={() => setDetail(null)} />}

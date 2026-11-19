@@ -23,6 +23,13 @@ import { formatQuantity, readError } from '../utils/sea.js';
 // stays the same: only where the credentials are checked changes.
 
 const POLL_MS = 3000;
+
+// mig 096: what the employee reads while the request goes on.
+const WAITING_TEXT = {
+  REQUESTED: 'Aguardando a avaliação da solicitação…',
+  APPROVED: 'Solicitação aprovada. Aguardando alguém do estoque aceitar…',
+  PICKING: 'está preparando os seus materiais…',
+};
 const RESET_AFTER_MS = 12000;
 // SEA (mig 093): an employee who walks away before asking for material
 // is signed out, so the next person cannot act in their name.
@@ -62,9 +69,12 @@ export default function TerminalRetirada() {
   const [busy, setBusy] = useState(false);
   // SEA (mig 092): seconds left for the employee to confirm on the phone.
   const [waitingPhone, setWaitingPhone] = useState(null);
+  // mig 096: who accepted the request (name and photo as a data: URL).
+  const [picker, setPicker] = useState(null);
 
   const clearRequest = useCallback(() => {
     setCode(''); setOrder(null); setStock([]); setQty({}); setWithdrawal(null); setError(''); setBusy(false);
+    setPicker(null);
   }, []);
 
   // End the session: the next employee always starts at the login.
@@ -163,6 +173,10 @@ export default function TerminalRetirada() {
       if (!current) return;
       setWithdrawal(current);
       if (current.status === 'READY') setStep('confirm');
+      if (current.status === 'REJECTED') {
+        setError(`A solicitação foi negada${current.evaluation_note ? `: ${current.evaluation_note}` : '.'}`);
+        setStep('done-cancelled');
+      }
       if (current.status === 'CANCELLED') {
         setError(`A solicitação foi cancelada pelo responsável do estoque${current.cancel_reason ? `: ${current.cancel_reason}` : '.'}`);
         setStep('done-cancelled');
@@ -172,6 +186,19 @@ export default function TerminalRetirada() {
     const timer = setInterval(poll, POLL_MS);
     return () => { stopped = true; clearInterval(timer); };
   }, [step, withdrawalId, api]);
+
+  // Once someone accepts, their name and photo show until the handover.
+  const pickedBy = withdrawal?.picked_by;
+  useEffect(() => {
+    if (!pickedBy || !withdrawalId) return undefined;
+    let stopped = false;
+    api.get(`/sea/retiradas/${withdrawalId}/responsavel`).then(async (res) => {
+      if (stopped || !res.ok) return;
+      const data = await res.json();
+      if (!stopped) setPicker(data);
+    });
+    return () => { stopped = true; };
+  }, [pickedBy, withdrawalId, api]);
 
   // 4: confirm receipt -> single stock decrement.
   async function confirm() {
@@ -302,9 +329,16 @@ export default function TerminalRetirada() {
             <div className="terminal-step">Passo 3 de 4</div>
             <div className="terminal-title">Solicitação nº {withdrawal.withdrawal_id} enviada ao estoque</div>
             <div className="terminal-card" aria-live="polite">
-              <p style={{ fontSize: 20 }}>
-                {withdrawal.status === 'PICKING' ? 'O responsável pelo estoque está separando os materiais…' : 'Aguardando o responsável pelo estoque iniciar a separação…'}
-              </p>
+              {withdrawal.status === 'PICKING' && picker ? (
+                <div className="terminal-picker">
+                  {picker.photo
+                    ? <img src={picker.photo} alt={`Foto de ${picker.name}`} className="terminal-picker-photo" />
+                    : <div className="terminal-picker-photo terminal-picker-initials" aria-hidden="true">{(picker.name || '?').slice(0, 1).toUpperCase()}</div>}
+                  <p style={{ fontSize: 20 }}><strong>{picker.name}</strong> {WAITING_TEXT.PICKING}</p>
+                </div>
+              ) : (
+                <p style={{ fontSize: 20 }}>{WAITING_TEXT[withdrawal.status] || 'Aguardando o estoque…'}</p>
+              )}
               {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 17 }}>{formatQuantity(l.quantity, l.uom, l.pack_weight_kg)} · {l.item_name} ({l.bin_code})</div>)}
             </div>
             <div className="terminal-actions">
@@ -318,6 +352,12 @@ export default function TerminalRetirada() {
             <div className="terminal-step">Passo 4 de 4</div>
             <div className="terminal-title">Materiais separados. {employee?.full_name || employee?.username}, confirme o recebimento</div>
             <div className="terminal-card">
+              {picker && (
+                <div className="terminal-picker">
+                  {picker.photo && <img src={picker.photo} alt={`Foto de ${picker.name}`} className="terminal-picker-photo" />}
+                  <p style={{ fontSize: 18 }}>Preparado por <strong>{picker.name}</strong></p>
+                </div>
+              )}
               {withdrawal.lines.map((l) => <div key={l.inventory_id} style={{ fontSize: 20, padding: '6px 0' }}>{formatQuantity(l.quantity, l.uom, l.pack_weight_kg)} · {l.item_name}</div>)}
             </div>
             <div className="terminal-actions">

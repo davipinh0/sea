@@ -4,11 +4,10 @@ services/sea_service.py; this module only handles HTTP, permissions and
 warehouse scoping.
 """
 
+import base64
 from functools import wraps
 
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import bindparam, text
-
 from middleware.auth_middleware import (
     check_warehouse_access,
     require_admin_or_page_permission,
@@ -22,25 +21,25 @@ from schemas.sea import (
     CancelWithdrawalRequest,
     CreateBaseOtRequest,
     CreateCatalogMaterialRequest,
-    RegisterPushTokenRequest,
-    UpdateCatalogMaterialRequest,
     CreateWithdrawalRequest,
+    EvaluateWithdrawalRequest,
     InterpretLabelRequest,
     LoginDecisionRequest,
     RegisterFromBaseRequest,
     RegisterOtRequest,
+    RegisterPushTokenRequest,
     TransferStockRequest,
+    UpdateCatalogMaterialRequest,
     UpdateOtDataRequest,
     UpdateOtMaterialRequest,
 )
-from services import login_approval
-from services import step_up
+from services import login_approval, sap_base, step_up, user_photo
 from services import notification_service as notifications
-from services import sap_base
 from services import sea_service as sea
 from services.audit_service import write_audit_log
 from services.label_parser import parse_label
 from services.ot_source import get_ot_source
+from sqlalchemy import bindparam, text
 from utils.validation import validate_body
 
 sea_bp = Blueprint("sea", __name__)
@@ -202,7 +201,7 @@ def painel():
             """
             SELECT status, COUNT(*) AS n FROM withdrawals
             WHERE warehouse_id = :wid
-              AND (status IN ('REQUESTED', 'PICKING', 'READY')
+              AND (status IN ('REQUESTED', 'APPROVED', 'PICKING', 'READY')
                    OR COALESCE(delivered_at, cancelled_at, requested_at) >= CURRENT_DATE)
             GROUP BY status
             """
@@ -236,7 +235,7 @@ def painel():
     pending_everywhere = g.db.execute(
         text(
             "SELECT COUNT(*) FROM withdrawals "
-            f"WHERE status IN ('REQUESTED', 'PICKING', 'READY') {scope_clause}"
+            f"WHERE status IN ('REQUESTED', 'APPROVED', 'PICKING', 'READY') {scope_clause}"
         ),
         scope_params,
     ).scalar()
@@ -503,6 +502,10 @@ def list_notificacoes():
     returns only the ones newer than a known id (panel polling)."""
     scope_clause, scope_params = warehouse_scope_clause("n.warehouse_id")
     after = request.args.get("after", type=int)
+    # mig 096: withdrawal steps go to who acts on them (and administrators).
+    pages = g.current_user.get("allowed_pages")
+    hidden = [kind for kind, page in notifications.AUDIENCE.items()
+              if pages is not None and page not in pages]
     limit = min(max(1, request.args.get("limit", 20, type=int)), 50)
     rows = g.db.execute(
         text(
@@ -514,12 +517,14 @@ def list_notificacoes():
               -- what this user cleared no longer shows for them
               AND n.notification_id > (SELECT notifications_cleared_id FROM users
                                        WHERE user_id = :uid)
+              AND NOT (n.kind = ANY(:hidden))
               {scope_clause}
             ORDER BY n.notification_id DESC
             LIMIT :limit
             """
         ),
-        {"after": after, "limit": limit, "uid": g.current_user["user_id"], **scope_params},
+        {"after": after, "limit": limit, "uid": g.current_user["user_id"], "hidden": hidden,
+         **scope_params},
     ).fetchall()
     return jsonify({
         "notifications": [
@@ -729,6 +734,8 @@ def get_ordem(number):
 # ------------------------------------- Recebimento por etiqueta da OT
 
 RECEIVING_PAGE_KEYS = ("receiving", "purchase-orders")
+# mig 096: request at the terminal / evaluate / accept and separate.
+WITHDRAWAL_PAGES = ("retirada", "retirada-avaliar", "retirada-fazer")
 
 
 @sea_bp.route("/recebimentos/areas")
@@ -1121,8 +1128,8 @@ def confirmacao_acompanhar(purpose, challenge_id):
     if status == login_approval.DENIED:
         return _user_error("A liberação foi negada no celular.", 403)
     if status == login_approval.APPROVED:
-        return jsonify({"status": status, "granted": True,
-                        "seconds_left": step_up.seconds_left(g.db, g.current_user.get("jti"), purpose)})
+        left = step_up.seconds_left(g.db, g.current_user.get("jti"), purpose)
+        return jsonify({"status": status, "granted": True, "seconds_left": left})
     return _user_error("O tempo para confirmar acabou. Peça de novo.", 410)
 
 
@@ -1380,12 +1387,15 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             SELECT w.*, p.po_number, p.order_type, p.service_order_number,
                    u.full_name AS delivered_to_name,
                    r.full_name AS requested_by_name, r.email AS requested_by_email,
+                   pk.user_id AS picked_by_user_id, pk.full_name AS picked_by_name,
+                   pk.photo_updated_at AS picked_by_photo_at,
                    sw.warehouse_code
             FROM withdrawals w
             JOIN purchase_orders p ON p.po_id = w.po_id
             JOIN warehouses sw ON sw.warehouse_id = w.warehouse_id
             LEFT JOIN users u ON u.user_id = w.delivered_to_user_id
             LEFT JOIN users r ON r.username = w.requested_by
+            LEFT JOIN users pk ON pk.username = w.picked_by
             WHERE {' AND '.join(where)}
             ORDER BY w.withdrawal_id DESC
             LIMIT :limit
@@ -1432,6 +1442,11 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             "requested_by_name": r.requested_by_name, "requested_by_email": r.requested_by_email,
             "requested_at": _iso(r.requested_at), "requester_note": r.requester_note,
             "picked_by": r.picked_by, "picking_started_at": _iso(r.picking_started_at),
+            # mig 096: who accepted it (the terminal shows the name and photo).
+            "picked_by_user_id": r.picked_by_user_id, "picked_by_name": r.picked_by_name,
+            "picked_by_has_photo": r.picked_by_photo_at is not None,
+            "evaluated_by": r.evaluated_by, "evaluated_at": _iso(r.evaluated_at),
+            "evaluation_note": r.evaluation_note,
             "ready_at": _iso(r.ready_at), "delivered_to": r.delivered_to_name,
             "delivered_at": _iso(r.delivered_at),
             "confirmed_by": r.confirmed_by, "cancelled_by": r.cancelled_by,
@@ -1449,7 +1464,7 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
 
 @sea_bp.route("/retiradas")
 @require_auth
-@require_admin_or_page_permission("retirada")
+@require_any_page(*WITHDRAWAL_PAGES)
 @with_db
 def list_retiradas():
     """Withdrawals of one location (?warehouse_id=) or, without it, of
@@ -1469,7 +1484,7 @@ def list_retiradas():
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>")
 @require_auth
-@require_admin_or_page_permission("retirada")
+@require_any_page(*WITHDRAWAL_PAGES)
 @with_db
 def get_retirada(withdrawal_id):
     """One withdrawal, whatever its status (the terminal follows its own
@@ -1482,6 +1497,37 @@ def get_retirada(withdrawal_id):
     if wh is None:
         return _user_error("Retirada não encontrada", 404)
     return jsonify({"withdrawal": _withdrawals(warehouse_id=wh, withdrawal_id=withdrawal_id)[0]})
+
+
+@sea_bp.route("/retiradas/<int:withdrawal_id>/responsavel")
+@require_auth
+@require_any_page(*WITHDRAWAL_PAGES)
+@with_db
+def responsavel_retirada(withdrawal_id):
+    """Who accepted the request, with the photo as a data: URL (mig 096).
+
+    The terminal has no panel cookie, so it cannot load the photo URL of
+    the panel; and the page CSP allows data: images, not blob:.
+    """
+    scope_clause, scope_params = _withdrawal_scope(withdrawal_id)
+    row = g.db.execute(
+        text(
+            f"""
+            SELECT u.user_id, u.full_name, u.username
+            FROM withdrawals w JOIN users u ON u.username = w.picked_by
+            WHERE w.withdrawal_id = :id {scope_clause}
+            """
+        ),
+        {"id": withdrawal_id, **(scope_params or {})},
+    ).fetchone()
+    if row is None:
+        return _user_error("Ninguém aceitou esta retirada ainda.", 404)
+    photo = user_photo.load_photo(g.db, row.user_id)
+    data_url = (
+        f"data:{photo.photo_mime};base64,{base64.b64encode(bytes(photo.photo)).decode()}"
+        if photo else None
+    )
+    return jsonify({"name": row.full_name or row.username, "photo": data_url})
 
 
 @sea_bp.route("/retiradas", methods=["POST"])
@@ -1541,21 +1587,38 @@ def _transition(withdrawal_id, fn, *args, message, own=False):
     return jsonify({"message": message, "withdrawal": current[0] if current else None}), result
 
 
+@sea_bp.route("/retiradas/<int:withdrawal_id>/avaliar", methods=["POST"])
+@require_auth
+@require_step_up("retirada")
+@require_admin_or_page_permission("retirada-avaliar")
+@validate_body(EvaluateWithdrawalRequest)
+@with_db
+def avaliar(withdrawal_id, validated):
+    """mig 096: the evaluator approves or denies a request."""
+    resp, _ = _transition(
+        withdrawal_id, sea.evaluate, g.current_user["username"], validated.approve,
+        validated.note,
+        message="Retirada aprovada" if validated.approve else "Retirada negada")
+    notifications.dispatch(g.db)
+    return resp
+
+
 @sea_bp.route("/retiradas/<int:withdrawal_id>/separar", methods=["POST"])
 @require_auth
 @require_step_up("retirada")
-@require_admin_or_page_permission("retirada")
+@require_admin_or_page_permission("retirada-fazer")
 @with_db
 def separar(withdrawal_id):
+    """Accept an approved request and prepare it (mig 096)."""
     resp, _ = _transition(withdrawal_id, sea.start_picking, g.current_user["username"],
-                          message="Separação iniciada")
+                          message="Retirada aceita: prepare o material")
     return resp
 
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/pronta", methods=["POST"])
 @require_auth
 @require_step_up("retirada")
-@require_admin_or_page_permission("retirada")
+@require_admin_or_page_permission("retirada-fazer")
 @with_db
 def pronta(withdrawal_id):
     resp, _ = _transition(withdrawal_id, sea.mark_ready, g.current_user["username"],
@@ -1576,7 +1639,7 @@ def entregar(withdrawal_id):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/cancelar", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("retirada")
+@require_any_page(*WITHDRAWAL_PAGES)
 @validate_body(CancelWithdrawalRequest)
 @with_db
 def cancelar(withdrawal_id, validated):

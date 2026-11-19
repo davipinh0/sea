@@ -18,7 +18,7 @@ const NAV = [
       { to: '/estoque', label: 'Estoque', pageKeys: ['inventory', 'items', 'bins', 'audit-log'] },
       // Only offered while the Expedição location is selected (EXPEDICAO_CODE).
       { to: '/expedicao', label: 'Expedição', pageKeys: ['receiving', 'putaway', 'purchase-orders'], onlyAt: EXPEDICAO_CODE },
-      { to: '/retirada', label: 'Retirada', pageKeys: ['retirada'] },
+      { to: '/retirada', label: 'Retirada', pageKeys: ['retirada', 'retirada-avaliar', 'retirada-fazer'] },
     ],
   },
   {

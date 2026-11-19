@@ -108,9 +108,11 @@ class TestOrderLookup:
         assert resp.get_json()["withdrawal"]["warehouse_id"] == WAREHOUSE
         assert client.get(f"/api/sea/retiradas/{wid}", headers=employee).status_code == 200
 
-        # The employee does not separate: that is for the location's users.
+        # The employee does not separate: that needs "Fazer retirada" (mig 096).
         assert client.post(f"/api/sea/retiradas/{wid}/separar", headers=employee,
-                           json={}).status_code == 404
+                           json={}).status_code == 403
+        assert client.post(f"/api/sea/retiradas/{wid}/avaliar", headers=auth_headers,
+                           json={"approve": True}).status_code == 200
         for action in ("separar", "pronta"):
             assert client.post(f"/api/sea/retiradas/{wid}/{action}", headers=auth_headers,
                                json={}).status_code == 200
@@ -167,8 +169,10 @@ class TestBoxWeight:
         assert withdrawal["lines"][0]["quantity"] == 18
         assert withdrawal["lines"][0]["pack_weight_kg"] == 18
         wid = withdrawal["withdrawal_id"]
-        for action in ("separar", "pronta", "entregar"):
-            step = client.post(f"/api/sea/retiradas/{wid}/{action}", headers=auth_headers, json={})
+        for action in ("avaliar", "separar", "pronta", "entregar"):
+            body = {"approve": True} if action == "avaliar" else {}
+            step = client.post(f"/api/sea/retiradas/{wid}/{action}",
+                               headers=auth_headers, json=body)
             assert step.status_code == 200, step.get_json()
         assert conn.execute(
             text("SELECT quantity_on_hand FROM inventory WHERE inventory_id = :i"),

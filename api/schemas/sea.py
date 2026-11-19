@@ -178,6 +178,16 @@ class TransferStockRequest(BaseModel):
     reason: Optional[str] = Field(None, max_length=500)
 
 
+class EvaluateWithdrawalRequest(BaseModel):
+    """The evaluator approves or denies a request (mig 096). Denying
+    needs the reason; the service checks it."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    approve: bool
+    note: Optional[str] = Field(None, max_length=500)
+
+
 class CancelWithdrawalRequest(BaseModel):
     """A cancellation always carries its reason (never blank)."""
 

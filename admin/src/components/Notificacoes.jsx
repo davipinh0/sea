@@ -15,6 +15,7 @@ const TOAST_MS = 8000;
 
 const KIND_LABEL = {
   RETIRADA_SOLICITADA: 'Solicitação de retirada',
+  RETIRADA_APROVADA: 'Retirada aprovada',
   RECEBIMENTO: 'Recebimento de materiais',
   ARMAZENAGEM_CONCLUIDA: 'Armazenamento concluído',
 };
@@ -22,6 +23,7 @@ const KIND_LABEL = {
 // Where each notification leads: the screen where the operator acts on it.
 const KIND_TARGET = {
   RETIRADA_SOLICITADA: '/retirada',
+  RETIRADA_APROVADA: '/retirada',
   RECEBIMENTO: '/expedicao/armazenagem',
   ARMAZENAGEM_CONCLUIDA: '/estoque/sp12',
 };

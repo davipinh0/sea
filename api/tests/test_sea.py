@@ -283,6 +283,9 @@ class TestWithdrawals:
 
         # Cannot deliver before separation is finished.
         assert _step(client, auth_headers, wid, "entregar").status_code == 409
+        # mig 096: the evaluator approves before anyone accepts it.
+        assert _step(client, auth_headers, wid, "separar").status_code == 409
+        assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         assert _step(client, auth_headers, wid, "separar").status_code == 200
         assert _step(client, auth_headers, wid, "pronta").status_code == 200
 
@@ -318,6 +321,7 @@ class TestWithdrawals:
         )
         assert audit == [
             "WITHDRAWAL_REQUESTED",
+            "WITHDRAWAL_APPROVED",
             "WITHDRAWAL_PICKING",
             "WITHDRAWAL_READY",
             "WITHDRAWAL_DELIVERED",
@@ -336,6 +340,7 @@ class TestWithdrawals:
     def test_cancel_releases_the_reservation(self, client, auth_headers, stored_ot):
         inv_id = stored_ot["inventory_id"]
         wid = _request(client, auth_headers, inv_id, 5).get_json()["withdrawal"]["withdrawal_id"]
+        assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         assert _step(client, auth_headers, wid, "separar").status_code == 200
         assert _step(client, auth_headers, wid, "cancelar", {"reason": "teste"}).status_code == 200
         assert tuple(_stock(stored_ot["conn"], inv_id)) == (10, 0)
@@ -404,6 +409,7 @@ class TestWithdrawals:
 
         inv_id = stored_ot["inventory_id"]
         wid = _request(client, employee, inv_id, 3).get_json()["withdrawal"]["withdrawal_id"]
+        assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         for action in ("separar", "pronta"):
             assert _step(client, auth_headers, wid, action).status_code == 200
 
@@ -711,6 +717,7 @@ class TestPainelPrivacy:
         wid = _request(client, auth_headers, stored_ot["inventory_id"], 1).get_json()["withdrawal"][
             "withdrawal_id"
         ]
+        assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         for action in ("separar", "pronta"):
             assert _step(client, auth_headers, wid, action).status_code == 200
         assert _step(client, auth_headers, wid, "entregar").status_code == 200

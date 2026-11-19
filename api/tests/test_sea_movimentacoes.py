@@ -4,9 +4,9 @@ Only administrators and users granted "Histórico" (audit-log) see them.
 "Limpar" restarts the Painel list of that user; the history keeps it all.
 """
 
+from services.audit_service import write_audit_log
 from sqlalchemy import text
 
-from services.audit_service import write_audit_log
 from tests.test_sea import WAREHOUSE
 from tests.test_sea_acesso import _user
 
@@ -62,13 +62,23 @@ class TestClearingTheList:
         # What happens after the moment of "Limpar" is listed again (the
         # test transaction freezes NOW(), so the moment is moved back).
         _db_transaction.execute(
-            text("UPDATE users SET movements_cleared_at = movements_cleared_at - INTERVAL '1 hour' "
-                 "WHERE username = 'sea.mov.limpa'")
+            text(
+                "UPDATE users SET movements_cleared_at = movements_cleared_at - INTERVAL '1 hour' "
+                "WHERE username = 'sea.mov.limpa'"
+            )
         )
         assert "antigo" in _reasons(_painel(client, mine))
-        assert client.post("/api/sea/painel/movimentacoes/limpar", json={}, headers=mine).status_code == 200
+        assert (
+            client.post("/api/sea/painel/movimentacoes/limpar", json={}, headers=mine).status_code
+            == 200
+        )
 
-        assert client.post("/api/sea/painel/movimentacoes/restaurar", json={}, headers=mine).status_code == 200
+        assert (
+            client.post(
+                "/api/sea/painel/movimentacoes/restaurar", json={}, headers=mine
+            ).status_code
+            == 200
+        )
         assert "antigo" in _reasons(_painel(client, mine))
 
     def test_without_historico_the_list_cannot_be_cleared(self, client, _db_transaction):
@@ -82,7 +92,9 @@ class TestAppHistory:
         headers = _user(client, _db_transaction, "sea.mov.app", ["audit-log"], [WAREHOUSE])
         for n in range(3):
             _movement(_db_transaction, f"m{n}")
-        first = client.get(f"/api/sea/historico?warehouse_id={WAREHOUSE}&limit=2", headers=headers).get_json()
+        first = client.get(
+            f"/api/sea/historico?warehouse_id={WAREHOUSE}&limit=2", headers=headers
+        ).get_json()
         assert [m["details"]["reason"] for m in first["movements"]] == ["m2", "m1"]
         rest = client.get(
             f"/api/sea/historico?warehouse_id={WAREHOUSE}&limit=2&before={first['next_before']}",
@@ -92,5 +104,8 @@ class TestAppHistory:
 
     def test_the_history_needs_the_permission(self, client, _db_transaction):
         headers = _user(client, _db_transaction, "sea.mov.appsem", ["retirada"], [WAREHOUSE])
-        assert client.get(f"/api/sea/historico?warehouse_id={WAREHOUSE}", headers=headers).status_code == 403
+        assert (
+            client.get(f"/api/sea/historico?warehouse_id={WAREHOUSE}", headers=headers).status_code
+            == 403
+        )
         assert client.get("/api/admin/audit-log", headers=headers).status_code == 403

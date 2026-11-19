@@ -30,7 +30,7 @@ export function orderName(row) {
 export const MODULES = [
   { key: 'receive', label: 'RECEBER', sub: 'Recebimento de ordem', screen: 'Receber', accent: 'red', fn: 'receive', pages: ['receiving'], onlyAt: EXPEDICAO_CODE },
   { key: 'putaway', label: 'ARMAZENAR', sub: 'Guardar o que foi recebido', screen: 'Armazenar', accent: 'copper', fn: 'putaway', pages: ['putaway'], onlyAt: EXPEDICAO_CODE },
-  { key: 'retirada', label: 'RETIRADA', sub: 'Fila de solicitações', screen: 'Retirada', accent: 'red', pages: ['retirada'] },
+  { key: 'retirada', label: 'RETIRADA', sub: 'Fila de solicitações', screen: 'Retirada', accent: 'red', pages: ['retirada', 'retirada-avaliar', 'retirada-fazer'] },
   { key: 'transfer', label: 'TRANSFERIR', sub: 'Entre endereços e locais', screen: 'Transferir', accent: 'gray', pages: ['items', 'inventory', 'putaway'] },
   { key: 'estoque', label: 'ESTOQUE', sub: 'O que há em cada endereço', screen: 'Estoque', accent: 'copper', pages: ['inventory'] },
   { key: 'ordens', label: 'ORDENS', sub: 'Consulta de OTs e materiais', screen: 'Ordens', accent: 'gray', pages: ['inventory', 'purchase-orders', 'receiving', 'putaway', 'retirada'] },
@@ -46,6 +46,28 @@ export function visibleModules(me, warehouseCode) {
     if (me.role === 'ADMIN') return true;
     return (m.fn && functions.includes(m.fn)) || m.pages.some((p) => pages.includes(p));
   });
+}
+
+// mig 096: what the user may do with a withdrawal of the queue.
+// Evaluate needs "retirada-avaliar"; accept and finish need "retirada-fazer".
+export function withdrawalActions(w, me) {
+  const pages = me?.allowed_pages || [];
+  const admin = me?.role === 'ADMIN';
+  const canEvaluate = admin || pages.includes('retirada-avaliar');
+  const canDo = admin || pages.includes('retirada-fazer');
+  if (w.status === 'REQUESTED' && canEvaluate) {
+    return [
+      { action: 'avaliar', label: 'APROVAR', body: { approve: true }, done: `Retirada nº ${w.withdrawal_id} aprovada.` },
+      { action: 'avaliar', label: 'NEGAR', deny: true },
+    ];
+  }
+  if (w.status === 'APPROVED' && canDo) {
+    return [{ action: 'separar', label: 'ACEITAR E SEPARAR', done: `Retirada nº ${w.withdrawal_id} aceita: prepare o material.` }];
+  }
+  if (w.status === 'PICKING' && canDo) {
+    return [{ action: 'pronta', label: 'PRONTA PARA ENTREGA', done: `Retirada nº ${w.withdrawal_id} pronta. O funcionário confirma no terminal.` }];
+  }
+  return [];
 }
 
 // Message of a failed request, written for the operator.

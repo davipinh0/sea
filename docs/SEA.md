@@ -82,7 +82,13 @@ armazenamento concluído) com aviso sonoro.
 * **Armazenagem SP12** (validada na API em toda armazenagem de OT):
   * a ordem pode ser distribuída livremente por vários endereços;
   * prateleiras livres: qualquer material, de qualquer ordem, em qualquer quantidade.
-* **Retirada**: solicitada → em separação → pronta → entregue (ou cancelada).
+* **Retirada** (migração `096`): solicitada → **avaliada** (aprovada ou negada com motivo) →
+  aceita por quem faz a retirada (em separação) → pronta → entregue (ou cancelada). Três
+  permissões em **Sistema > Usuários**: **Solicitar retirada** (terminal), **Avaliar retirada**
+  (aprovar ou negar) e **Fazer retirada** (aceitar e separar). Quem já tinha "Retirada" recebeu
+  também "Fazer retirada". O avaliador é avisado de cada solicitação; aprovada, os usuários com
+  "Fazer retirada" são avisados; quem aceitar aparece com **nome e foto** no terminal enquanto
+  prepara o material. Negada, a reserva é desfeita e o terminal mostra o motivo.
   A solicitação **reserva** o saldo; a **baixa** só ocorre quando quem solicitou confirma o
   recebimento no terminal. Cada transição trava as linhas no banco e confere o status atual,
   impedindo baixa duplicada e retirada acima do saldo.
@@ -251,10 +257,31 @@ lidos com a **câmera**. Usa a mesma API do painel.
 |---|---|---|
 | Receber | lê a OT; se ela está só na base do SAP, mostra os materiais e registra a entrega; recebe parcial ou integral | local Expedição; permissão Recebimento (ou módulo "Receber") |
 | Armazenar | lista o que aguarda em todos os locais e guarda em qualquer prateleira (sugestão, lista ou código do endereço) | local Expedição; permissão Armazenagem (ou módulo "Armazenagem") |
-| Retirada | fila do almoxarife: iniciar separação, pronta para entrega, cancelar com motivo | permissão Retirada |
+| Retirada | avaliar (aprovar/negar), aceitar e separar, pronta para entrega, cancelar com motivo | Solicitar, Avaliar ou Fazer retirada |
+| Histórico | movimentações do local e log completo do SEA | admin ou permissão Histórico |
 | Transferir | busca o material e move entre endereços ou locais | permissão Materiais, Visão Geral ou Armazenagem |
 
 O funcionário continua solicitando e confirmando a retirada no terminal (painel web).
+
+**Digital ou PIN antes de cada processo:** no app, abrir uma OT para receber, escolher onde
+armazenar um material e cada passo da retirada (avaliar, aceitar, pronta) pedem a digital ou a
+senha do celular (PIN ou padrão).
+
+**Processos do painel web liberados pelo celular** (migração `095`, `api/services/step_up.py`):
+no painel web, **Recebimento**, **Armazenagem** e **Retirada** só abrem depois de confirmados no
+app SEA do celular cadastrado: o painel envia o pedido, o celular recebe o push "Liberar ... no
+painel", o usuário confirma com a digital/PIN e a tela abre. A liberação vale para aquela sessão do
+painel e termina após 15 minutos sem uso (aí o painel pede de novo). Sem celular cadastrado o
+processo fica bloqueado. A API exige a liberação nas rotas do processo (`403 step_up_required`);
+o app e o terminal (token Bearer) não passam por essa trava, porque o app pede a digital/PIN.
+
+**Últimas movimentações e Histórico** (migração `094`): as movimentações do Painel aparecem só
+para administradores e quem tem a permissão **Histórico**. **Ocultar** recolhe a lista neste
+navegador; **Limpar** recomeça a lista só para quem limpou (nada é apagado do histórico; "Mostrar
+tudo de novo" desfaz).
+
+**Foto do usuário:** o painel lê a foto escolhida como `data:` (a política de segurança do site
+bloqueia `blob:`, o que impedia a foto de ser salva).
 
 Além desses, o app tem **Estoque** (o que há em cada endereço), **Ordens** (consulta de OTs e
 materiais) e **Notificações**. As telas se atualizam sozinhas e o layout se ajusta à tela do
@@ -341,7 +368,8 @@ celular com o Expo Go); `npx eas-cli login`, `npx eas-cli init` e `npm run build
 
 | Evento | Quando | Assunto do e-mail |
 |---|---|---|
-| Solicitação de retirada | uma retirada é solicitada no terminal | `SEA - Solicitação de Retirada` |
+| Solicitação de retirada | uma retirada é solicitada no terminal (avisa quem avalia) | `SEA - Solicitação de Retirada` |
+| Retirada aprovada | o avaliador aprova (avisa quem faz a retirada) | `SEA - Retirada Aprovada` |
 | Recebimento de materiais | materiais de uma ordem são recebidos | `SEA - Recebimento de Materiais na Expedição` |
 | Conclusão de armazenamento | não resta material da ordem na área de recebimento | `SEA - Conclusão de Armazenamento` |
 

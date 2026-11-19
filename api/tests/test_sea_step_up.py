@@ -6,9 +6,9 @@ the process is used (15 minutes without use end it). The app and the
 terminal (Bearer) are not gated by the API.
 """
 
+from services.step_up import WINDOW_MINUTES
 from sqlalchemy import text
 
-from services.step_up import WINDOW_MINUTES
 from tests.test_sea import WAREHOUSE
 from tests.test_sea_acesso import _user
 
@@ -18,10 +18,14 @@ PAGES = ["receiving", "putaway", "retirada", "retirada-fazer"]
 
 def _setup(client, conn, username, *, phone=True):
     _user(client, conn, username, PAGES, [WAREHOUSE])
-    uid = conn.execute(text("SELECT user_id FROM users WHERE username = :u"), {"u": username}).scalar()
+    uid = conn.execute(
+        text("SELECT user_id FROM users WHERE username = :u"), {"u": username}
+    ).scalar()
     if phone:
-        conn.execute(text("INSERT INTO sea_push_tokens (token, user_id, secure_lock) VALUES (:t, :u, TRUE)"),
-                     {"t": PHONE, "u": uid})
+        conn.execute(
+            text("INSERT INTO sea_push_tokens (token, user_id, secure_lock) VALUES (:t, :u, TRUE)"),
+            {"t": PHONE, "u": uid},
+        )
     return uid
 
 
@@ -33,8 +37,10 @@ def _web_login(client, username):
 
 
 def _phone(client, username):
-    token = client.post("/api/auth/login", json={"username": username, "password": "Senha123",
-                                                 "device_token": PHONE}).get_json()["token"]
+    token = client.post(
+        "/api/auth/login",
+        json={"username": username, "password": "Senha123", "device_token": PHONE},
+    ).get_json()["token"]
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -61,7 +67,10 @@ class TestTheGate:
         phone = _phone(client, "sea.step.app")
         client.delete_cookie("sea_auth", domain="localhost")
         assert not _gated(_putaway(client, phone))
-        assert client.get("/api/sea/confirmacao/armazenagem", headers=phone).get_json()["required"] is False
+        assert (
+            client.get("/api/sea/confirmacao/armazenagem", headers=phone).get_json()["required"]
+            is False
+        )
 
     def test_without_a_registered_phone_the_process_is_blocked(self, client, _db_transaction):
         _setup(client, _db_transaction, "sea.step.semcel", phone=False)
@@ -84,8 +93,11 @@ class TestReleasingOnThePhone:
         return csrf, resp.get_json()["challenge_id"]
 
     def _decide(self, client, phone, challenge_id, approve):
-        return client.post(f"/api/sea/login/{challenge_id}/decidir",
-                           json={"approve": approve, "device_token": PHONE}, headers=phone)
+        return client.post(
+            f"/api/sea/login/{challenge_id}/decidir",
+            json={"approve": approve, "device_token": PHONE},
+            headers=phone,
+        )
 
     def test_approved_on_the_phone_the_session_is_released(self, client, _db_transaction):
         _setup(client, _db_transaction, "sea.step.ok")
@@ -138,9 +150,16 @@ class TestReleasingOnThePhone:
         phone = _phone(client, "sea.step.audit")
         _, challenge = self._ask(client, "sea.step.audit")
         self._decide(client, phone, challenge, True)
-        actions = _db_transaction.execute(
-            text("SELECT action_type FROM audit_log WHERE entity_type = 'USER' AND entity_id = :u "
-                 "ORDER BY log_id"),
-            {"u": uid},
-        ).scalars().all()
+        actions = (
+            _db_transaction.execute(
+                text(
+                    "SELECT action_type FROM audit_log "
+                    "WHERE entity_type = 'USER' AND entity_id = :u "
+                    "ORDER BY log_id"
+                ),
+                {"u": uid},
+            )
+            .scalars()
+            .all()
+        )
         assert actions[-2:] == ["PROCESS_APPROVAL_REQUESTED", "PROCESS_APPROVED"]

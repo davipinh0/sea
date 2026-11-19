@@ -38,13 +38,22 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 KIND_WITHDRAWAL_REQUESTED = "RETIRADA_SOLICITADA"
+KIND_WITHDRAWAL_APPROVED = "RETIRADA_APROVADA"
 KIND_RECEIPT = "RECEBIMENTO"
 KIND_STORAGE_DONE = "ARMAZENAGEM_CONCLUIDA"
 
 SUBJECTS = {
     KIND_WITHDRAWAL_REQUESTED: "SEA - Solicitação de Retirada",
+    KIND_WITHDRAWAL_APPROVED: "SEA - Retirada Aprovada",
     KIND_RECEIPT: "SEA - Recebimento de Materiais na Expedição",
     KIND_STORAGE_DONE: "SEA - Conclusão de Armazenamento",
+}
+
+# mig 096: who is told of each withdrawal step (besides administrators).
+# Other kinds go to every user of the location.
+AUDIENCE = {
+    KIND_WITHDRAWAL_REQUESTED: "retirada-avaliar",
+    KIND_WITHDRAWAL_APPROVED: "retirada-fazer",
 }
 
 EMAIL_PENDING = "PENDENTE"
@@ -158,19 +167,23 @@ def push_enabled() -> bool:
     return os.environ.get("SEA_PUSH", "").strip().lower() == "expo"
 
 
-def push_tokens(db, warehouse_id: int) -> list[str]:
+def push_tokens(db, warehouse_id: int, page_key: str | None = None) -> list[str]:
     """Devices of the active users who work in the location of the event
-    (administrators work in all of them)."""
+    (administrators work in all of them). With ``page_key`` only users
+    granted that page (and administrators)."""
     rows = db.execute(
         text(
             """
             SELECT t.token FROM sea_push_tokens t JOIN users u ON u.user_id = t.user_id
             WHERE u.is_active = TRUE AND t.signed_in = TRUE
-              AND (u.role = 'ADMIN' OR :wid = ANY(u.warehouse_ids))
+              AND (u.role = 'ADMIN' OR (:wid = ANY(u.warehouse_ids)
+                   AND (CAST(:page AS VARCHAR) IS NULL OR EXISTS (
+                        SELECT 1 FROM user_page_permissions pp
+                        WHERE pp.user_id = u.user_id AND pp.page_key = :page))))
             ORDER BY t.token
             """
         ),
-        {"wid": warehouse_id},
+        {"wid": warehouse_id, "page": page_key},
     ).fetchall()
     return [r.token for r in rows]
 
@@ -192,7 +205,7 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
     ).fetchone()
     if row is None or not push_enabled():
         return 0
-    tokens = push_tokens(db, row.warehouse_id)
+    tokens = push_tokens(db, row.warehouse_id, AUDIENCE.get(row.kind))
     if not tokens:
         return 0
     sender([

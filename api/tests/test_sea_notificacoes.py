@@ -118,10 +118,11 @@ class TestEmail:
             assert status == "ENVIADO"
             assert _status(conn, nid).email_sent_at is not None
             subjects.add(sent[-1][1]["Subject"])
-        assert len(subjects) == len(notifications.SUBJECTS) == 4
+        assert len(subjects) == len(notifications.SUBJECTS) == 5
         assert subjects == {
             "SEA - Solicitação de Retirada",
             "SEA - Retirada Aprovada",
+            "SEA - Retirada Cancelada",
             "SEA - Recebimento de Materiais na Expedição",
             "SEA - Conclusão de Armazenamento",
         }

@@ -8,7 +8,7 @@ import StatusTag from '../components/StatusTag.jsx';
 import Modal from '../components/Modal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { DadosOtModal, MaterialOtModal, RegistroOtModal } from '../components/OtForms.jsx';
-import { OT_HEADER_FIELDS, formatDate, formatDateTime, readError } from '../utils/sea.js';
+import { OT_HEADER_FIELDS, formatDate, formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Expedição > Recebimento: read the OT barcode, check material code,
@@ -176,10 +176,13 @@ export default function RecebimentoOT() {
       setMessage({ type: 'error', text: await readError(res, 'Não foi possível registrar o recebimento.') });
       return;
     }
-    const total = items.reduce((acc, x) => acc + x.quantity, 0);
+    const done = items.map((x) => {
+      const m = materials[x.line.po_line_id] || {};
+      return `${formatQuantity(x.quantity, m.uom, m.pack_weight_kg)} de ${x.line.sku}`;
+    }).join('; ');
     setMessage({
       type: 'ok',
-      text: `${total} unidade(s) recebida(s) por ${user?.full_name || user?.username} em ${formatDateTime(new Date().toISOString())}. Material disponível para armazenagem.`,
+      text: `Recebimento registrado por ${user?.full_name || user?.username} em ${formatDateTime(new Date().toISOString())}: ${done}. Material disponível para armazenagem.`,
     });
     await loadOt(ot.po_number);
     loadOpenOts();
@@ -290,6 +293,11 @@ export default function RecebimentoOT() {
             <button type="button" className="btn btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setDetail(ot.po_number)}>Histórico completo</button>
           </div>
           {!ot.order_type && <p className="form-error">Este pedido não é uma ordem PM11/PM12 do SEA.</p>}
+          {ot.status === 'PARTIAL' && pending.length > 0 && (
+            <p className="tag tag-warning" role="status" style={{ display: 'inline-block', marginBottom: 12 }}>
+              Recebimento parcial: {pending.length} material(is) desta OT ainda não chegou(aram). O que chegou fica registrado; receba o restante quando chegar.
+            </p>
+          )}
           {otData && (
             <>
               <div className="detail-grid" style={{ marginBottom: 12 }}>
@@ -382,7 +390,7 @@ export default function RecebimentoOT() {
             <>
               <div className="section-title" style={{ marginTop: 16 }}>Recebimentos registrados</div>
               <table className="lines-table">
-                <thead><tr><th>Código</th><th>Qtd.</th><th>Endereço</th><th>Responsável</th><th>Data/hora</th><th /></tr></thead>
+                <thead><tr><th>Código</th><th>Quantidade</th><th>Endereço</th><th>Responsável</th><th>Data/hora</th><th /></tr></thead>
                 <tbody>
                   {receipts.map((r) => (
                     <tr key={r.receipt_id}>

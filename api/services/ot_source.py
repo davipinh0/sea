@@ -37,6 +37,8 @@ class OtMaterialData:
     # The order this material belongs to (an OT brings several orders).
     service_order_type: str | None = None  # PM11 / PM12
     service_order_number: str | None = None
+    # Weight of one box for a material kept in KG (withdrawn by box).
+    pack_weight_kg: int | None = None
 
 
 @dataclass(frozen=True)

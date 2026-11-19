@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import client from '../api/client';
 import { confirmIdentity } from '../auth/confirmIdentity';
+import { useAuth } from '../auth/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
 import CodeInput from '../components/CodeInput';
@@ -9,6 +10,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
 import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Armazenagem. Lists what waits in the receiving areas of every location
 // the user works in; the material goes to a shelf of any location (an
@@ -16,6 +18,7 @@ import { screenStyles } from '../theme/styles';
 // SP13). The API applies the storage rules.
 
 export default function ArmazenarScreen({ navigation }) {
+  const { warehouseId } = useAuth();
   const [pending, setPending] = useState(null);
   const [bins, setBins] = useState([]);
   const [active, setActive] = useState(null);
@@ -62,9 +65,17 @@ export default function ArmazenarScreen({ navigation }) {
   }
 
   // An address code read or typed must be one of the offered destinations.
+  // SP12 and SP13 share shelf codes (A0, B1 ...): the printed label
+  // (SP13-A0) names one; a bare code goes to the location in use.
   function pickByCode(code) {
-    const wanted = code.toUpperCase();
-    const matches = bins.filter((b) => b.bin_code.toUpperCase() === wanted);
+    const wanted = code.trim().toUpperCase();
+    const byLabel = bins.filter((b) => (b.bin_barcode || '').toUpperCase() === wanted
+      || `${b.warehouse_code}-${b.bin_code}`.toUpperCase() === wanted);
+    let matches = byLabel.length ? byLabel : bins.filter((b) => b.bin_code.toUpperCase() === wanted);
+    if (matches.length > 1) {
+      const here = matches.filter((b) => b.warehouse_id === warehouseId);
+      if (here.length === 1) matches = here;
+    }
     if (matches.length === 1) { setTarget(matches[0]); setMessage(null); return; }
     setMessage({ type: 'error', text: matches.length > 1 ? `Há mais de um endereço ${code}. Escolha na lista.` : `Endereço ${code} não encontrado entre os destinos.` });
   }
@@ -79,7 +90,7 @@ export default function ArmazenarScreen({ navigation }) {
         item_id: active.item_id, from_bin_id: active.bin_id, to_bin_id: target.bin_id,
         quantity: parseQuantity(quantity), lot_number: active.lot_number,
       });
-      setMessage({ type: 'ok', text: `${parseQuantity(quantity)} de ${active.sku} armazenado(s) em ${target.warehouse_code} · ${target.bin_code}.` });
+      setMessage({ type: 'ok', text: `Armazenagem registrada: ${formatQuantity(parseQuantity(quantity), active.uom, active.pack_weight_kg)} de ${active.sku} em ${target.warehouse_code} · ${target.bin_code}.` });
       setActive(null);
       await load();
     } catch (err) {
@@ -92,7 +103,7 @@ export default function ArmazenarScreen({ navigation }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="ARMAZENAR" onBack={() => (active ? setActive(null) : navigation.goBack())} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={load} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <Message message={message} />
 
         {!active && (
@@ -117,7 +128,7 @@ export default function ArmazenarScreen({ navigation }) {
             <Field label="ORIGEM" value={`${active.warehouse_code} · ${active.bin_code}`} />
             <Field label="ORDEM" value={orderName(active)} />
             <Field label="OT" value={active.lot_number} />
-            <Field label="AGUARDANDO" value={formatQuantity(active.quantity)} />
+            <Field label="AGUARDANDO" value={formatQuantity(active.quantity, active.uom, active.pack_weight_kg)} />
             {suggested && (
               <Button
                 label={`USAR SUGESTÃO: ${suggested.warehouse_code ? `${suggested.warehouse_code} · ` : ''}${suggested.bin_code}`} secondary
@@ -132,7 +143,7 @@ export default function ArmazenarScreen({ navigation }) {
             <Button label="CONFIRMAR ARMAZENAGEM" onPress={confirm} disabled={busy} />
           </Card>
         )}
-      </ScrollView>
+      </RefreshScroll>
 
       <AddressPicker
         visible={picking} bins={bins} excludeBinId={active?.bin_id} suggestedBinId={suggested?.bin_id}

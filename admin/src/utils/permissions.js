@@ -9,6 +9,15 @@ export function canExportCsv(user) {
 
 // Page-permission check shared by the SEA navigation (mirrors the API's
 // require_admin_or_page_permission: ADMIN passes, USER needs the key).
+// SEA (mig 098): the account of the withdrawal terminal. It holds this
+// permission only and sees nothing but the terminal.
+export const TERMINAL_PAGE = 'terminal-retirada';
+
+export function isTerminalAccount(user) {
+  return user?.role !== 'ADMIN' && Array.isArray(user?.allowed_pages)
+    && user.allowed_pages.includes(TERMINAL_PAGE);
+}
+
 export function canSee(user, pageKey) {
   if (!pageKey) return true;
   if (user?.role === 'ADMIN') return true;

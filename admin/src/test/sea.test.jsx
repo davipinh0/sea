@@ -74,10 +74,11 @@ beforeEach(() => {
   currentUser = { username: 'terminal', full_name: 'Terminal SP12', role: 'USER', allowed_pages: ['retirada'] };
 });
 
-// The terminal always opens on its login screen.
+// The terminal always opens on the choice of how to identify (mig 098).
 async function terminalSignIn() {
   render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
   expect(screen.queryByLabelText('Ordem')).toBeNull();
+  fireEvent.click(screen.getByText('Tenho acesso ao SEA'));
   fireEvent.change(screen.getByLabelText('E-mail corporativo ou usuário'), { target: { value: 'retirada@sea.example' } });
   fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'Sea@2026' } });
   fireEvent.click(screen.getByText('Entrar'));
@@ -126,19 +127,49 @@ describe('Terminal de retirada', () => {
     // Every request used the terminal's own token, never the panel session.
     expect(new Set(terminalTokens)).toEqual(new Set(['tok-terminal']));
 
-    // Ending the session returns to the login screen.
+    // Ending the session returns to the choice of how to identify.
     fireEvent.click(screen.getByText('Encerrar sessão'));
-    await screen.findByLabelText('E-mail corporativo ou usuário');
+    await screen.findByText('Tenho acesso ao SEA');
     // ...and ends the session on the server too (mig 093).
     expect(terminalLogout).toHaveBeenCalledWith('tok-terminal');
   }, 15000);
+
+  it('who has no access to the SEA asks with the corporate e-mail only (mig 098)', async () => {
+    apiGet.mockImplementation((path) => (path === '/sea/ordens/2000000011' ? ok(ORDER) : ok({})));
+    apiPost.mockImplementation(() => ok({ withdrawal: { withdrawal_id: 9, status: 'REQUESTED', lines: [] } }));
+    render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
+    fireEvent.click(screen.getByText('Não tenho acesso ao SEA'));
+    expect(screen.queryByLabelText('Senha')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('E-mail corporativo'), { target: { value: 'sem-arroba' } });
+    fireEvent.click(screen.getByText('Continuar'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('e-mail corporativo válido');
+
+    fireEvent.change(screen.getByLabelText('E-mail corporativo'), { target: { value: ' Fulano@Empresa.example ' } });
+    fireEvent.click(screen.getByText('Continuar'));
+    await screen.findByLabelText('Ordem');
+    expect(screen.getByText(/Identificado: fulano@empresa.example \(sem acesso ao SEA\)/)).toBeInTheDocument();
+    expect(terminalLogin).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
+    fireEvent.click(screen.getByText('Consultar ordem'));
+    await screen.findByText('Parafuso');
+    fireEvent.click(screen.getByLabelText('Aumentar MAT-1'));
+    fireEvent.click(screen.getByText('Solicitar retirada'));
+    await screen.findByText(/Solicitação nº 9 enviada/);
+    expect(apiPost).toHaveBeenCalledWith('/sea/retiradas', {
+      ot: 'OT-1', lines: [{ inventory_id: 11, quantity: 1 }], requester_email: 'fulano@empresa.example',
+    });
+    // The requests went under the terminal account (panel session), not an employee token.
+    expect(terminalTokens).toEqual([]);
+  });
 
   it('signs out an employee who walks away before asking for material', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       await terminalSignIn();
       await vi.advanceTimersByTimeAsync(TERMINAL_IDLE_MS + 6000);
-      expect(await screen.findByLabelText('E-mail corporativo ou usuário')).toBeInTheDocument();
+      expect(await screen.findByText('Tenho acesso ao SEA')).toBeInTheDocument();
       expect(terminalLogout).toHaveBeenCalledWith('tok-terminal');
     } finally {
       vi.useRealTimers();
@@ -148,6 +179,7 @@ describe('Terminal de retirada', () => {
   it('refuses a wrong login and a user without the retirada permission', async () => {
     terminalLogin.mockRejectedValueOnce(new Error('E-mail, usuário ou senha inválidos.'));
     render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
+    fireEvent.click(screen.getByText('Tenho acesso ao SEA'));
     fireEvent.change(screen.getByLabelText('E-mail corporativo ou usuário'), { target: { value: 'x@y.example' } });
     fireEvent.change(screen.getByLabelText('Senha'), { target: { value: 'errada' } });
     fireEvent.click(screen.getByText('Entrar'));
@@ -320,7 +352,7 @@ describe('Armazenagem entre locais', () => {
 
     fireEvent.click(screen.getByText('Confirmar'));
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/putaway/confirm', { item_id: 3, from_bin_id: 1, to_bin_id: 21, quantity: 20, lot_number: '100000001' }));
-    expect(await screen.findByText(/armazenada\(s\) em SP12 · A0/)).toBeInTheDocument();
+    expect(await screen.findByText(/Armazenagem registrada: 20 de MAT-1 em SP12 · A0/)).toBeInTheDocument();
   });
 });
 
@@ -584,6 +616,14 @@ describe('Navegação SEA', () => {
     expect(screen.getByText('Retirada')).toBeInTheDocument();
     expect(screen.queryByText('Estoque')).toBeNull();
     expect(screen.queryByText('Usuários')).toBeNull();
+  });
+
+  it('the terminal account sees only Retirada (mig 098)', () => {
+    currentUser = { role: 'USER', allowed_pages: ['terminal-retirada'] };
+    apiGet.mockImplementation(() => ok({}));
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
+    expect(screen.getByText('Retirada')).toBeInTheDocument();
+    for (const label of ['Painel', 'Estoque', 'Usuários']) expect(screen.queryByText(label)).toBeNull();
   });
 
   it('shows every SEA tab to ADMIN and nothing from the removed SEA pages', () => {

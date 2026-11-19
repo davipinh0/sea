@@ -5,6 +5,7 @@ import {
   IDLE_MESSAGE, announceLogout, askOtherTabs, clearTabSession, hasTabSession,
   listenOtherTabs, markTabSession, setLoginFlash, watchIdle,
 } from './utils/sessionGuard.js';
+import { isTerminalAccount } from './utils/permissions.js';
 
 const AuthContext = createContext(null);
 
@@ -62,7 +63,9 @@ export function AuthProvider({ children }) {
     const stopTabs = listenOtherTabs({
       onLogout: () => { clearTabSession(); setUser(null); },
     });
-    const stopIdle = watchIdle({
+    // mig 098: the terminal account stays signed in while the terminal
+    // waits for the next employee (the server does the same).
+    const stopIdle = isTerminalAccount(user) ? () => {} : watchIdle({
       onIdle: async () => {
         setLoginFlash(IDLE_MESSAGE);
         await endSession();

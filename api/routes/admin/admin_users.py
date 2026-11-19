@@ -449,6 +449,14 @@ def replace_user_permissions(user_id, validated):
             "unknown": unknown,
         }), 400
 
+    # mig 098: the terminal account does nothing but open the terminal.
+    if "terminal-retirada" in requested and len(requested) > 1:
+        return jsonify({
+            "error": "O usuário do terminal de retirada só pode ter a permissão "
+                     "\"Terminal de retirada\". Tire as outras permissões ou use outro usuário.",
+            "user_facing": True,
+        }), 400
+
     if user.role == "ADMIN":
         # ADMINs always have full access; rows are inert. Skip the
         # write so we do not pollute the table with redundant data.

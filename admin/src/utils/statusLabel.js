@@ -19,7 +19,7 @@ const STATUS_LABELS = {
   LOW: 'Baixo',
   OPEN: 'Aberto',
   PACKED: 'Embalado',
-  PARTIAL: 'Parcial',
+  PARTIAL: 'Recebimento parcial',
   PARTIALLY_RECEIVED: 'Recebido parcialmente',
   PAUSED: 'Pausado',
   PENDING: 'Pendente',

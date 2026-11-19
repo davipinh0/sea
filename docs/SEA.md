@@ -95,8 +95,19 @@ armazenamento concluído) com aviso sonoro.
   * Toda solicitação fica registrada, mesmo a que não é executada: a cancelada permanece em
     **Retirada > Histórico** com quem cancelou, quando e o motivo.
   * O cancelamento exige motivo (a API recusa motivo em branco).
-* **Identificação no terminal**: o terminal abre sempre na tela de login. O funcionário entra
-  com o e-mail corporativo (ou usuário) e a senha, e a sessão termina ao fim da retirada.
+* **Usuário do terminal** (migração `098`): o terminal abre com um usuário que tem só a
+  permissão **Terminal de retirada** (a API recusa somar outras). Ele entra no painel, vê apenas
+  **Retirada > Abrir terminal de retirada** e não sai por inatividade (o token ainda expira em 8 h).
+  O botão do terminal saiu da aba Retirada dos demais usuários.
+* **Identificação no terminal**: o terminal abre sempre na escolha **Tenho acesso ao SEA** /
+  **Não tenho acesso ao SEA**. Com acesso, o funcionário entra com o e-mail corporativo (ou
+  usuário) e a senha, e a sessão termina ao fim da retirada. Sem acesso, informa só o e-mail
+  corporativo: o pedido é feito pelo usuário do terminal em nome desse e-mail
+  (`withdrawals.requester_email`), e a entrega é confirmada no próprio terminal.
+* **Quem aceitou acompanha** (migração `098`): depois que alguém aceita a retirada, só essa pessoa
+  dá andamento (marcar pronta; cancelar, além do solicitante e do administrador) e só ela recebe
+  avisos dessa retirada; para os demais os avisos somem e fica o registro. Se o solicitante
+  cancelar, quem aceitou recebe **Retirada cancelada**.
   A sessão do terminal é própria (`admin/src/terminalApi.js`): não troca nem encerra a sessão
   do painel aberta no mesmo navegador.
   Enquanto o diretório da empresa não está integrado, o e-mail é o cadastrado em
@@ -253,6 +264,13 @@ mudam. Nenhum endpoint, credencial ou formato do SAP foi presumido.
 App Android (Expo / React Native) em `mobile/`, para celular comum: os códigos são digitados ou
 lidos com a **câmera**. Usa a mesma API do painel.
 
+**iOS**: o projeto já está configurado (`ios.bundleIdentifier` `br.sea.prototipo`, Face ID, câmera,
+avisos). O perfil `ios-simulator` do `eas.json` gera o app para o simulador sem conta Apple. Para
+instalar em iPhone (perfil `preview`, distribuição interna) é preciso uma conta **Apple Developer**:
+rode `eas device:create` para cadastrar os iPhones e depois `eas build -p ios --profile preview`
+em modo interativo, entrando com a conta Apple (certificado e perfil ficam no Expo). Os avisos com o
+app fechado no iPhone usam a chave APNs, que o EAS cria na mesma etapa.
+
 | Módulo | O que faz | Quem vê |
 |---|---|---|
 | Receber | lê a OT; se ela está só na base do SAP, mostra os materiais e registra a entrega; recebe parcial ou integral | local Expedição; permissão Recebimento (ou módulo "Receber") |
@@ -284,6 +302,22 @@ tudo de novo" desfaz).
 cada material (coluna `lot_number` ou `lote`). Ao registrar a entrega pela base, o lote segue para o
 material da ordem e aparece na coluna **Lote** (painel: recebimento, base do SAP e detalhe da OT;
 app: Receber e Ordens).
+
+**Recebimento parcial** (migração `098`): quando chega só parte da OT (por exemplo, o material de
+uma das ordens), o que chegou é registrado normalmente e a OT fica em **Recebimento parcial** até o
+restante chegar. As listas de ordens mostram "OT em recebimento parcial: falta(m) N material(is)"
+também nas ordens que já chegaram inteiras.
+
+**KG por caixa** (migração `098`): o peso da caixa do **Cadastro de materiais** (ou da planilha de
+materiais, coluna `pack_weight_kg` / `kg_por_caixa`) passa para o material do estoque, e a OT que
+entra pela base do SAP leva esse peso. Antes, só a OT digitada pela etiqueta levava o peso, e a
+retirada desses materiais não andava por caixa.
+
+**Prateleiras do SP13** (migração `098`): o SP13 recebeu os mesmos endereços de armazenagem do SP12,
+com o mesmo código (A0, B1…); o código de barras impresso leva o prefixo (`SP13-A0`). Um código
+sem prefixo vai para o local selecionado.
+
+**Atualizar no app**: em todas as telas de dados, puxar a tela para baixo recarrega na hora.
 
 **Foto do usuário:** o painel lê a foto escolhida como `data:` (a política de segurança do site
 bloqueia `blob:`, o que impedia a foto de ser salva).
@@ -375,6 +409,7 @@ celular com o Expo Go); `npx eas-cli login`, `npx eas-cli init` e `npm run build
 |---|---|---|
 | Solicitação de retirada | uma retirada é solicitada no terminal (avisa quem avalia) | `SEA - Solicitação de Retirada` |
 | Retirada aprovada | o avaliador aprova (avisa quem faz a retirada) | `SEA - Retirada Aprovada` |
+| Retirada cancelada | o solicitante cancela uma retirada já aceita (avisa só quem aceitou) | `SEA - Retirada Cancelada` |
 | Recebimento de materiais | materiais de uma ordem são recebidos | `SEA - Recebimento de Materiais na Expedição` |
 | Conclusão de armazenamento | não resta material da ordem na área de recebimento | `SEA - Conclusão de Armazenamento` |
 

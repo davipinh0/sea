@@ -16,6 +16,7 @@ const TOAST_MS = 8000;
 const KIND_LABEL = {
   RETIRADA_SOLICITADA: 'Solicitação de retirada',
   RETIRADA_APROVADA: 'Retirada aprovada',
+  RETIRADA_CANCELADA: 'Retirada cancelada',
   RECEBIMENTO: 'Recebimento de materiais',
   ARMAZENAGEM_CONCLUIDA: 'Armazenamento concluído',
 };
@@ -24,6 +25,7 @@ const KIND_LABEL = {
 const KIND_TARGET = {
   RETIRADA_SOLICITADA: '/retirada',
   RETIRADA_APROVADA: '/retirada',
+  RETIRADA_CANCELADA: '/retirada',
   RECEBIMENTO: '/expedicao/armazenagem',
   ARMAZENAGEM_CONCLUIDA: '/estoque/sp12',
 };

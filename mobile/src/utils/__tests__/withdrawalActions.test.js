@@ -22,6 +22,13 @@ describe('withdrawalActions (mig 096)', () => {
     expect(labels('APPROVED', { role: 'ADMIN' })).toEqual(['ACEITAR E SEPARAR']);
   });
 
+  it('once accepted, only who accepted carries it on (mig 098)', () => {
+    const w = { withdrawal_id: 8, status: 'PICKING', picked_by: 'ana' };
+    const doer = (username) => ({ username, role: 'USER', allowed_pages: ['retirada-fazer'] });
+    expect(withdrawalActions(w, doer('ana')).map((a) => a.label)).toEqual(['PRONTA PARA ENTREGA']);
+    expect(withdrawalActions(w, doer('bruno'))).toEqual([]);
+  });
+
   it('sends the approval in the body', () => {
     const [approve] = withdrawalActions({ withdrawal_id: 7, status: 'REQUESTED' }, { role: 'ADMIN' });
     expect(approve).toMatchObject({ action: 'avaliar', body: { approve: true } });

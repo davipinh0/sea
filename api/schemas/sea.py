@@ -111,6 +111,22 @@ class CreateWithdrawalRequest(BaseModel):
     ot: str = Field(..., min_length=1, max_length=128)
     lines: List[WithdrawalLine] = Field(..., min_length=1, max_length=200)
     note: Optional[str] = Field(None, max_length=500)
+    # mig 098: at the terminal, an employee without access to the SEA is
+    # identified only by the corporate e-mail.
+    requester_email: Optional[str] = Field(None, max_length=254)
+
+    @field_validator("requester_email")
+    @classmethod
+    def _email(cls, value):
+        if value is None:
+            return None
+        value = value.strip().lower()
+        if not value:
+            return None
+        local, at, domain = value.partition("@")
+        if not at or not local or "." not in domain or " " in value or "@" in domain:
+            raise ValueError("Informe um e-mail corporativo válido (ex.: nome@empresa.com).")
+        return value
 
 
 class CatalogMaterialFields(_LabelModel):

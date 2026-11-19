@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import client from '../api/client';
 import { confirmIdentity } from '../auth/confirmIdentity';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Button, Card, ConfirmModal, Message, ui } from '../components/ui';
 import { apiError, formatQuantity, withdrawalActions } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Fila de retirada. Requests of every location the user works in (mig 096):
 // the evaluator approves or denies; someone with "Fazer retirada" accepts
@@ -89,14 +90,14 @@ export default function RetiradaScreen({ navigation }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="RETIRADA" onBack={() => navigation.goBack()} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={load} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <Message message={message} />
         {queue === null && <Text style={ui.empty}>Carregando…</Text>}
         {queue && queue.length === 0 && <Text style={ui.empty}>Nenhuma solicitação de retirada em aberto.</Text>}
         {(queue || []).map((w) => (
           <Card key={w.withdrawal_id} title={`Nº ${w.withdrawal_id} · ${(w.orders || []).length > 1 ? 'ORDENS' : 'ORDEM'} ${(w.orders || []).join(', ') || w.ot}`}>
             <Text style={ui.tag}>{STATUS[w.status] || w.status}</Text>
-            <Text style={[ui.meta, { marginTop: 6 }]}>Solicitada por {w.requested_by_name || w.requested_by}</Text>
+            <Text style={[ui.meta, { marginTop: 6 }]}>Solicitada por {w.requester_email ? `${w.requester_email} (terminal)` : (w.requested_by_name || w.requested_by)}</Text>
             {w.picked_by ? <Text style={ui.meta}>Aceita por {w.picked_by_name || w.picked_by}</Text> : null}
             {w.lines.map((l) => (
               <View key={l.inventory_id} style={ui.line}>
@@ -116,7 +117,7 @@ export default function RetiradaScreen({ navigation }) {
             </View>
           </Card>
         ))}
-      </ScrollView>
+      </RefreshScroll>
 
       <ConfirmModal
         visible={!!cancelling} title={`${mode === 'deny' ? 'NEGAR' : 'CANCELAR'} RETIRADA Nº ${cancelling?.withdrawal_id || ''}`} danger

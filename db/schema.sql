@@ -2624,3 +2624,13 @@ ALTER TABLE sea_notifications ADD CONSTRAINT sea_notifications_kind_check
                     'ARMAZENAGEM_CONCLUIDA'));
 
 ALTER TABLE sap_reservation_items ADD COLUMN IF NOT EXISTS lot_number VARCHAR(50);
+
+-- mig 098: terminal de retirada, notificações da retirada.
+ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS requester_email VARCHAR(254);
+ALTER TABLE sea_notifications ADD COLUMN IF NOT EXISTS withdrawal_id INT;
+CREATE INDEX IF NOT EXISTS ix_sea_notifications_withdrawal
+    ON sea_notifications(withdrawal_id) WHERE withdrawal_id IS NOT NULL;
+ALTER TABLE sea_notifications DROP CONSTRAINT IF EXISTS sea_notifications_kind_check;
+ALTER TABLE sea_notifications ADD CONSTRAINT sea_notifications_kind_check
+    CHECK (kind IN ('RETIRADA_SOLICITADA', 'RETIRADA_APROVADA', 'RETIRADA_CANCELADA',
+                    'RECEBIMENTO', 'ARMAZENAGEM_CONCLUIDA'));

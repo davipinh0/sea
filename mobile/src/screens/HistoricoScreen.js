@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, ScrollView, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -8,6 +8,7 @@ import { Button, Message, ui } from '../components/ui';
 import { actionLabel, describeMovement, whenText } from '../utils/history';
 import { apiError } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Histórico (administrators and users granted "Histórico"):
 //   MOVIMENTAÇÕES - what happened in the selected location (stock moves);
@@ -70,7 +71,7 @@ export default function HistoricoScreen({ navigation }) {
           </TouchableOpacity>
         ))}
       </View>
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner}>
+      <RefreshScroll onRefresh={() => load()} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner}>
         <Message message={message} />
         {tab === 'mov' && !warehouseId && <Text style={ui.empty}>Selecione um local na tela inicial.</Text>}
         {items === null && (tab === 'log' || warehouseId) && <Text style={ui.empty}>Carregando…</Text>}
@@ -90,7 +91,7 @@ export default function HistoricoScreen({ navigation }) {
           );
         })}
         {next && <Button label={busy ? 'CARREGANDO...' : 'CARREGAR MAIS'} secondary disabled={busy} onPress={() => load(next)} style={{ marginTop: 12 }} />}
-      </ScrollView>
+      </RefreshScroll>
     </SafeAreaView>
   );
 }

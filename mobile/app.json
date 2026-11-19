@@ -14,7 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.sea.prototipo"
+      "bundleIdentifier": "br.sea.prototipo",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

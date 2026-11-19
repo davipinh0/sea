@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../api/client';
 import ScreenHeader from '../components/ScreenHeader';
@@ -8,6 +8,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import { KIND_LABEL, KIND_SCREEN, writeSeen } from '../notifications';
 import { apiError } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Notificações: what happened in the locations the user works in. Tap
 // one to open the related screen; "Limpar" empties the user's own list.
@@ -47,7 +48,7 @@ export default function NotificacoesScreen({ navigation }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="NOTIFICAÇÕES" onBack={() => navigation.goBack()} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner}>
+      <RefreshScroll onRefresh={load} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner}>
         <Message message={message} />
         {items && items.length > 0 && <Button label="LIMPAR NOTIFICAÇÕES" secondary onPress={clearAll} style={{ marginBottom: 12 }} />}
         {items === null && <Text style={ui.empty}>Carregando…</Text>}
@@ -65,7 +66,7 @@ export default function NotificacoesScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </RefreshScroll>
     </SafeAreaView>
   );
 }

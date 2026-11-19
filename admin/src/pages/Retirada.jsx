@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { canSee } from '../utils/permissions.js';
@@ -34,6 +33,10 @@ const WAITING = {
 };
 
 export default function Retirada() {
+  // mig 098: once accepted, only who accepted carries the withdrawal on
+  // (the API refuses the others too).
+  const ownsNext = (w) => !w.picked_by || w.picked_by === user?.username;
+  const canCancel = (w) => user?.role === 'ADMIN' || ownsNext(w) || w.requested_by === user?.username;
   // The queue shows every location the user works in: a request must not
   // be missed because another location is selected in the top bar.
   const [view, setView] = useState('open');
@@ -105,9 +108,7 @@ export default function Retirada() {
 
   return (
     <div>
-      <PageHeader title="Retirada">
-        <Link to="/retirada/terminal" className="btn btn-primary" target="_blank" rel="noopener">Abrir terminal de retirada</Link>
-      </PageHeader>
+      <PageHeader title="Retirada" />
 
       <div className="data-tabs" role="tablist">
         <button type="button" role="tab" className={`data-tab${view === 'open' ? ' active' : ''}`} onClick={() => setView('open')}>Em andamento</button>
@@ -130,7 +131,7 @@ export default function Retirada() {
             <span className="settings-note">OT <a href="#" className="mono" onClick={(e) => { e.preventDefault(); setDetail(w.ot); }}>{w.ot}</a></span>
             <StatusTag status={w.status} />
             <span className="settings-note" style={{ marginLeft: 'auto' }}>
-              Solicitada em {formatDateTime(w.requested_at)} por {w.requested_by_name || w.requested_by}{w.requested_by_email ? ` (${w.requested_by_email})` : ''}
+              Solicitada em {formatDateTime(w.requested_at)} por {w.requester_email ? `${w.requester_email} (sem acesso ao SEA, pelo terminal)` : <>{w.requested_by_name || w.requested_by}{w.requested_by_email ? ` (${w.requested_by_email})` : ''}</>}
             </span>
           </div>
           <table className="lines-table">
@@ -160,16 +161,19 @@ export default function Retirada() {
                   <button type="button" className="btn btn-danger" disabled={busy === w.withdrawal_id} onClick={() => { setNote(''); setDenying(w); }}>Negar</button>
                 </>
               )}
-              {NEXT[w.status] && canDo && (
+              {NEXT[w.status] && canDo && ownsNext(w) && (
                 <button type="button" className="btn btn-primary" disabled={busy === w.withdrawal_id} onClick={() => step(w, NEXT[w.status].action)}>
                   {NEXT[w.status].label}
                 </button>
+              )}
+              {w.status === 'PICKING' && !ownsNext(w) && (
+                <span className="tag tag-info" style={{ alignSelf: 'center' }}>Em separação por {w.picked_by_name || w.picked_by}: só quem aceitou dá andamento</span>
               )}
               {WAITING[w.status] && !(w.status === 'REQUESTED' ? canEvaluate : canDo) && (
                 <span className="tag tag-info" style={{ alignSelf: 'center' }}>{WAITING[w.status]}</span>
               )}
               {w.status === 'READY' && <span className="tag tag-info" style={{ alignSelf: 'center' }}>Aguardando o solicitante confirmar o recebimento no terminal</span>}
-              <button type="button" className="btn" onClick={() => setCancelling(w)}>Cancelar</button>
+              {canCancel(w) && <button type="button" className="btn" onClick={() => setCancelling(w)}>Cancelar</button>}
             </div>
           )}
         </div>

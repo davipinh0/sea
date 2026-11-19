@@ -31,7 +31,8 @@ def _items(db, ot_number: str):
         text(
             """
             SELECT ri.order_number, o.order_type, ri.material_code, m.description,
-                   ri.quantity, COALESCE(ri.uom, m.uom) AS uom, ri.lot_number
+                   ri.quantity, COALESCE(ri.uom, m.uom) AS uom, ri.lot_number,
+                   m.pack_weight_kg
             FROM sap_reservation_items ri
             JOIN sap_orders o ON o.order_number = ri.order_number
             JOIN sap_materials m ON m.material_code = ri.material_code
@@ -80,6 +81,8 @@ def lookup(db, ot_code: str) -> OtData | None:
             OtMaterialData(
                 material_code=i.material_code, description=i.description,
                 quantity=i.quantity, uom=i.uom, lot_number=i.lot_number,
+                # mig 098: the box weight of the catalogue goes with the material.
+                pack_weight_kg=i.pack_weight_kg,
                 service_order_type=i.order_type, service_order_number=i.order_number,
             )
             for i in items
@@ -209,6 +212,16 @@ def _clean_material(data: dict) -> dict[str, object]:
             "pack_weight_kg": pack if uom == "KG" else None}
 
 
+def _sync_stock_material(db, code: str, clean: dict) -> None:
+    """mig 098: the material in stock follows the catalogue: the box
+    weight (KG por caixa) and the unit are what the withdrawal reads."""
+    db.execute(
+        text("UPDATE items SET pack_weight_kg = :pack_weight_kg, uom = COALESCE(:uom, uom) "
+             "WHERE sku = :c"),
+        {"c": code, "pack_weight_kg": clean["pack_weight_kg"], "uom": clean["uom"]},
+    )
+
+
 def create_material(db, data: dict) -> dict[str, object]:
     code = data["material_code"].strip()
     if db.execute(text("SELECT 1 FROM sap_materials WHERE material_code = :c"),
@@ -219,6 +232,7 @@ def create_material(db, data: dict) -> dict[str, object]:
              "VALUES (:c, :description, :uom, :pack_weight_kg)"),
         {"c": code, **_clean_material(data)},
     )
+    _sync_stock_material(db, code, _clean_material(data))
     return {"material_code": code, **_clean_material(data)}
 
 
@@ -236,6 +250,7 @@ def update_material(db, code: str, data: dict) -> dict[str, object]:
     ).fetchone()
     if updated is None:
         raise CatalogError(f"O material {code} não está no cadastro.", status=404)
+    _sync_stock_material(db, code, _clean_material(data))
     return {"material_code": code, **_clean_material(data)}
 
 
@@ -340,17 +355,27 @@ def _import_order(db, row: SapOrderRow) -> None:
 
 
 def _import_material(db, row: SapMaterialRow) -> None:
-    db.execute(
+    saved = db.execute(
         text(
             """
-            INSERT INTO sap_materials (material_code, description, uom)
-            VALUES (:c, :d, :u)
+            INSERT INTO sap_materials (material_code, description, uom, pack_weight_kg)
+            VALUES (:c, :d, :u, :p)
             ON CONFLICT (material_code) DO UPDATE
-            SET description = EXCLUDED.description, uom = EXCLUDED.uom, updated_at = NOW()
+            SET description = EXCLUDED.description, uom = EXCLUDED.uom,
+                -- a sheet without the column keeps the box weight already set
+                pack_weight_kg = COALESCE(EXCLUDED.pack_weight_kg, sap_materials.pack_weight_kg),
+                updated_at = NOW()
+            RETURNING uom, pack_weight_kg
             """
         ),
-        {"c": row.material_code, "d": row.description, "u": row.uom},
-    )
+        {"c": row.material_code, "d": row.description, "u": row.uom,
+         "p": row.pack_weight_kg if (row.uom or "").strip().upper() == "KG" else None},
+    ).fetchone()
+    # A box weight known for a material kept in KG reaches the stock; a
+    # sheet without it leaves the stock as it is.
+    if saved.pack_weight_kg and (saved.uom or "").strip().upper() == "KG":
+        _sync_stock_material(db, row.material_code,
+                             {"uom": saved.uom, "pack_weight_kg": saved.pack_weight_kg})
 
 
 def _import_reservation(db, row: SapReservationRow) -> None:

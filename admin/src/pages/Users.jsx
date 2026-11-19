@@ -44,6 +44,7 @@ const PAGE_GROUPS = [
       { key: 'retirada', label: 'Solicitar retirada (terminal)' },
       { key: 'retirada-avaliar', label: 'Avaliar retirada (aprovar ou negar)' },
       { key: 'retirada-fazer', label: 'Fazer retirada (aceitar e separar)' },
+      { key: 'terminal-retirada', label: 'Terminal de retirada (usuário só do terminal, sem outras permissões)' },
     ],
   },
   {

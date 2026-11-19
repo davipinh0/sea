@@ -1413,9 +1413,25 @@ def order_rows(db, warehouse_id, *, order_type=None, status=None, q=None):
             row["qty_stored"] += s.quantity_on_hand
             row["_bins"].add(f"{s.warehouse_code} · {s.bin_code}")
 
+    # mig 098: the OT as a whole. An order that arrived in full may belong
+    # to an OT whose other materials did not arrive yet: that OT is in
+    # partial receipt, and the order says so.
+    ot_lines = {}
+    for ln in lines:
+        ot_lines.setdefault(ln.po_id, []).append(ln)
+    ot_status = {}
+    for po_id, po_lines in ot_lines.items():
+        if all(x.quantity_received >= x.quantity_ordered for x in po_lines):
+            ot_status[po_id] = ("RECEIVED", 0)
+        else:
+            pending = sum(1 for x in po_lines if x.quantity_received < x.quantity_ordered)
+            started = any(x.quantity_received > 0 for x in po_lines)
+            ot_status[po_id] = ("PARTIAL" if started else "OPEN", pending)
+
     wanted = (q or "").strip().casefold()
     result = []
     for row in grouped.values():
+        row["ot_status"], row["ot_pending_materials"] = ot_status[row["po_id"]]
         if row["po_status"] in PO_LOCKED_STATUSES:
             row["status"] = row["po_status"]
         elif row["qty_received"] <= 0:
@@ -1495,7 +1511,7 @@ def _unit_suffix(uom):
     return f" {uom.upper()}" if uom else ""
 
 
-def create_withdrawal(db, *, ot, lines, username, note=None):
+def create_withdrawal(db, *, ot, lines, username, note=None, requester_email=None):
     """Reserve stock of an OT and open a withdrawal request.
 
     ``lines``: [{"inventory_id": int, "quantity": int}]. Each inventory
@@ -1566,13 +1582,14 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
     withdrawal_id = db.execute(
         text(
             """
-            INSERT INTO withdrawals (warehouse_id, po_id, status, requested_by, requester_note)
-            VALUES (:wid, :po_id, :status, :user, :note)
+            INSERT INTO withdrawals (warehouse_id, po_id, status, requested_by, requester_note,
+                                     requester_email)
+            VALUES (:wid, :po_id, :status, :user, :note, :email)
             RETURNING withdrawal_id
             """
         ),
         {"wid": stock_warehouse_id, "po_id": ot.po_id, "status": W_REQUESTED,
-         "user": username, "note": note},
+         "user": username, "note": note, "email": requester_email},
     ).scalar()
 
     for line in lines:
@@ -1609,14 +1626,16 @@ def create_withdrawal(db, *, ot, lines, username, note=None):
                        "bin_code": locked[ln["inventory_id"]].bin_code, "quantity": ln["quantity"]}
                       for ln in lines],
             "note": note,
+            "requester_email": requester_email,
         },
     )
     notifications.create(
         db, kind=notifications.KIND_WITHDRAWAL_REQUESTED, warehouse_id=stock_warehouse_id,
+        withdrawal_id=withdrawal_id,
         title="Retirada nº {} solicitada: {}".format(
             withdrawal_id, order_label(db, ot, {row.item_id for row in locked.values()})),
         message="Solicitada por {}: {}.".format(
-            username,
+            f"{requester_email} (terminal)" if requester_email else username,
             "; ".join(
                 f"{ln['quantity']}{_unit_suffix(locked[ln['inventory_id']].uom)} x "
                 f"{locked[ln['inventory_id']].sku} "
@@ -1633,7 +1652,7 @@ def _lock_withdrawal(db, withdrawal_id, scope_clause="", scope_params=None):
         text(
             f"""
             SELECT w.withdrawal_id, w.status, w.warehouse_id, w.po_id, w.requested_by,
-                   p.po_number
+                   w.requester_email, w.picked_by, p.po_number
             FROM withdrawals w JOIN purchase_orders p ON p.po_id = w.po_id
             WHERE w.withdrawal_id = :id {scope_clause}
             FOR UPDATE OF w
@@ -1697,8 +1716,9 @@ def evaluate(db, withdrawal_id, username, approve, note=None, scope=("", None)):
         notifications.create(
             db, kind=notifications.KIND_WITHDRAWAL_APPROVED, warehouse_id=w.warehouse_id,
             title=f"Retirada nº {withdrawal_id} aprovada: quem pode fazer?",
-            message=f"Solicitada por {w.requested_by}, OT {w.po_number}. Aceite para separar.",
-            ot=w.po_number, username=username,
+            message=f"Solicitada por {w.requester_email or w.requested_by}, OT {w.po_number}. "
+                    "Aceite para separar.",
+            ot=w.po_number, username=username, withdrawal_id=withdrawal_id,
         )
 
 
@@ -1720,9 +1740,20 @@ def start_picking(db, withdrawal_id, username, scope=("", None)):
                     w.warehouse_id, details={"ot": w.po_number})
 
 
+def _require_picker(w, username, action):
+    """mig 098: once accepted, only who accepted carries the withdrawal on."""
+    if w.picked_by and w.picked_by != username:
+        raise SeaError(
+            f"Não é possível {action}: a retirada nº {w.withdrawal_id} foi aceita por "
+            f"{w.picked_by}. Somente quem aceitou dá andamento a ela.",
+            status=403,
+        )
+
+
 def mark_ready(db, withdrawal_id, username, scope=("", None)):
     w = _lock_withdrawal(db, withdrawal_id, *scope)
     _require_status(w, (W_PICKING,), "marcar como pronta")
+    _require_picker(w, username, "marcar como pronta")
     db.execute(
         text("UPDATE withdrawals SET status = :s, ready_at = NOW() WHERE withdrawal_id = :id"),
         {"s": W_READY, "id": withdrawal_id},
@@ -1822,7 +1853,9 @@ def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
             "ot": w.po_number,
             "employee_user_id": employee.user_id,
             "employee_name": employee.full_name,
-            "identified_by": "login",
+            # mig 098: who has no access to the SEA is known by the e-mail.
+            "requester_email": w.requester_email,
+            "identified_by": "email" if w.requester_email else "login",
             "lines": [{"sku": ln.sku, "bin_code": ln.bin_code, "quantity": ln.quantity}
                       for ln in lines],
         },
@@ -1844,12 +1877,17 @@ def _release_reservation(db, withdrawal_id):
         )
 
 
-def cancel(db, withdrawal_id, username, reason, scope=("", None)):
+def cancel(db, withdrawal_id, username, reason, scope=("", None), any_user=False):
+    """Cancel an open withdrawal. Once someone accepted it, only the
+    requester, who accepted it or an administrator (``any_user``) may; when
+    the requester cancels, who accepted it is told (mig 098)."""
     reason = (reason or "").strip()
     if not reason:
         raise SeaError("Informe o motivo do cancelamento.", status=400)
     w = _lock_withdrawal(db, withdrawal_id, *scope)
     _require_status(w, W_OPEN_STATUSES, "cancelar")
+    if not any_user and username != w.requested_by:
+        _require_picker(w, username, "cancelar")
     _release_reservation(db, withdrawal_id)
     db.execute(
         text(
@@ -1863,3 +1901,10 @@ def cancel(db, withdrawal_id, username, reason, scope=("", None)):
     )
     write_audit_log(db, ACTION_WITHDRAWAL_CANCELLED, "WITHDRAWAL", withdrawal_id, username,
                     w.warehouse_id, details={"ot": w.po_number, "reason": reason})
+    if w.picked_by and username != w.picked_by:
+        notifications.create(
+            db, kind=notifications.KIND_WITHDRAWAL_CANCELLED, warehouse_id=w.warehouse_id,
+            title=f"Retirada nº {withdrawal_id} cancelada",
+            message=f"Cancelada por {username}: {reason}. Não é preciso continuar a separação.",
+            ot=w.po_number, username=username, withdrawal_id=withdrawal_id,
+        )

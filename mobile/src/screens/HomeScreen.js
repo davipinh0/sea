@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Pressable, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, TextInput, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { reloadAppAsync } from 'expo';
 import { useAuth } from '../auth/AuthContext';
@@ -12,6 +12,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import { readSeen, unregisterDevice } from '../notifications';
 import { visibleModules } from '../utils/sea';
 import { colors, radii, saveTheme, spacing, themeChoice } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Tela inicial: local selecionado, sino de notificações e menu do usuário
 // no topo; abaixo, os módulos que o usuário pode abrir.
@@ -122,7 +123,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <RefreshScroll onRefresh={() => Promise.all([loadProfile(), loadCounts()])} contentContainerStyle={styles.content}>
         <Text style={styles.section}>OPERAÇÕES</Text>
         {modules.length === 0 && (
           <Text style={styles.empty}>
@@ -139,7 +140,7 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-      </ScrollView>
+      </RefreshScroll>
 
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <Pressable style={styles.overlay} onPress={() => setMenu(false)}>

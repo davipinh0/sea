@@ -518,13 +518,17 @@ def list_notificacoes():
               AND n.notification_id > (SELECT notifications_cleared_id FROM users
                                        WHERE user_id = :uid)
               AND NOT (n.kind = ANY(:hidden))
+              -- mig 098: an accepted withdrawal is followed only by who accepted it
+              AND NOT EXISTS (SELECT 1 FROM withdrawals wd
+                              WHERE wd.withdrawal_id = n.withdrawal_id
+                                AND wd.picked_by IS NOT NULL AND wd.picked_by <> :me)
               {scope_clause}
             ORDER BY n.notification_id DESC
             LIMIT :limit
             """
         ),
         {"after": after, "limit": limit, "uid": g.current_user["user_id"], "hidden": hidden,
-         **scope_params},
+         "me": g.current_user["username"], **scope_params},
     ).fetchall()
     return jsonify({
         "notifications": [
@@ -717,7 +721,7 @@ def list_ordens():
 
 @sea_bp.route("/ordens/<path:number>")
 @require_auth
-@require_any_page(*OT_PAGE_KEYS)
+@require_any_page(*OT_PAGE_KEYS, "terminal-retirada")
 @with_db
 def get_ordem(number):
     """Withdrawal terminal: the materials of a PM order available now,
@@ -736,6 +740,15 @@ def get_ordem(number):
 RECEIVING_PAGE_KEYS = ("receiving", "purchase-orders")
 # mig 096: request at the terminal / evaluate / accept and separate.
 WITHDRAWAL_PAGES = ("retirada", "retirada-avaliar", "retirada-fazer")
+# mig 098: the account of the withdrawal terminal.
+TERMINAL_PAGE = "terminal-retirada"
+
+
+def _is_terminal_account():
+    """The terminal account: holds the terminal page and is no admin."""
+    pages = g.current_user.get("allowed_pages")
+    return (g.current_user.get("role") != "ADMIN" and pages is not None
+            and TERMINAL_PAGE in pages)
 
 
 @sea_bp.route("/recebimentos/areas")
@@ -1305,8 +1318,8 @@ def destinos():
     rows = g.db.execute(
         text(
             f"""
-            SELECT b.bin_id, b.bin_code, b.description, b.size_class, b.capacity_units,
-                   w.warehouse_id, w.warehouse_code, w.warehouse_name
+            SELECT b.bin_id, b.bin_code, b.bin_barcode, b.description, b.size_class,
+                   b.capacity_units, w.warehouse_id, w.warehouse_code, w.warehouse_name
             FROM bins b JOIN warehouses w ON w.warehouse_id = b.warehouse_id
             WHERE b.is_active = TRUE AND w.is_active = TRUE
               AND b.bin_type NOT IN :staging {scope_clause}
@@ -1317,7 +1330,8 @@ def destinos():
     ).fetchall()
     return jsonify({
         "bins": [
-            {"bin_id": r.bin_id, "bin_code": r.bin_code, "description": r.description,
+            {"bin_id": r.bin_id, "bin_code": r.bin_code, "bin_barcode": r.bin_barcode,
+             "description": r.description,
              "size_class": r.size_class, "capacity_units": r.capacity_units,
              "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code,
              "warehouse_name": r.warehouse_name}
@@ -1441,6 +1455,8 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             "status": r.status, "requested_by": r.requested_by,
             "requested_by_name": r.requested_by_name, "requested_by_email": r.requested_by_email,
             "requested_at": _iso(r.requested_at), "requester_note": r.requester_note,
+            # mig 098: asked at the terminal by someone without access to the SEA.
+            "requester_email": r.requester_email,
             "picked_by": r.picked_by, "picking_started_at": _iso(r.picking_started_at),
             # mig 096: who accepted it (the terminal shows the name and photo).
             "picked_by_user_id": r.picked_by_user_id, "picked_by_name": r.picked_by_name,
@@ -1484,7 +1500,7 @@ def list_retiradas():
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>")
 @require_auth
-@require_any_page(*WITHDRAWAL_PAGES)
+@require_any_page(*WITHDRAWAL_PAGES, TERMINAL_PAGE)
 @with_db
 def get_retirada(withdrawal_id):
     """One withdrawal, whatever its status (the terminal follows its own
@@ -1501,7 +1517,7 @@ def get_retirada(withdrawal_id):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/responsavel")
 @require_auth
-@require_any_page(*WITHDRAWAL_PAGES)
+@require_any_page(*WITHDRAWAL_PAGES, TERMINAL_PAGE)
 @with_db
 def responsavel_retirada(withdrawal_id):
     """Who accepted the request, with the photo as a data: URL (mig 096).
@@ -1532,10 +1548,19 @@ def responsavel_retirada(withdrawal_id):
 
 @sea_bp.route("/retiradas", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("retirada")
+@require_any_page("retirada", TERMINAL_PAGE)
 @validate_body(CreateWithdrawalRequest)
 @with_db
 def create_retirada(validated):
+    # mig 098: the e-mail identifies who has no access to the SEA, and only
+    # the terminal account asks in their name.
+    email = validated.requester_email
+    if _is_terminal_account():
+        if not email:
+            return _user_error("Informe o e-mail corporativo de quem vai retirar.", 400)
+    elif email and g.current_user.get("role") != "ADMIN":
+        return _user_error(
+            "Somente o terminal de retirada pede material em nome de outra pessoa.", 403)
     # Not limited to the requester's locations (see get_ordem): the
     # withdrawal belongs to the location where the material is stored.
     ot = sea.find_ot(g.db, validated.ot.strip())
@@ -1545,6 +1570,7 @@ def create_retirada(validated):
         withdrawal_id = sea.create_withdrawal(
             g.db, ot=ot, lines=[ln.model_dump() for ln in validated.lines],
             username=g.current_user["username"], note=validated.note,
+            requester_email=email,
         )
     except sea.SeaError as exc:
         g.db.rollback()
@@ -1566,15 +1592,18 @@ def _withdrawal_scope(withdrawal_id):
     ).scalar()
     if requested_by is not None and requested_by == g.current_user["username"]:
         return "", None
+    if _is_terminal_account():
+        # The terminal follows only what was asked at it.
+        return "AND FALSE", {}
     return warehouse_scope_clause("w.warehouse_id")
 
 
-def _transition(withdrawal_id, fn, *args, message, own=False):
+def _transition(withdrawal_id, fn, *args, message, own=False, **kwargs):
     # ``own``: steps the requester takes on their own request (confirm,
     # cancel). Separating is always the work of the location's users.
     scope = _withdrawal_scope(withdrawal_id) if own else warehouse_scope_clause("w.warehouse_id")
     try:
-        result = fn(g.db, withdrawal_id, *args, scope=scope)
+        result = fn(g.db, withdrawal_id, *args, scope=scope, **kwargs)
     except sea.SeaError as exc:
         g.db.rollback()
         return _sea_error(exc), None
@@ -1628,7 +1657,7 @@ def pronta(withdrawal_id):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/entregar", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("retirada")
+@require_any_page("retirada", TERMINAL_PAGE)
 @with_db
 def entregar(withdrawal_id):
     """The logged-in employee confirms they received what they requested."""
@@ -1639,10 +1668,12 @@ def entregar(withdrawal_id):
 
 @sea_bp.route("/retiradas/<int:withdrawal_id>/cancelar", methods=["POST"])
 @require_auth
-@require_any_page(*WITHDRAWAL_PAGES)
+@require_any_page(*WITHDRAWAL_PAGES, TERMINAL_PAGE)
 @validate_body(CancelWithdrawalRequest)
 @with_db
 def cancelar(withdrawal_id, validated):
     resp, _ = _transition(withdrawal_id, sea.cancel, g.current_user["username"],
-                          validated.reason, message="Retirada cancelada", own=True)
+                          validated.reason, message="Retirada cancelada", own=True,
+                          any_user=g.current_user.get("role") == "ADMIN")
+    notifications.dispatch(g.db)
     return resp

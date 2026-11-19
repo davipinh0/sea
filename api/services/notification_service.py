@@ -39,12 +39,16 @@ logger = logging.getLogger(__name__)
 
 KIND_WITHDRAWAL_REQUESTED = "RETIRADA_SOLICITADA"
 KIND_WITHDRAWAL_APPROVED = "RETIRADA_APROVADA"
+# mig 098: the requester cancelled a withdrawal someone had accepted; only
+# who accepted it is told.
+KIND_WITHDRAWAL_CANCELLED = "RETIRADA_CANCELADA"
 KIND_RECEIPT = "RECEBIMENTO"
 KIND_STORAGE_DONE = "ARMAZENAGEM_CONCLUIDA"
 
 SUBJECTS = {
     KIND_WITHDRAWAL_REQUESTED: "SEA - Solicitação de Retirada",
     KIND_WITHDRAWAL_APPROVED: "SEA - Retirada Aprovada",
+    KIND_WITHDRAWAL_CANCELLED: "SEA - Retirada Cancelada",
     KIND_RECEIPT: "SEA - Recebimento de Materiais na Expedição",
     KIND_STORAGE_DONE: "SEA - Conclusão de Armazenamento",
 }
@@ -54,6 +58,7 @@ SUBJECTS = {
 AUDIENCE = {
     KIND_WITHDRAWAL_REQUESTED: "retirada-avaliar",
     KIND_WITHDRAWAL_APPROVED: "retirada-fazer",
+    KIND_WITHDRAWAL_CANCELLED: "retirada-fazer",
 }
 
 EMAIL_PENDING = "PENDENTE"
@@ -100,7 +105,8 @@ def smtp_config() -> Optional[SmtpConfig]:
 
 
 def create(db, *, kind: str, warehouse_id: int, title: str, message: str,
-           ot: Optional[str] = None, username: Optional[str] = None) -> int:
+           ot: Optional[str] = None, username: Optional[str] = None,
+           withdrawal_id: Optional[int] = None) -> int:
     """Record a notification in the caller's transaction."""
     if kind not in SUBJECTS:
         raise ValueError(f"unknown notification kind: {kind}")
@@ -109,13 +115,13 @@ def create(db, *, kind: str, warehouse_id: int, title: str, message: str,
         text(
             """
             INSERT INTO sea_notifications (warehouse_id, kind, title, message, ot, created_by,
-                                           email_status)
-            VALUES (:wid, :kind, :title, :message, :ot, :user, :status)
+                                           email_status, withdrawal_id)
+            VALUES (:wid, :kind, :title, :message, :ot, :user, :status, :withdrawal)
             RETURNING notification_id
             """
         ),
         {"wid": warehouse_id, "kind": kind, "title": title[:200], "message": message[:1000],
-         "ot": ot, "user": username, "status": status},
+         "ot": ot, "user": username, "status": status, "withdrawal": withdrawal_id},
     ).scalar()
     if status == EMAIL_PENDING:
         db.info.setdefault(_SESSION_KEY, []).append(notification_id)
@@ -188,6 +194,21 @@ def push_tokens(db, warehouse_id: int, page_key: str | None = None) -> list[str]
     return [r.token for r in rows]
 
 
+def user_push_tokens(db, username: str) -> list[str]:
+    """Devices where ``username`` is signed in."""
+    rows = db.execute(
+        text(
+            """
+            SELECT t.token FROM sea_push_tokens t JOIN users u ON u.user_id = t.user_id
+            WHERE u.username = :u AND u.is_active = TRUE AND t.signed_in = TRUE
+            ORDER BY t.token
+            """
+        ),
+        {"u": username},
+    ).fetchall()
+    return [r.token for r in rows]
+
+
 def _expo_send(messages: list[dict]) -> None:
     import requests
 
@@ -199,13 +220,24 @@ def _expo_send(messages: list[dict]) -> None:
 def send_push(db, notification_id: int, sender=_expo_send) -> int:
     """Send one notification to the phones. Returns how many devices."""
     row = db.execute(
-        text("SELECT warehouse_id, kind, title, message FROM sea_notifications "
-             "WHERE notification_id = :id"),
+        text(
+            """
+            SELECT n.warehouse_id, n.kind, n.title, n.message, wd.picked_by
+            FROM sea_notifications n
+            LEFT JOIN withdrawals wd ON wd.withdrawal_id = n.withdrawal_id
+            WHERE n.notification_id = :id
+            """
+        ),
         {"id": notification_id},
     ).fetchone()
     if row is None or not push_enabled():
         return 0
-    tokens = push_tokens(db, row.warehouse_id, AUDIENCE.get(row.kind))
+    if row.picked_by:
+        # mig 098: once someone accepted the withdrawal, only they follow it.
+        tokens = (user_push_tokens(db, row.picked_by)
+                  if row.kind == KIND_WITHDRAWAL_CANCELLED else [])
+    else:
+        tokens = push_tokens(db, row.warehouse_id, AUDIENCE.get(row.kind))
     if not tokens:
         return 0
     sender([

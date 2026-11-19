@@ -360,6 +360,10 @@ ALL_PAGE_KEYS = (
     "retirada",
     "retirada-avaliar",
     "retirada-fazer",
+    # mig 098: the account of the withdrawal terminal. It holds this key
+    # only: it opens the terminal, where an employee without access to the
+    # SEA asks for material with the corporate e-mail.
+    "terminal-retirada",
     # SEA: Sistema > Cadastro de materiais (create, change and delete the
     # materials consulted when an OT is put together).
     "material-catalog",

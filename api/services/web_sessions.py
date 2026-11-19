@@ -76,10 +76,17 @@ def check(db, jti, *, web: bool) -> str | None:
         return "unknown" if web else None
     row = db.execute(
         text("""
-            SELECT ended_at IS NOT NULL AS ended,
-                   last_seen_at < NOW() - make_interval(mins => :idle) AS idle,
-                   last_seen_at < NOW() - make_interval(secs => :touch) AS stale
-            FROM sea_sessions WHERE jti = :jti
+            SELECT s.ended_at IS NOT NULL AS ended,
+                   s.last_seen_at < NOW() - make_interval(mins => :idle) AS idle,
+                   s.last_seen_at < NOW() - make_interval(secs => :touch) AS stale,
+                   -- mig 098: the terminal account stays signed in while the
+                   -- terminal waits for the next employee (token expiry still
+                   -- applies). It can only open the terminal.
+                   EXISTS (SELECT 1 FROM users u
+                           JOIN user_page_permissions pp ON pp.user_id = u.user_id
+                           WHERE u.user_id = s.user_id AND u.role <> 'ADMIN'
+                             AND pp.page_key = 'terminal-retirada') AS kiosk
+            FROM sea_sessions s WHERE s.jti = :jti
         """),
         {"jti": jti, "idle": WEB_IDLE_MINUTES, "touch": TOUCH_EVERY_SECONDS},
     ).fetchone()
@@ -87,7 +94,7 @@ def check(db, jti, *, web: bool) -> str | None:
         return "unknown" if web else None
     if row.ended:
         return "ended"
-    if web and row.idle:
+    if web and row.idle and not row.kiosk:
         end(db, jti, IDLE)
         db.commit()
         return "idle"

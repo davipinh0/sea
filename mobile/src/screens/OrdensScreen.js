@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import client from '../api/client';
@@ -9,12 +9,13 @@ import { Card, Field, Message, ui } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { apiError, formatQuantity, orderName } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Ordens: the OTs of the selected location and, for each one, its
 // materials with what was received, where it is and what was withdrawn
 // (read-only).
 
-const STATUS = { OPEN: 'Aberta', PARTIAL: 'Recebida em parte', RECEIVED: 'Recebida', CLOSED: 'Fechada', ARCHIVED: 'Arquivada' };
+const STATUS = { OPEN: 'Aberta', PARTIAL: 'Recebimento parcial', RECEIVED: 'Recebida', CLOSED: 'Fechada', ARCHIVED: 'Arquivada' };
 
 export default function OrdensScreen({ navigation }) {
   const { warehouseId } = useAuth();
@@ -47,7 +48,7 @@ export default function OrdensScreen({ navigation }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="ORDENS" onBack={() => (detail ? setDetail(null) : navigation.goBack())} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={load} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         {!detail && <CodeInput placeholder="Código de barras da OT" onSubmit={open} buttonLabel="ABRIR" />}
         <Message message={message} />
 
@@ -59,6 +60,7 @@ export default function OrdensScreen({ navigation }) {
               <Text style={ui.code}>{orderName(o)}</Text>
               <Text style={ui.meta}>
                 {STATUS[o.status] || o.status} · recebido {o.qty_received}/{o.qty_ordered} · armazenado {o.qty_stored} · retirado {o.qty_withdrawn}
+                {o.ot_status === 'PARTIAL' && o.status !== 'PARTIAL' ? `\nOT ${o.ot} em recebimento parcial: falta(m) ${o.ot_pending_materials} material(is)` : ''}
               </Text>
               <Text style={ui.meta}>{o.bins ? `${o.bins} · ` : ''}OT {o.ot}</Text>
             </View>
@@ -94,7 +96,7 @@ export default function OrdensScreen({ navigation }) {
             </Card>
           </>
         )}
-      </ScrollView>
+      </RefreshScroll>
     </SafeAreaView>
   );
 }

@@ -14,7 +14,7 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 const OT_STATUSES = ['', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED'];
 const OT_STATUS_LABELS = {
-  '': 'Todos os status', OPEN: 'Aberta', PARTIAL: 'Parcial', RECEIVED: 'Recebida', CLOSED: 'Fechada',
+  '': 'Todos os status', OPEN: 'Aberta', PARTIAL: 'Recebimento parcial', RECEIVED: 'Recebida', CLOSED: 'Fechada',
 };
 
 function shelvesFrom(bins) {
@@ -102,7 +102,15 @@ export default function EstoqueSP12() {
   const otColumns = [
     { key: 'order_number', label: 'Ordem', mono: true },
     { key: 'order_type', label: 'Tipo', render: (r) => <OtTypeTag type={r.order_type} />, csvValue: (r) => r.order_type },
-    { key: 'status', label: 'Status', render: (r) => <StatusTag status={r.status} />, csvValue: (r) => r.status },
+    // mig 098: an order that arrived may belong to an OT still waiting for other materials.
+    { key: 'status', label: 'Status', render: (r) => (
+      <>
+        <StatusTag status={r.status} />
+        {r.ot_status === 'PARTIAL' && r.status !== 'PARTIAL' && (
+          <div className="settings-note" style={{ marginTop: 2 }}>OT {r.ot} em recebimento parcial: falta(m) {r.ot_pending_materials} material(is)</div>
+        )}
+      </>
+    ), csvValue: (r) => r.status },
     { key: 'qty_ordered', label: 'Prevista' },
     { key: 'qty_received', label: 'Recebida' },
     { key: 'qty_staging', label: 'Aguard. armazenagem' },

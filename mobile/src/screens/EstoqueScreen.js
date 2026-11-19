@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import client from '../api/client';
@@ -8,6 +8,7 @@ import { Card, Message, ui } from '../components/ui';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { apiError, orderName } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Estoque: what is in each address of the selected location (read-only).
 // The filter looks at address, material code, description and OT.
@@ -44,7 +45,7 @@ export default function EstoqueScreen({ navigation }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="ESTOQUE" onBack={() => navigation.goBack()} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={load} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <Message message={message} />
         <TextInput
           style={styles.filter} value={filter} onChangeText={setFilter} autoCapitalize="characters" autoCorrect={false}
@@ -73,7 +74,7 @@ export default function EstoqueScreen({ navigation }) {
             ))}
           </Card>
         ))}
-      </ScrollView>
+      </RefreshScroll>
     </SafeAreaView>
   );
 }

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { useWarehouse } from '../warehouse.jsx';
 import { EXPEDICAO_CODE } from '../utils/sea.js';
+import { isTerminalAccount } from '../utils/permissions.js';
 
 // SEA navigation. Each item carries the page_key(s) that grant it
 // (api/constants.py ALL_PAGE_KEYS); the sidebar hides entries the user
@@ -18,7 +19,7 @@ const NAV = [
       { to: '/estoque', label: 'Estoque', pageKeys: ['inventory', 'items', 'bins', 'audit-log'] },
       // Only offered while the Expedição location is selected (EXPEDICAO_CODE).
       { to: '/expedicao', label: 'Expedição', pageKeys: ['receiving', 'putaway', 'purchase-orders'], onlyAt: EXPEDICAO_CODE },
-      { to: '/retirada', label: 'Retirada', pageKeys: ['retirada', 'retirada-avaliar', 'retirada-fazer'] },
+      { to: '/retirada', label: 'Retirada', pageKeys: ['retirada', 'retirada-avaliar', 'retirada-fazer', 'terminal-retirada'] },
     ],
   },
   {
@@ -33,6 +34,8 @@ const NAV = [
 ];
 
 function canOpen(user, item) {
+  // mig 098: the terminal account sees only Retirada.
+  if (isTerminalAccount(user)) return item.to === '/retirada';
   if (!item.pageKeys) return true;
   if (user?.role === 'ADMIN') return true;
   const allowed = user?.allowed_pages;

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import client from '../api/client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ScreenHeader';
@@ -7,6 +7,7 @@ import CodeInput from '../components/CodeInput';
 import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '../components/ui';
 import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Transferência entre endereços. Find a material by its code, see where
 // it is, and move it to another shelf of the same location (A1 to B2) or
@@ -92,7 +93,7 @@ export default function TransferirScreen({ navigation, route }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="TRANSFERIR" onBack={() => (moving ? setMoving(null) : navigation.goBack())} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={() => (item ? loadStock(item.item_id) : undefined)} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         {!moving && <CodeInput placeholder="Código do material" onSubmit={find} disabled={busy} buttonLabel="BUSCAR" />}
         <Message message={message} />
 
@@ -134,7 +135,7 @@ export default function TransferirScreen({ navigation, route }) {
             <Button label="CONFIRMAR TRANSFERÊNCIA" onPress={confirm} disabled={busy} />
           </Card>
         )}
-      </ScrollView>
+      </RefreshScroll>
 
       <AddressPicker
         visible={picking} bins={bins} excludeBinId={moving?.bin_id}

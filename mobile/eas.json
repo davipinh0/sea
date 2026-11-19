@@ -19,11 +19,20 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sea-expedicao.eastus.cloudapp.azure.com"
+      },
+      "ios": {
+        "resourceClass": "default"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      }
+    },
+    "ios-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
       }
     }
   },

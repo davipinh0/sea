@@ -27,6 +27,7 @@ const SEEN_KEY = 'sea_notif_seen';
 export const KIND_SCREEN = {
   RETIRADA_SOLICITADA: 'Retirada',
   RETIRADA_APROVADA: 'Retirada',
+  RETIRADA_CANCELADA: 'Retirada',
   RECEBIMENTO: 'Armazenar',
   ARMAZENAGEM_CONCLUIDA: 'Estoque',
 };
@@ -46,6 +47,7 @@ export function onLoginApprovalPush(onLoginApproval) {
 export const KIND_LABEL = {
   RETIRADA_SOLICITADA: 'Solicitação de retirada',
   RETIRADA_APROVADA: 'Retirada aprovada',
+  RETIRADA_CANCELADA: 'Retirada cancelada',
   RECEBIMENTO: 'Recebimento de materiais',
   ARMAZENAGEM_CONCLUIDA: 'Armazenamento concluído',
 };

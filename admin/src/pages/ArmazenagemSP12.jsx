@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { useWarehouse } from '../warehouse.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
-import { readError } from '../utils/sea.js';
+import { formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 // Expedição > Armazenagem: material waiting in a receiving area, with an
@@ -60,7 +60,7 @@ function Row({ row, destinations, onDone }) {
     }
     const data = await res.json();
     const place = destinations.flatMap((g) => g.bins).find((b) => String(b.bin_id) === target);
-    onDone(`${data.quantity} un. de ${data.item} armazenada(s) em ${place ? `${place.warehouse_code} · ` : ''}${data.to_bin}.`);
+    onDone(`Armazenagem registrada: ${formatQuantity(data.quantity, row.uom, row.pack_weight_kg)} de ${data.item} em ${place ? `${place.warehouse_code} · ` : ''}${data.to_bin}.`);
   }
 
   return (

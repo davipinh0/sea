@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { confirmIdentity } from '../auth/confirmIdentity';
 import client from '../api/client';
@@ -9,6 +9,7 @@ import CodeInput from '../components/CodeInput';
 import { Button, Card, Field, Message, ui } from '../components/ui';
 import { apiError, formatQuantity, parseQuantity } from '../utils/sea';
 import { colors, fonts, radii, screenStyles } from '../theme/styles';
+import RefreshScroll from '../components/RefreshScroll';
 
 // Recebimento de ordem. Same flow and same API as the panel:
 //   1. read or type the OT code;
@@ -119,10 +120,13 @@ export default function ReceberScreen({ navigation, route }) {
         po_id: ot.po_id,
         items: items.map((x) => ({ item_id: x.line.item_id, quantity: x.quantity, bin_id: areaId })),
       });
-      const total = items.reduce((sum, x) => sum + x.quantity, 0);
+      const done = items.map((x) => {
+        const m = details[x.line.po_line_id] || {};
+        return `${formatQuantity(x.quantity, m.uom, m.pack_weight_kg)} de ${x.line.sku}`;
+      }).join('; ');
       const code = ot.po_number;
       await load(code, true);
-      setMessage({ type: 'ok', text: `${total} unidade(s) recebida(s). Material disponível para armazenagem.` });
+      setMessage({ type: 'ok', text: `Recebimento registrado: ${done}. Material disponível para armazenagem.` });
     } catch (err) {
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível registrar o recebimento.') });
       setBusy(false);
@@ -136,7 +140,7 @@ export default function ReceberScreen({ navigation, route }) {
   return (
     <SafeAreaView style={screenStyles.screen} edges={['top', 'bottom']}>
       <ScreenHeader title="RECEBER" onBack={() => navigation.goBack()} />
-      <ScrollView style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
+      <RefreshScroll onRefresh={() => (ot ? load(ot.po_number, true) : undefined)} style={screenStyles.content} contentContainerStyle={screenStyles.contentInner} keyboardShouldPersistTaps="handled">
         <CodeInput placeholder="Código de barras da OT" onSubmit={openOt} disabled={busy} buttonLabel="CONSULTAR" />
         <Message message={message} />
 
@@ -168,6 +172,11 @@ export default function ReceberScreen({ navigation, route }) {
         {ot && (
           <Card title={`OT ${ot.po_number}${ot.order_type ? ` · ${ot.order_type}` : ''}`}>
             {!receivable && <Text style={ui.tag}>Ordem já recebida ou fechada</Text>}
+            {ot.status === 'PARTIAL' && pending.length > 0 && (
+              <Text style={[ui.tag, { marginBottom: 8 }]}>
+                RECEBIMENTO PARCIAL: {pending.length} material(is) desta OT ainda não chegou(aram). Receba o restante quando chegar.
+              </Text>
+            )}
             {areas.length > 1 && (
               <View style={{ marginBottom: 8 }}>
                 <Text style={styles.label}>ÁREA DE RECEBIMENTO</Text>
@@ -200,7 +209,7 @@ export default function ReceberScreen({ navigation, route }) {
                         onChangeText={(t) => setQty((q) => ({ ...q, [l.po_line_id]: t }))}
                       />
                       <TouchableOpacity style={styles.lineBtn} disabled={busy} onPress={() => receive([l])} accessibilityLabel={`Receber ${l.sku}`}>
-                        <Text style={styles.lineBtnText}>OK</Text>
+                        <Text style={styles.lineBtnText}>RECEBER</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -212,7 +221,7 @@ export default function ReceberScreen({ navigation, route }) {
             )}
           </Card>
         )}
-      </ScrollView>
+      </RefreshScroll>
     </SafeAreaView>
   );
 }
@@ -227,6 +236,6 @@ const styles = StyleSheet.create({
     width: 68, minHeight: 44, textAlign: 'center', fontFamily: fonts.mono, fontSize: 16, fontWeight: '700',
     color: colors.textPrimary, backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.inputBorder, borderRadius: radii.small,
   },
-  lineBtn: { minWidth: 48, minHeight: 44, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.copper, borderRadius: radii.small },
+  lineBtn: { minWidth: 72, paddingHorizontal: 8, minHeight: 44, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.copper, borderRadius: radii.small },
   lineBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
 });

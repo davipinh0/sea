@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { terminalApi, terminalLogin, terminalLogout } from '../terminalApi.js';
+import { api as panelApi } from '../api.js';
 import { watchIdle } from '../utils/sessionGuard.js';
 import SeaLogo from '../components/SeaLogo.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
 import { formatQuantity, readError } from '../utils/sea.js';
 
-// Touchscreen withdrawal terminal (kiosk). Flow:
-//   0. the employee identifies with the corporate login (e-mail or
-//      user + password). The terminal always opens on this screen and
-//      ends the session after each withdrawal.
+// Touchscreen withdrawal terminal (kiosk). It opens under the terminal
+// account (mig 098), which stays signed in. Flow:
+//   0. the employee chooses how to identify:
+//      * "Tenho acesso ao SEA": the corporate login (e-mail or user +
+//        password), as their own session;
+//      * "Não tenho acesso ao SEA": only the corporate e-mail; the request
+//        is made by the terminal account in the name of that e-mail.
+//      The terminal always opens on this choice and goes back to it after
+//      each withdrawal.
 //      The terminal session is its own (terminalApi.js): it does not
 //      replace or end a panel session open in the same browser.
 //   1. types the number of the order (PM11 / PM12)
@@ -34,7 +40,9 @@ const RESET_AFTER_MS = 12000;
 // SEA (mig 093): an employee who walks away before asking for material
 // is signed out, so the next person cannot act in their name.
 export const TERMINAL_IDLE_MS = 2 * 60 * 1000;
-const IDLE_STEPS = new Set(['ot', 'materials']);
+const IDLE_STEPS = new Set(['ot', 'materials', 'login', 'email']);
+// A simple shape check; the API checks it again.
+const looksLikeEmail = (value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
 // A material kept in KG with a box weight goes box by box: each press adds
 // the weight of one box (0 > 18 KG > 36 KG). Everything else goes unit by
@@ -56,10 +64,14 @@ function QtyPicker({ value, max, onChange, label, unit, step = 1 }) {
 export default function TerminalRetirada() {
   const [employee, setEmployee] = useState(null);
   const [token, setToken] = useState(null);
-  const api = useMemo(() => terminalApi(token), [token]);
+  // mig 098: e-mail of who has no access to the SEA (the requests then go
+  // under the terminal account, in the panel session of this browser).
+  const [email, setEmail] = useState('');
+  const [byEmail, setByEmail] = useState(false);
+  const api = useMemo(() => (byEmail ? panelApi : terminalApi(token)), [byEmail, token]);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [step, setStep] = useState('login');
+  const [step, setStep] = useState('choose');
   const [code, setCode] = useState('');
   const [order, setOrder] = useState(null);
   const [stock, setStock] = useState([]);
@@ -77,14 +89,28 @@ export default function TerminalRetirada() {
     setPicker(null);
   }, []);
 
-  // End the session: the next employee always starts at the login.
-  // The session also ends on the server (mig 093).
+  // End the session: the next employee always starts at the choice.
+  // The employee's own session also ends on the server (mig 093); the
+  // terminal account stays signed in.
   const signOut = useCallback(() => {
     if (token) terminalLogout(token);
     clearRequest();
     setEmployee(null); setToken(null); setIdentifier(''); setPassword('');
-    setStep('login');
+    setEmail(''); setByEmail(false);
+    setStep('choose');
   }, [clearRequest, token]);
+
+  // 0 -> 1 without access to the SEA: only the corporate e-mail.
+  function continueWithEmail(e) {
+    e.preventDefault();
+    const clean = email.trim().toLowerCase();
+    if (!looksLikeEmail(clean)) { setError('Informe um e-mail corporativo válido (ex.: nome@empresa.com).'); return; }
+    setError('');
+    setEmail(clean);
+    setByEmail(true);
+    setEmployee({ full_name: clean, email: clean });
+    setStep('ot');
+  }
 
   useEffect(() => {
     if (!IDLE_STEPS.has(step)) return undefined;
@@ -117,9 +143,10 @@ export default function TerminalRetirada() {
     }
   }
 
-  // Session ended on the server (expired): back to the login screen.
+  // Session ended on the server (expired): back to the choice. (In the
+  // e-mail mode the panel itself goes to its login page.)
   function expired(res) {
-    if (res.status !== 401) return false;
+    if (!res || res.status !== 401) return false;
     signOut();
     setError('Sessão encerrada. Identifique-se novamente.');
     return true;
@@ -133,7 +160,7 @@ export default function TerminalRetirada() {
     setBusy(true); setError('');
     const res = await api.get(`/sea/ordens/${encodeURIComponent(clean)}`);
     setBusy(false);
-    if (expired(res)) return;
+    if (!res || expired(res)) return;
     if (!res.ok) { setError(res.status === 404 ? `Ordem ${clean} não encontrada.` : await readError(res, 'Não foi possível consultar a ordem.')); return; }
     const data = await res.json();
     setOrder(data);
@@ -153,9 +180,9 @@ export default function TerminalRetirada() {
     }
     const lines = chosen.map((s) => ({ inventory_id: s.inventory_id, quantity: stockQuantity(s, qty[s.inventory_id]) }));
     setBusy(true); setError('');
-    const res = await api.post('/sea/retiradas', { ot: chosen[0].ot, lines });
+    const res = await api.post('/sea/retiradas', { ot: chosen[0].ot, lines, ...(byEmail && { requester_email: email }) });
     setBusy(false);
-    if (expired(res)) return;
+    if (!res || expired(res)) return;
     if (!res.ok) { setError(await readError(res, 'Não foi possível solicitar a retirada.')); return; }
     setWithdrawal((await res.json()).withdrawal);
     setStep('waiting');
@@ -168,7 +195,7 @@ export default function TerminalRetirada() {
     let stopped = false;
     async function poll() {
       const res = await api.get(`/sea/retiradas/${withdrawalId}`);
-      if (stopped || !res.ok) return;
+      if (stopped || !res || !res.ok) return;
       const current = (await res.json()).withdrawal;
       if (!current) return;
       setWithdrawal(current);
@@ -193,7 +220,7 @@ export default function TerminalRetirada() {
     if (!pickedBy || !withdrawalId) return undefined;
     let stopped = false;
     api.get(`/sea/retiradas/${withdrawalId}/responsavel`).then(async (res) => {
-      if (stopped || !res.ok) return;
+      if (stopped || !res || !res.ok) return;
       const data = await res.json();
       if (!stopped) setPicker(data);
     });
@@ -205,7 +232,7 @@ export default function TerminalRetirada() {
     setBusy(true); setError('');
     const res = await api.post(`/sea/retiradas/${withdrawal.withdrawal_id}/entregar`, {});
     setBusy(false);
-    if (expired(res)) return;
+    if (!res || expired(res)) return;
     if (!res.ok) { setError(await readError(res, 'Não foi possível confirmar a entrega.')); return; }
     setWithdrawal((await res.json()).withdrawal);
     setStep('done');
@@ -217,7 +244,7 @@ export default function TerminalRetirada() {
       setBusy(true);
       const res = await api.post(`/sea/retiradas/${withdrawal.withdrawal_id}/cancelar`, { reason: 'Cancelada pelo solicitante no terminal' });
       setBusy(false);
-      if (expired(res)) return;
+      if (!res || expired(res)) return;
       if (!res.ok) { setError(await readError(res, 'Não foi possível cancelar a solicitação.')); return; }
     }
     clearRequest();
@@ -238,13 +265,46 @@ export default function TerminalRetirada() {
         <SeaLogo size={36} />
         <div>
           SEA · Terminal de Retirada
-          <div className="terminal-sub">{employee ? `Identificado: ${employee.full_name || employee.username}` : 'Identifique-se para retirar materiais'}</div>
+          <div className="terminal-sub">{employee ? `Identificado: ${employee.full_name || employee.username}${byEmail ? ' (sem acesso ao SEA)' : ''}` : 'Identifique-se para retirar materiais'}</div>
         </div>
         {employee && <button type="button" className="terminal-btn secondary terminal-exit" onClick={signOut}>Sair</button>}
       </header>
 
       <main className="terminal-body">
         {error && <div className="terminal-msg error" role="alert">{error}</div>}
+
+        {step === 'choose' && (
+          <div>
+            <div className="terminal-title">Como você quer se identificar?</div>
+            <div className="terminal-choice">
+              <button type="button" className="terminal-btn" onClick={() => { setError(''); setStep('login'); }}>
+                Tenho acesso ao SEA
+                <span className="terminal-choice-sub">Entrar com o login corporativo e a senha</span>
+              </button>
+              <button type="button" className="terminal-btn secondary" onClick={() => { setError(''); setStep('email'); }}>
+                Não tenho acesso ao SEA
+                <span className="terminal-choice-sub">Informar só o e-mail corporativo</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'email' && (
+          <form onSubmit={continueWithEmail}>
+            <div className="terminal-title">Informe o seu e-mail corporativo</div>
+            <div className="terminal-badge-pad">
+              <input
+                autoFocus className="terminal-input" aria-label="E-mail corporativo" type="text" inputMode="email"
+                style={{ maxWidth: 520 }} placeholder="nome@empresa.com"
+                value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off"
+              />
+            </div>
+            <div className="terminal-actions">
+              <button type="submit" className="terminal-btn" disabled={!email.trim()}>Continuar</button>
+              <button type="button" className="terminal-btn secondary" onClick={signOut}>Voltar</button>
+            </div>
+          </form>
+        )}
 
         {step === 'login' && (
           <form onSubmit={signIn}>
@@ -268,6 +328,7 @@ export default function TerminalRetirada() {
             )}
             <div className="terminal-actions">
               <button type="submit" className="terminal-btn" disabled={busy || !identifier.trim() || !password}>{busy ? 'Entrando…' : 'Entrar'}</button>
+              <button type="button" className="terminal-btn secondary" disabled={busy} onClick={signOut}>Voltar</button>
             </div>
           </form>
         )}
@@ -370,7 +431,7 @@ export default function TerminalRetirada() {
         {step === 'done' && (
           <div className="terminal-card" style={{ textAlign: 'center', padding: 40 }}>
             <div className="terminal-msg ok" style={{ fontSize: 26, fontWeight: 700 }}>Retirada concluída</div>
-            <p style={{ fontSize: 18 }}>Entrega registrada para {withdrawal?.delivered_to || employee?.full_name} e baixa realizada no estoque.</p>
+            <p style={{ fontSize: 18 }}>Entrega registrada para {byEmail ? email : (withdrawal?.delivered_to || employee?.full_name)} e baixa realizada no estoque.</p>
             <div className="terminal-actions" style={{ justifyContent: 'center' }}>
               <button type="button" className="terminal-btn" onClick={() => { clearRequest(); setStep('ot'); }}>Nova retirada</button>
               <button type="button" className="terminal-btn secondary" onClick={signOut}>Encerrar sessão</button>

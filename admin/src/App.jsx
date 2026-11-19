@@ -3,7 +3,7 @@ import { useAuth } from './auth.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Layout from './components/Layout.jsx';
 import SectionTabs from './components/SectionTabs.jsx';
-import { canSee } from './utils/permissions.js';
+import { canSee, isTerminalAccount, TERMINAL_PAGE } from './utils/permissions.js';
 import { useWarehouse } from './warehouse.jsx';
 import { EXPEDICAO_CODE } from './utils/sea.js';
 import Login from './pages/Login.jsx';
@@ -20,6 +20,7 @@ import PurchaseOrders from './pages/PurchaseOrders.jsx';
 import Retirada from './pages/Retirada.jsx';
 import ProcessGate from './components/ProcessGate.jsx';
 import TerminalRetirada from './pages/TerminalRetirada.jsx';
+import TerminalInicio from './pages/TerminalInicio.jsx';
 import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
 import Imports from './pages/Imports.jsx';
@@ -53,7 +54,25 @@ function ProtectedRoute({ children }) {
   if (user.must_change_password && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
   }
+  // SEA (mig 098): the terminal account goes only to the terminal.
+  if (isTerminalAccount(user) && !TERMINAL_PATHS.has(location.pathname)) {
+    return <Navigate to="/retirada" replace />;
+  }
   return children;
+}
+
+const TERMINAL_PATHS = new Set(['/retirada', '/retirada/terminal', '/change-password']);
+
+// mig 098: the Retirada page of the terminal account is the button that
+// opens the terminal.
+function RetiradaPage() {
+  const { user } = useAuth();
+  if (isTerminalAccount(user)) return <TerminalInicio />;
+  return (
+    <RequirePage pageKeys={WITHDRAWAL_PAGES}>
+      <ProcessGate purpose="retirada" label="Retirada"><Retirada /></ProcessGate>
+    </RequirePage>
+  );
 }
 
 // Pages opened by URL without the permission go back to the Painel
@@ -84,11 +103,15 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       {/* Withdrawal terminal: full-screen kiosk without the admin chrome,
-          sized for a touchscreen. It always opens on its own login screen
-          (the employee identifies there), so it is not behind ProtectedRoute. */}
+          sized for a touchscreen. mig 098: it opens under the terminal
+          account (or an administrator); each employee then identifies
+          with the SEA login or, without access, the corporate e-mail. */}
       <Route
         path="/retirada/terminal"
-        element={page(<TerminalRetirada />, 'Não foi possível carregar o terminal de retirada.')}
+        element={page(
+          <ProtectedRoute><RequirePage pageKey={TERMINAL_PAGE}><TerminalRetirada /></RequirePage></ProtectedRoute>,
+          'Não foi possível carregar o terminal de retirada.',
+        )}
       />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/change-password" element={page(<ChangePassword />, 'Não foi possível carregar a troca de senha.')} />
@@ -108,7 +131,7 @@ export default function App() {
           <Route path="base-sap" element={<BaseSap />} />
         </Route>
 
-        <Route path="/retirada" element={page(<RequirePage pageKeys={WITHDRAWAL_PAGES}><ProcessGate purpose="retirada" label="Retirada"><Retirada /></ProcessGate></RequirePage>, 'Não foi possível carregar a retirada.')} />
+        <Route path="/retirada" element={page(<RetiradaPage />, 'Não foi possível carregar a retirada.')} />
 
         <Route path="/users" element={page(<RequirePage pageKey="users"><Users /></RequirePage>, 'Não foi possível carregar os usuários.')} />
         <Route path="/settings" element={page(<RequirePage pageKey="settings"><Settings /></RequirePage>, 'Não foi possível carregar as configurações.')} />

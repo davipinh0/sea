@@ -101,10 +101,15 @@ def lookup_bin(barcode):
             LEFT JOIN zones z ON z.zone_id = b.zone_id
             WHERE (b.bin_barcode = :barcode OR b.bin_code = :barcode)
               {scope_clause}
+            -- mig 098: SP12 and SP13 share shelf codes (A0, B1 ...): the
+            -- location the user is in wins, then the printed barcode.
+            ORDER BY (b.warehouse_id = CAST(:prefer AS INT)) DESC NULLS LAST,
+                     (b.bin_barcode = :barcode) DESC, b.bin_id
             LIMIT 1
             """
         ),
-        {"barcode": barcode, **scope_params},
+        {"barcode": barcode, "prefer": request.args.get("warehouse_id", type=int),
+         **scope_params},
     ).fetchone()
 
     if not bin_row:

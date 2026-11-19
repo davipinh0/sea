@@ -64,7 +64,8 @@ export function withdrawalActions(w, me) {
   if (w.status === 'APPROVED' && canDo) {
     return [{ action: 'separar', label: 'ACEITAR E SEPARAR', done: `Retirada nº ${w.withdrawal_id} aceita: prepare o material.` }];
   }
-  if (w.status === 'PICKING' && canDo) {
+  // mig 098: once accepted, only who accepted carries it on.
+  if (w.status === 'PICKING' && canDo && (!w.picked_by || w.picked_by === me?.username)) {
     return [{ action: 'pronta', label: 'PRONTA PARA ENTREGA', done: `Retirada nº ${w.withdrawal_id} pronta. O funcionário confirma no terminal.` }];
   }
   return [];
@@ -75,7 +76,7 @@ export function apiError(err, fallback) {
   if (err?.isTimeout) return 'O servidor demorou a responder. Verifique a rede e tente de novo.';
   if (!err?.response) return 'Sem conexão com o servidor. Verifique a rede e o endereço do servidor.';
   const data = err.response.data;
-  if (err.response.status === 403) return 'Você não tem permissão para esta ação.';
+  if (err.response.status === 403 && !(data && data.user_facing)) return 'Você não tem permissão para esta ação.';
   if (err.response.status >= 502 && err.response.status <= 504) return 'O servidor do SEA está iniciando ou fora do ar. Tente de novo em instantes.';
   if (data && typeof data.error === 'string' && data.user_facing) return data.error;
   return fallback;

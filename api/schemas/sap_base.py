@@ -32,6 +32,10 @@ class SapMaterialRow(_SapRow):
     material_code: str = Field(..., min_length=1, max_length=50)
     description: str = Field(..., min_length=1, max_length=200)
     uom: Optional[str] = Field(None, max_length=10)
+    # mig 098: weight of one box ("KG por caixa"), for a material kept in KG.
+    pack_weight_kg: Optional[int] = Field(
+        None, gt=0, le=100000,
+        validation_alias=AliasChoices("pack_weight_kg", "kg_por_caixa", "KG por caixa"))
 
 
 class SapReservationRow(_SapRow):

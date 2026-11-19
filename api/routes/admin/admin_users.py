@@ -626,12 +626,17 @@ def list_audit_log():
             resolved[k] = v
         return resolved
 
+    # SEA: the order(s) of each row (PM12 - number), read from the OT.
+    from services.sea_service import log_orders
+
+    orders = log_orders(g.db, rows)
     return jsonify({
         "entries": [
             {"log_id": r.log_id, "action_type": r.action_type, "entity_type": r.entity_type,
              "entity_id": r.entity_id, "entity_name": r.entity_name,
              "username": r.user_id, "device_id": r.device_id,
              "warehouse_id": r.warehouse_id, "warehouse_code": r.warehouse_code,
+             "orders": orders.get(r.log_id, []),
              "details": resolve_details(r.details),
              "created_at": r.created_at.isoformat() if r.created_at else None}
             for r in rows

@@ -5,7 +5,7 @@ import client from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { Button, Message, ui } from '../components/ui';
-import { actionLabel, describeMovement, whenText } from '../utils/history';
+import { actionLabel, authText, describeMovement, orderText, whenText } from '../utils/history';
 import { apiError } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
@@ -26,6 +26,8 @@ export default function HistoricoScreen({ navigation }) {
   const [next, setNext] = useState(null);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  // The record opened with a tap shows the order and the details.
+  const [open, setOpen] = useState(null);
 
   const load = useCallback(async (more) => {
     setBusy(true);
@@ -39,7 +41,7 @@ export default function HistoricoScreen({ navigation }) {
       } else {
         const page = more || 1;
         const resp = await client.get(`/api/admin/audit-log?page=${page}&per_page=30`);
-        const rows = (resp.data?.entries || []).map((e) => ({ ...e, user: e.user_id }));
+        const rows = (resp.data?.entries || []).map((e) => ({ ...e, user: e.username }));
         setItems((current) => (more ? [...(current || []), ...rows] : rows));
         setNext(resp.data && resp.data.page < resp.data.pages ? resp.data.page + 1 : null);
       }
@@ -77,17 +79,27 @@ export default function HistoricoScreen({ navigation }) {
         {items === null && (tab === 'log' || warehouseId) && <Text style={ui.empty}>Carregando…</Text>}
         {items && items.length === 0 && <Text style={ui.empty}>Nada registrado.</Text>}
         {(items || []).map((e) => {
+          const expanded = open === e.log_id;
+          const order = orderText(e);
           const detail = describeMovement(e);
+          const auth = authText(e);
           return (
-            <View key={e.log_id} style={ui.line}>
+            <TouchableOpacity
+              key={e.log_id} style={ui.line} onPress={() => setOpen(expanded ? null : e.log_id)}
+              accessibilityRole="button" accessibilityState={{ expanded }}
+              accessibilityHint={expanded ? 'Fecha os detalhes' : 'Mostra a ordem e os detalhes'}
+            >
               <Text style={{ flex: 1 }}>
                 <Text style={ui.code}>{actionLabel(e.action_type)}</Text>
                 {e.warehouse_code ? <Text style={ui.tag}>{`  ${e.warehouse_code}`}</Text> : null}{'\n'}
-                {detail ? <Text style={ui.name}>{detail}{'\n'}</Text> : null}
-                {e.entity_name ? <Text style={ui.name}>{e.entity_name}{'\n'}</Text> : null}
                 <Text style={ui.meta}>{whenText(e.created_at)} · {e.user || '-'}</Text>
+                {expanded && order ? <Text style={ui.name}>{'\n'}{order}</Text> : null}
+                {expanded && detail ? <Text style={ui.name}>{'\n'}{detail}</Text> : null}
+                {expanded && auth ? <Text style={styles.auth}>{'\n'}✓ {auth}</Text> : null}
+                {expanded && !order && !detail && !auth ? <Text style={ui.meta}>{'\n'}Sem outros detalhes.</Text> : null}
               </Text>
-            </View>
+              <Text style={ui.meta}>{expanded ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
           );
         })}
         {next && <Button label={busy ? 'CARREGANDO...' : 'CARREGAR MAIS'} secondary disabled={busy} onPress={() => load(next)} style={{ marginTop: 12 }} />}
@@ -102,4 +114,5 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: colors.buttonBg },
   tabText: { fontSize: 13, fontWeight: '800', color: colors.textSecondary },
   tabTextActive: { color: colors.onAccent },
+  auth: { fontSize: 13, fontWeight: '700', color: colors.success },
 });

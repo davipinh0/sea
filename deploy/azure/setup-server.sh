@@ -7,6 +7,9 @@ set -eu
 DOMAIN=${1:?informe o domínio, ex.: sea-xxxx.centralus.cloudapp.azure.com}
 DUMP=${2:-}
 cd /opt/sea
+# The daily backup (cron, cloud-init.yml) runs backup.sh: keep it
+# executable after every deploy (the archive of the deploy may drop the bit).
+chmod +x deploy/azure/backup.sh
 COMPOSE="docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml"
 
 rand() { openssl rand -hex "$1"; }

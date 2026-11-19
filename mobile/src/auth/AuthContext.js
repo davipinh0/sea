@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import client, { setLogoutHandler, initApiUrl } from '../api/client';
 import { BIOMETRIC_USER_KEY, sameUser, shouldLock, withoutLock } from './appLock';
+import { clearIdentityConfirmed } from './identityProof';
 import { getDeviceToken } from '../notifications';
 import {
   clearAllAuth,
@@ -47,6 +48,7 @@ export function AuthProvider({ children }) {
     // stops working. Best effort: offline, it still dies with the token.
     await client.post('/api/auth/logout', {}, { keepSession: true, timeout: 4000 }).catch(() => {});
     await clearAllAuth();
+    clearIdentityConfirmed();
     lockEnabled.current = false;
     setLocked(false);
     setNeedsEnrollment(false);

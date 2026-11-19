@@ -138,7 +138,7 @@ def locais():
 # Audit details shown on the Painel (visible to every warehouse user):
 # only these display fields, never badge UIDs or other raw payload.
 _PAINEL_DETAIL_KEYS = ("ot", "po_number", "sku", "quantity", "to_bin_code", "employee_name",
-                       "lot_number", "reason")
+                       "lot_number", "reason", "autenticacao", "requester_email")
 
 
 def _public_details(details):
@@ -260,10 +260,12 @@ def painel():
     })
 
 
-def _movement(r):
+def _movement(r, orders=None):
     return {"log_id": r.log_id, "action_type": r.action_type, "entity_type": r.entity_type,
             "entity_id": r.entity_id, "user": r.user_id,
-            "details": _public_details(r.details), "created_at": _iso(r.created_at)}
+            "details": _public_details(r.details), "created_at": _iso(r.created_at),
+            # The order(s) of the operation, e.g. ["PM12 - 2002349234"].
+            "orders": (orders or {}).get(r.log_id, [])}
 
 
 def _can_see_history():
@@ -319,7 +321,8 @@ def historico():
         ),
         {"wid": warehouse_id, "before": before, "limit": limit},
     ).fetchall()
-    return jsonify({"movements": [_movement(r) for r in rows],
+    orders = sea.log_orders(g.db, rows)
+    return jsonify({"movements": [_movement(r, orders) for r in rows],
                     "next_before": rows[-1].log_id if len(rows) == limit else None})
 
 

@@ -26,7 +26,16 @@ export const ACTION_LABELS = {
   MATERIAL_DELETED: 'Material excluído',
   SAP_BASE_IMPORTED: 'Base do SAP importada',
   WITHDRAWAL_REQUESTED: 'Retirada solicitada',
-  WITHDRAWAL_PICKING: 'Separação iniciada',
+  WITHDRAWAL_PICKING: 'Retirada aceita (separação iniciada)',
+  WITHDRAWAL_APPROVED: 'Retirada aprovada',
+  WITHDRAWAL_REJECTED: 'Retirada negada',
+  PROCESS_APPROVAL_REQUESTED: 'Processo aguardando o celular',
+  PROCESS_APPROVED: 'Processo liberado no celular',
+  PROCESS_DENIED: 'Processo negado no celular',
+  PO_LINE_ADDED: 'Material adicionado à ordem',
+  PO_LINE_UPDATED: 'Material da ordem alterado',
+  PO_LINE_REMOVED: 'Material removido da ordem',
+  LOGIN_LOCKOUT_MINUTES: 'Bloqueio de login alterado',
   WITHDRAWAL_READY: 'Separação concluída',
   WITHDRAWAL_DELIVERED: 'Retirada entregue (baixa)',
   WITHDRAWAL_CANCELLED: 'Retirada cancelada',
@@ -35,8 +44,21 @@ export const ACTION_LABELS = {
   forced_password_change_completed: 'Senha inicial trocada',
 };
 
+// Words of a code without a label, in Portuguese, so no English shows.
+const WORDS = {
+  WITHDRAWAL: 'retirada', RECEIVE: 'recebimento', RECEIVED: 'recebido', PUTAWAY: 'armazenagem',
+  TRANSFER: 'transferência', STOCK: 'estoque', ITEM: 'material', BIN: 'endereço', PO: 'ordem',
+  LINE: 'linha', USER: 'usuário', LOGIN: 'login', APPROVAL: 'aprovação', APPROVED: 'aprovado',
+  REJECTED: 'negado', DENIED: 'negado', REQUESTED: 'solicitado', CANCELLED: 'cancelado',
+  CANCEL: 'cancelamento', CREATED: 'criado', CREATE: 'criação', UPDATED: 'alterado',
+  UPDATE: 'alteração', DELETED: 'excluído', DELETE: 'exclusão', ADDED: 'adicionado',
+  REMOVED: 'removido', STATUS: 'status', CHANGED: 'alterado', READY: 'pronto',
+  DELIVERED: 'entregue', PICKING: 'separação', PROCESS: 'processo', SETTING: 'configuração',
+  PASSWORD: 'senha', CHANGE: 'troca', TOKEN: 'token', ISSUE: 'emissão', REVOKE: 'revogação',
+};
+
 function readable(code) {
-  const text = String(code).replace(/_/g, ' ').toLowerCase();
+  const text = String(code).split('_').map((w) => WORDS[w.toUpperCase()] || w.toLowerCase()).join(' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -44,18 +66,30 @@ export function actionLabel(action) {
   return action ? ACTION_LABELS[action] || readable(action) : '-';
 }
 
-// One line of detail of a movement (same as the panel Painel).
+// What a record shows when it is opened: the order (PM12 - number, never
+// the OT), the material and what happened to it, and how the user was
+// authenticated when the process required it.
+export function orderText(entry) {
+  const orders = entry?.orders || [];
+  if (orders.length === 0) return null;
+  return `${orders.length > 1 ? 'Ordens' : 'Ordem'} ${orders.join(', ')}`;
+}
+
 export function describeMovement(entry) {
   const d = entry?.details || {};
   const parts = [];
-  const order = d.ot || d.po_number || d.lot_number;
-  if (order) parts.push(/^OT/i.test(order) ? order : `OT ${order}`);
-  if (d.sku) parts.push(d.sku);
-  if (d.quantity) parts.push(`${d.quantity} un.`);
-  if (d.to_bin_code) parts.push(`→ ${d.to_bin_code}`);
-  if (d.employee_name) parts.push(`para ${d.employee_name}`);
+  if (d.sku) parts.push(`Material ${d.sku}`);
+  if (d.quantity) parts.push(`quantidade ${d.quantity}`);
+  if (d.to_bin_code) parts.push(`destino ${d.to_bin_code}`);
+  if (d.employee_name) parts.push(`entregue para ${d.employee_name}`);
+  if (d.requester_email) parts.push(`solicitante ${d.requester_email}`);
   if (d.reason) parts.push(`motivo: ${d.reason}`);
   return parts.join(' · ');
+}
+
+export function authText(entry) {
+  const how = entry?.details?.autenticacao;
+  return how ? `Usuário autenticado (${how})` : null;
 }
 
 export function whenText(value) {

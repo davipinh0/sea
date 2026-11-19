@@ -98,6 +98,10 @@ export const ACTION_LABELS = {
   WITHDRAWAL_READY: 'Separação concluída',
   WITHDRAWAL_DELIVERED: 'Retirada entregue (baixa)',
   WITHDRAWAL_CANCELLED: 'Retirada cancelada',
+  PO_LINE_ADDED: 'Material adicionado à ordem',
+  PO_LINE_UPDATED: 'Material da ordem alterado',
+  PO_LINE_REMOVED: 'Material removido da ordem',
+  LOGIN_LOCKOUT_MINUTES: 'Bloqueio de login alterado',
   CANCEL: 'Cancelamento',
   password_change: 'Senha alterada',
   forced_password_change_completed: 'Senha inicial trocada',
@@ -116,8 +120,21 @@ export const ENTITY_LABELS = {
   SETTING: 'Configuração',
 };
 
+// Words of a code without a label, in Portuguese, so no English shows.
+const WORDS = {
+  WITHDRAWAL: 'retirada', RECEIVE: 'recebimento', RECEIVED: 'recebido', PUTAWAY: 'armazenagem',
+  TRANSFER: 'transferência', STOCK: 'estoque', ITEM: 'material', BIN: 'endereço', PO: 'ordem',
+  LINE: 'linha', USER: 'usuário', LOGIN: 'login', APPROVAL: 'aprovação', APPROVED: 'aprovado',
+  REJECTED: 'negado', DENIED: 'negado', REQUESTED: 'solicitado', CANCELLED: 'cancelado',
+  CANCEL: 'cancelamento', CREATED: 'criado', CREATE: 'criação', UPDATED: 'alterado',
+  UPDATE: 'alteração', DELETED: 'excluído', DELETE: 'exclusão', ADDED: 'adicionado',
+  REMOVED: 'removido', STATUS: 'status', CHANGED: 'alterado', READY: 'pronto',
+  DELIVERED: 'entregue', PICKING: 'separação', PROCESS: 'processo', SETTING: 'configuração',
+  PASSWORD: 'senha', CHANGE: 'troca', TOKEN: 'token', ISSUE: 'emissão', REVOKE: 'revogação',
+};
+
 function readable(code) {
-  const text = String(code).replace(/_/g, ' ').toLowerCase();
+  const text = String(code).split('_').map((w) => WORDS[w.toUpperCase()] || w.toLowerCase()).join(' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 

@@ -192,6 +192,14 @@ def require_auth(f):
     return decorated
 
 
+# What the log records about how the user proved who they are in a
+# process that requires it (Recebimento, Armazenagem, Retirada).
+IDENTITY_HEADER = "X-SEA-Identidade"
+IDENTITY_APP = "digital-pin"
+AUTH_PROOF_APP = "Digital/PIN no app"
+AUTH_PROOF_PHONE = "Liberado no celular (painel web)"
+
+
 def require_step_up(purpose):
     """SEA (mig 095): in the web panel (session in the cookie) the process
     ``purpose`` must have been released on the user's registered phone.
@@ -202,6 +210,11 @@ def require_step_up(purpose):
         @wraps(f)
         def decorated(*args, **kwargs):
             if getattr(g, "auth_source", None) != "cookie":
+                # The app confirms the fingerprint/PIN on the phone and says
+                # so in this header; it is recorded on the log (the API has
+                # no way to check the phone's own lock).
+                if request.headers.get(IDENTITY_HEADER) == IDENTITY_APP:
+                    g.auth_proof = AUTH_PROOF_APP
                 return f(*args, **kwargs)
             import models.database as _db
             from services import step_up
@@ -218,6 +231,7 @@ def require_step_up(purpose):
                     "step_up_required": purpose,
                     "user_facing": True,
                 }), 403
+            g.auth_proof = AUTH_PROOF_PHONE
             return f(*args, **kwargs)
 
         return decorated

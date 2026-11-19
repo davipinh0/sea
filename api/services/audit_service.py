@@ -4,6 +4,7 @@ Audit logging helper - used by all warehouse workflows.
 
 import json
 
+from flask import g, has_request_context
 from sqlalchemy import text
 
 
@@ -18,6 +19,11 @@ def write_audit_log(db, action_type, entity_type, entity_id, user_id, warehouse_
     void-ship surfaces use it to populate audit_log_id in the response
     body so dockd can deep-link operators to the audit row.
     """
+    # SEA: a process that required authentication says how it was done
+    # (set by middleware.auth_middleware.require_step_up).
+    proof = g.get("auth_proof") if has_request_context() else None
+    if proof:
+        details = {**(details or {}), "autenticacao": proof}
     result = db.execute(
         text(
             """

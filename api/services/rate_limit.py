@@ -17,11 +17,13 @@ that only per-route limits are user-aware:
   ``user:<id>`` key (useful for users behind a NAT).
 - The global ``default_limits`` are evaluated in a Flask
   ``before_request`` hook that fires BEFORE ``@require_auth``, so
-  ``g.current_user`` is unset and the key always falls back to
-  ``ip:<remote_addr>``. Treat the default as a coarse per-IP
-  backstop, not a per-user quota.
+  ``g.current_user`` is unset. SEA: the key then reads the user from
+  the signed JWT (Bearer header or panel cookie) without touching the
+  database; only requests without a valid token fall back to
+  ``ip:<remote_addr>``. Behind a company NAT every phone shares one IP,
+  so a per-IP budget would block the operation at a few dozen phones.
 
-Default: 300/minute per IP. Sensitive routes override via
+Default: 300/minute per user (per IP without a valid token). Sensitive routes override via
 ``@limiter.limit("N per minute")`` with a tighter user-keyed budget.
 
 Storage backend: Redis DB 1 in production (derived from
@@ -60,7 +62,31 @@ def _rate_limit_key() -> str:
             return f"user:{user['user_id']}"
     except Exception:
         pass
+    # SEA: the global limit runs before @require_auth. Read the user from
+    # the signed token itself (no database): behind the company network
+    # every phone shares one public IP, and a per-IP budget would block the
+    # whole operation at a few dozen phones.
+    user_id = _token_user_id()
+    if user_id is not None:
+        return f"user:{user_id}"
     return f"ip:{request.remote_addr or 'unknown'}"
+
+
+def _token_user_id():
+    """user_id of a valid, signed JWT in the Bearer header or the panel
+    cookie; None otherwise (missing, forged or expired: the IP bucket)."""
+    from services.auth_service import decode_token
+    from services.cookie_auth import AUTH_COOKIE_NAME
+
+    header = request.headers.get("Authorization", "")
+    token = header[7:].strip() if header.startswith("Bearer ") else None
+    token = token or request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
+        return None
+    payload = decode_token(token)
+    if not isinstance(payload, dict):
+        return None
+    return payload.get("user_id")
 
 
 def _resolve_storage_uri() -> str:

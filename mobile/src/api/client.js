@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthItem } from '../auth/secureStorage';
+import { identityHeaders } from '../auth/identityProof';
 
 // Build-time default from .env / eas.json env
 const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
@@ -59,7 +60,8 @@ const DEFAULT_TIMEOUT_MS = 10000;
 
 async function request(method, path, body, requestOptions = {}) {
   const token = await getAuthItem('jwt_token');
-  const headers = { 'Content-Type': 'application/json' };
+  // A fingerprint/PIN confirmed shortly before goes on the log (identityProof.js).
+  const headers = { 'Content-Type': 'application/json', ...identityHeaders() };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }

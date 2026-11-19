@@ -99,6 +99,13 @@ function ActionBadge({ action }) {
   );
 }
 
+// SEA: a process that required authentication says how it was done.
+function AuthTag({ row }) {
+  const how = parseDetails(row.details)?.autenticacao;
+  if (!how) return null;
+  return <span className="tag tag-success" style={{ fontSize: 11 }} title={how}>Usuário autenticado ({how})</span>;
+}
+
 function EntityCell({ row }) {
   if (!row.entity_type) {
     return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
@@ -500,7 +507,13 @@ const AUDIT_COLUMNS = [
     key: 'action_type',
     label: 'Ação',
     sortable: true,
-    render: (r) => <ActionBadge action={r.action_type} />,
+    render: (r) => (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+        <ActionBadge action={r.action_type} />
+        <AuthTag row={r} />
+        {r.orders?.length > 0 && <span className="mono" style={{ fontSize: 11 }}>Ordem {r.orders.join(', ')}</span>}
+      </div>
+    ),
   },
   {
     key: 'entity_type',
@@ -576,6 +589,7 @@ function AuditDetailModal({ entry, onClose }) {
         borderBottom: '1px solid var(--border)',
       }}>
         <ActionBadge action={entry.action_type} />
+        <AuthTag row={entry} />
         <span className="mono" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
           {fmtTimestamp(entry.created_at)}
         </span>

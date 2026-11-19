@@ -1,5 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { identityError, withoutLock } from './appLock';
+import { markIdentityConfirmed } from './identityProof';
 
 // SEA: before receiving an OT, choosing where to store a material or
 // processing a withdrawal, the operator confirms with the fingerprint or
@@ -11,5 +12,7 @@ export async function confirmIdentity(reason) {
     cancelLabel: 'Cancelar',
     disableDeviceFallback: false,
   }));
-  return identityError(result);
+  const problem = identityError(result);
+  if (!problem) markIdentityConfirmed();
+  return problem;
 }

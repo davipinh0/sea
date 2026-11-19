@@ -21,4 +21,4 @@ write_files:
   - path: /etc/cron.d/sea-backup
     permissions: "0644"
     content: |
-      0 3 * * * seaadmin /opt/sea/deploy/azure/backup.sh >> /var/backups/sea/backup.log 2>&1
+      0 3 * * * seaadmin sh /opt/sea/deploy/azure/backup.sh >> /var/backups/sea/backup.log 2>&1

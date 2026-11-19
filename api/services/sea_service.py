@@ -1507,6 +1507,99 @@ def order_stock(db, order_number, warehouse_ids=None):
     }
 
 
+def order_display(order_type, number):
+    """How the operation names an order: "PM12 - 2002349234"."""
+    if not number:
+        return None
+    return f"{order_type} - {number}" if order_type else str(number)
+
+
+def log_orders(db, rows):
+    """The orders (PM11 / PM12) each history row is about, by log_id.
+
+    The log keeps the OT and the material; the operation speaks of the
+    order. A withdrawal answers with the orders of its materials; the
+    other rows with the order of the material on the OT (all the orders of
+    the OT when the row names no material). ``rows`` need log_id,
+    entity_type, entity_id and details.
+    """
+    result = {}
+    withdrawal_ids = {r.entity_id for r in rows if r.entity_type == "WITHDRAWAL" and r.entity_id}
+    by_withdrawal = {}
+    if withdrawal_ids:
+        for x in db.execute(
+            text(
+                """
+                SELECT DISTINCT wl.withdrawal_id,
+                       COALESCE(ol.service_order_type, op.order_type) AS order_type,
+                       COALESCE(ol.service_order_number, op.service_order_number, op.po_number)
+                           AS order_number
+                FROM withdrawal_lines wl
+                JOIN withdrawals wd ON wd.withdrawal_id = wl.withdrawal_id
+                JOIN purchase_orders op ON op.po_id = wd.po_id
+                LEFT JOIN purchase_order_lines ol
+                  ON ol.po_id = op.po_id AND ol.item_id = wl.item_id
+                WHERE wl.withdrawal_id = ANY(:ids)
+                """
+            ),
+            {"ids": sorted(withdrawal_ids)},
+        ):
+            by_withdrawal.setdefault(x.withdrawal_id, set()).add(
+                order_display(x.order_type, x.order_number))
+
+    wanted = {}
+    po_ids, po_numbers = set(), set()
+    for r in rows:
+        if r.entity_type == "WITHDRAWAL":
+            continue
+        d = r.details if isinstance(r.details, dict) else {}
+        po_id = r.entity_id if r.entity_type == "PO" else None
+        ot = d.get("ot") or d.get("po_number") or d.get("lot_number")
+        if po_id is None and not ot:
+            continue
+        skus = {d["sku"]} if d.get("sku") else {
+            m.get("sku") for m in d.get("materials") or [] if isinstance(m, dict) and m.get("sku")
+        }
+        wanted[r.log_id] = (po_id, str(ot) if ot else None, d.get("item_id"), skus)
+        if po_id:
+            po_ids.add(po_id)
+        if ot:
+            po_numbers.add(str(ot))
+    lines = []
+    if po_ids or po_numbers:
+        lines = db.execute(
+            text(
+                """
+                SELECT p.po_id, p.po_number, l.item_id, i.sku,
+                       COALESCE(l.service_order_type, p.order_type) AS order_type,
+                       COALESCE(l.service_order_number, p.service_order_number, p.po_number)
+                           AS order_number
+                FROM purchase_order_lines l
+                JOIN purchase_orders p ON p.po_id = l.po_id
+                JOIN items i ON i.item_id = l.item_id
+                WHERE p.order_type IS NOT NULL
+                  AND (p.po_id = ANY(:ids) OR p.po_number = ANY(:numbers))
+                """
+            ),
+            {"ids": sorted(po_ids), "numbers": sorted(po_numbers)},
+        ).fetchall()
+
+    for r in rows:
+        if r.entity_type == "WITHDRAWAL":
+            found = by_withdrawal.get(r.entity_id, set())
+        elif r.log_id in wanted:
+            po_id, ot, item_id, skus = wanted[r.log_id]
+            same_ot = [ln for ln in lines if ln.po_id == po_id or ln.po_number == ot]
+            narrowed = [ln for ln in same_ot
+                        if (item_id and ln.item_id == item_id) or (skus and ln.sku in skus)]
+            found = {order_display(ln.order_type, ln.order_number)
+                     for ln in (narrowed or same_ot)}
+        else:
+            found = set()
+        result[r.log_id] = sorted(x for x in found if x)
+    return result
+
+
 def _unit_suffix(uom):
     return f" {uom.upper()}" if uom else ""
 

@@ -354,18 +354,15 @@ ALL_PAGE_KEYS = (
     # can CRUD + test-send destinations. Distinct from 'webhooks'
     # (signed-envelope HTTP subscribers).
     "webhooks", "notifications", "audit-log", "imports", "integrations", "settings",
-    # SEA: Retirada. "retirada" = request at the terminal and follow the
-    # own requests; "retirada-avaliar" = approve or deny the requests;
-    # "retirada-fazer" = accept an approved request and separate it (mig 096).
+    # Retirada: "retirada" pede no terminal e acompanha os próprios pedidos; "retirada-avaliar"
+    # aprova ou nega; "retirada-fazer" aceita e separa.
     "retirada",
     "retirada-avaliar",
     "retirada-fazer",
-    # mig 098: the account of the withdrawal terminal. It holds this key
-    # only: it opens the terminal, where an employee without access to the
-    # SEA asks for material with the corporate e-mail.
+    # Usuário do terminal de retirada: só esta permissão. Abre o terminal, onde quem não tem acesso
+    # ao SEA pede com o e-mail corporativo.
     "terminal-retirada",
-    # SEA: Sistema > Cadastro de materiais (create, change and delete the
-    # materials consulted when an OT is put together).
+    # Cadastro de materiais (criar, alterar e apagar).
     "material-catalog",
 )
 
@@ -378,9 +375,8 @@ ALL_PAGE_KEYS = (
 # override key. Kept out of ALL_PAGE_KEYS so the sidebar permission
 # grid renders them in a separate "Overrides" group.
 OVERRIDE_SO_FULL_EDIT = "so-full-edit"
-# SEA: who may download the lists of the web panel as CSV files. The
-# export is built in the browser from data the user can already see, so
-# this grant controls the "Exportar CSV" buttons, not access to the data.
+# Quem pode baixar as listas do painel em CSV. O arquivo é montado no navegador com dados que o
+# usuário já vê; a permissão só controla os botões.
 OVERRIDE_EXPORT_CSV = "export-csv"
 ALL_OVERRIDE_KEYS = (
     OVERRIDE_SO_FULL_EDIT,

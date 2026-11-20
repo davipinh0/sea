@@ -189,9 +189,8 @@ def receive_items(validated):
         quantity = item_entry.quantity
         bin_id = item_entry.bin_id
         lot_number = item_entry.lot_number
-        # SEA: stock received from an OT (PM11/PM12) is tagged with the OT
-        # number as its lot, so every unit stays traceable to its OT
-        # through put-away, stock queries and withdrawals.
+        # O estoque recebido de uma OT leva o número dela como lote, para cada unidade continuar
+        # ligada à OT na armazenagem, nas consultas e na retirada.
         if po.order_type:
             lot_number = po.po_number
         serial_number = item_entry.serial_number
@@ -424,7 +423,7 @@ def receive_items(validated):
         )
         po_status = PO_PARTIAL
 
-    # SEA: announce the receipt (panel + e-mail). No-op for non-SEA POs.
+    # Avisa o recebimento (painel e e-mail).
     sea_service.notify_receipt(g.db, po, receipt_ids, username)
 
     g.db.commit()
@@ -502,12 +501,10 @@ def cancel_receiving(validated):
             "mismatched_receipt_ids": [r.receipt_id for r in mismatched],
         }), 400
 
-    # SEA: lot-tagged receipts (an OT's lot is the OT number) may only be
-    # reversed while that lot's free stock (on_hand - allocated) in the
-    # receiving bin still covers them. Otherwise the goods were already
-    # stored, reserved for a withdrawal or delivered, and clamping on_hand
-    # would silently corrupt stock. Checked for the whole call, under row
-    # locks, before any mutation.
+    # Recebimento de uma OT só pode ser estornado enquanto o saldo livre daquele lote na área de
+    # recebimento ainda cobre o estorno. Senão o material já foi guardado, reservado ou entregue, e
+    # mexer no saldo corromperia o estoque. Conferido para a chamada inteira, sob trava, antes de
+    # alterar qualquer coisa.
     lot_rows = g.db.execute(
         text(
             f"""

@@ -1,8 +1,5 @@
-"""SEA: OT (PM11/PM12) receiving, SP12 storage rules and terminal withdrawals.
-
-Each test runs inside the conftest transaction (rolled back afterwards),
-so the SP12 fixtures below are created fresh per test on top of the
-standard seed (warehouse 1, staging bin 1).
+"""Recebimento de OT (PM11/PM12), armazenagem e retirada no terminal. Cada teste roda numa transação
+desfeita no final; as fixtures são criadas sobre o seed padrão (local 1, área de recebimento 1).
 """
 
 import uuid
@@ -120,7 +117,7 @@ def sp12(_db_transaction):
     }
 
 
-# ------------------------------------------------------------ OT intake
+# --- Entrada da OT
 
 
 class TestOtReceiving:
@@ -148,7 +145,7 @@ class TestOtReceiving:
 
     def test_receipt_is_tagged_with_ot_number(self, client, auth_headers, sp12):
         po_id = _create_ot(client, auth_headers, "OT-T-2", [(sp12["small"], 10)])
-        # Partial receipt; the client-supplied lot is overridden by the OT.
+        # Recebimento parcial; o lote enviado pelo cliente é trocado pelo da OT.
         resp = _receive(client, auth_headers, po_id, sp12["small"], 4, lot="IGNORED")
         assert resp.status_code == 200, resp.get_json()
         inv = _inv(sp12["conn"], sp12["small"], STAGING_BIN, "OT-T-2")
@@ -168,7 +165,7 @@ class TestOtReceiving:
         assert resp.get_json()["purchase_order"]["order_type"] == "PM11"
 
 
-# ------------------------------------------------------- SP12 storage
+# --- Armazenagem
 
 
 class TestSp12Rules:
@@ -186,16 +183,13 @@ class TestSp12Rules:
         assert _inv(sp12["conn"], sp12["small"], sp12["b0"], ot).quantity_on_hand == 3
 
     def test_shelves_are_free(self, client, auth_headers, sp12):
-        """Size class, capacity and compatibility are no longer limits:
-        any material, of any order, in any quantity, in any shelf. (The
-        fixture still marks T-A3 as PEQUENO and gives T-B0 room for 10.)"""
-        # A material without size in the shelf marked for small parts.
+        """Classe de tamanho, capacidade e compatibilidade não limitam mais: qualquer material, em
+        qualquer quantidade, em qualquer prateleira.
+        """
         ot = self._staged(client, auth_headers, sp12, "OT-S-2", "other", 2)
         assert _putaway(client, auth_headers, sp12["other"], sp12["a3"], 2, ot).status_code == 200
-        # More units than the old capacity of the address.
         ot = self._staged(client, auth_headers, sp12, "OT-S-4", "small", 12)
         assert _putaway(client, auth_headers, sp12["small"], sp12["b0"], 12, ot).status_code == 200
-        # Materials of different groups and orders together.
         ot = self._staged(client, auth_headers, sp12, "OT-S-7", "small2", 2)
         assert _putaway(client, auth_headers, sp12["small2"], sp12["a3"], 2, ot).status_code == 200
         assert _inv(sp12["conn"], sp12["small2"], sp12["a3"], ot).quantity_on_hand == 2
@@ -218,7 +212,7 @@ class TestSp12Rules:
         assert resp.get_json()["bin_code"] == "T-C0"
 
     def test_non_ot_putaway_is_unaffected(self, client, auth_headers, sp12):
-        # Plain stock (no OT lot) ignores SP12 rules, as in SEA.
+        # Estoque sem lote de OT não segue as regras do SEA.
         conn = sp12["conn"]
         conn.execute(
             text(
@@ -230,12 +224,12 @@ class TestSp12Rules:
         assert _putaway(client, auth_headers, sp12["other"], sp12["a3"], 5, None).status_code == 200
 
 
-# ---------------------------------------------------------- Withdrawals
+# --- Retiradas
 
 
 @pytest.fixture()
 def stored_ot(client, auth_headers, sp12):
-    """OT-W-1: 10 units of 'small' stored in T-C0."""
+    """OT-W-1: 10 unidades de 'small' guardadas em T-C0."""
     po_id = _create_ot(client, auth_headers, "OT-W-1", [(sp12["small"], 10)])
     assert _receive(client, auth_headers, po_id, sp12["small"], 10).status_code == 200
     assert (
@@ -279,17 +273,15 @@ class TestWithdrawals:
         resp = _request(client, auth_headers, inv_id, 4)
         assert resp.status_code == 201, resp.get_json()
         wid = resp.get_json()["withdrawal"]["withdrawal_id"]
-        assert tuple(_stock(stored_ot["conn"], inv_id)) == (10, 4)  # reserved, not removed
+        assert tuple(_stock(stored_ot["conn"], inv_id)) == (10, 4)
 
-        # Cannot deliver before separation is finished.
+        # Não entrega antes de terminar a separação.
         assert _step(client, auth_headers, wid, "entregar").status_code == 409
-        # mig 096: the evaluator approves before anyone accepts it.
         assert _step(client, auth_headers, wid, "separar").status_code == 409
         assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         assert _step(client, auth_headers, wid, "separar").status_code == 200
         assert _step(client, auth_headers, wid, "pronta").status_code == 200
 
-        # The employee who requested it (the logged-in user) confirms.
         resp = _step(client, auth_headers, wid, "entregar")
         assert resp.status_code == 200, resp.get_json()
         body = resp.get_json()["withdrawal"]
@@ -302,7 +294,7 @@ class TestWithdrawals:
         assert body["confirmed_by"] == "admin"
         assert tuple(_stock(stored_ot["conn"], inv_id)) == (6, 0)
 
-        # Duplicate confirmation is refused and stock is untouched.
+        # Confirmação repetida é recusada e o estoque não muda.
         again = _step(client, auth_headers, wid, "entregar")
         assert again.status_code == 409
         assert tuple(_stock(stored_ot["conn"], inv_id)) == (6, 0)
@@ -331,7 +323,6 @@ class TestWithdrawals:
         inv_id = stored_ot["inventory_id"]
         assert _request(client, auth_headers, inv_id, 11).status_code == 409
         assert _request(client, auth_headers, inv_id, 7).status_code == 201
-        # Only 3 left unreserved.
         resp = _request(client, auth_headers, inv_id, 4)
         assert resp.status_code == 409
         assert resp.get_json()["available"] == 3
@@ -351,7 +342,6 @@ class TestWithdrawals:
         wid = _request(client, auth_headers, inv_id, 5).get_json()["withdrawal"]["withdrawal_id"]
         for body in ({}, {"reason": ""}, {"reason": "   "}, {"reason": None}):
             assert _step(client, auth_headers, wid, "cancelar", body).status_code == 400, body
-        # Still open and still reserved.
         assert tuple(_stock(stored_ot["conn"], inv_id)) == (10, 5)
         current = client.get(f"/api/sea/retiradas/{wid}", headers=auth_headers).get_json()
         assert current["withdrawal"]["status"] == "REQUESTED"
@@ -394,7 +384,7 @@ class TestWithdrawals:
             text("INSERT INTO user_page_permissions (user_id, page_key) VALUES (:u, 'retirada')"),
             {"u": user_id},
         )
-        # The corporate e-mail (any case) logs in as that user.
+        # O e-mail corporativo (maiúsculas ou minúsculas) entra como esse usuário.
         login = client.post(
             "/api/auth/login",
             json={"username": "retirada.t@EMPRESA.example", "password": "Senha123"},
@@ -413,7 +403,7 @@ class TestWithdrawals:
         for action in ("separar", "pronta"):
             assert _step(client, auth_headers, wid, action).status_code == 200
 
-        # Somebody else (even an admin) cannot take the delivery.
+        # Outra pessoa, mesmo administrador, não recebe a entrega.
         other = _step(client, auth_headers, wid, "entregar")
         assert other.status_code == 403
         assert tuple(_stock(conn, inv_id)) == (10, 3)
@@ -658,7 +648,7 @@ class TestMobileSuggestion:
         assert missing.status_code == 404
 
 
-# ------------------------------------------- Review fixes (regressions)
+# --- Regressões
 
 
 class TestReservationIntegrity:
@@ -708,7 +698,7 @@ class TestReservationIntegrity:
                 },
             )
 
-        assert move(3).status_code >= 400  # only 2 are free
+        assert move(3).status_code >= 400
         assert tuple(_stock(stored_ot["conn"], inv_id)) == (10, 8)
 
 

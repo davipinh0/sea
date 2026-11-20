@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 
-// Sistema > Usuários: "Confirmar login no celular" (mig 092) and the
-// phones that confirm the logins of the user.
+// Confirmação de login no celular e os celulares que confirmam os logins do usuário.
 
 function when(iso) {
   return iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-';

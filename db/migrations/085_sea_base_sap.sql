@@ -1,27 +1,9 @@
--- ============================================================
--- 085_sea_base_sap.sql - SEA: base de dados vinda do SAP
--- ============================================================
--- Espelho, dentro do SEA, dos três conjuntos de dados que vêm do SAP:
---   * sap_orders             ordens (PM11 / PM12)
---   * sap_materials          materiais
---   * sap_reservations       OTs / reservas abertas (cabeçalho)
---   * sap_reservation_items  materiais de cada OT: de qual ordem,
---                            quantidade e unidade
---
--- O recebimento lê o código de barras da OT e procura nesta base
--- (services/sap_base.py). O que é encontrado passa pelo mesmo cadastro
--- de uma etiqueta (purchase_orders / purchase_order_lines / items), de
--- modo que recebimento, armazenagem e retirada não mudam.
---
--- A base é só espelho: o SEA nunca escreve nela a partir da operação.
--- Ela é carregada por importação (Sistema > Importação) e, no futuro,
--- pela integração com o SAP.
---
--- Uma OT traz materiais de várias ordens, então a ordem passa a ser
--- guardada também em cada material da OT (purchase_order_lines).
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 085_sea_base_sap.sql - base de dados vinda do SAP
+-- Cópia, dentro do SEA, de ordens (PM11/PM12), materiais e OTs/reservas abertas. O recebimento
+-- procura a OT aqui e registra pelo mesmo caminho da etiqueta. A operação nunca escreve na base:
+-- ela é carregada por importação e, no futuro, pela integração com o SAP.
+-- Como uma OT traz materiais de várias ordens, a ordem também fica em cada material da OT.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 CREATE TABLE IF NOT EXISTS sap_orders (
     order_number VARCHAR(40) PRIMARY KEY,
@@ -55,7 +37,6 @@ CREATE TABLE IF NOT EXISTS sap_reservation_items (
     material_code VARCHAR(50) NOT NULL REFERENCES sap_materials(material_code),
     quantity      INT NOT NULL CHECK (quantity > 0),
     uom           VARCHAR(10),
-    -- O SEA mantém um registro por material em cada OT.
     UNIQUE (ot_number, material_code)
 );
 CREATE INDEX IF NOT EXISTS ix_sap_reservation_items_order

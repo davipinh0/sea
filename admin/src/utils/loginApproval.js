@@ -1,7 +1,5 @@
-// SEA (mig 092): a password login that waits for the user to confirm it in
-// the SEA app of the registered phone. The login answers 202 with a
-// challenge; whoever started it asks /auth/login/aprovacao until the
-// phone decides (or the time runs out).
+// Login com senha que espera a confirmação no app do celular: a API responde 202 e quem iniciou
+// consulta até o celular decidir ou o tempo acabar.
 
 const MESSAGES = {
   403: 'O acesso foi negado no celular.',
@@ -13,9 +11,6 @@ export class LoginApprovalCancelled extends Error {}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ``post(path, body)`` returns a fetch Response. Resolves with the body of
-// the approved login ({ token, user }); rejects with an Error whose
-// message can be shown, or LoginApprovalCancelled.
 export async function waitForApproval(post, challenge, { intervalMs = 2000, onTick, isCancelled = () => false } = {}) {
   const body = { challenge_id: challenge.challenge_id, poll_token: challenge.poll_token };
   for (;;) {

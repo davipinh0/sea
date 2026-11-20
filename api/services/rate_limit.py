@@ -62,10 +62,9 @@ def _rate_limit_key() -> str:
             return f"user:{user['user_id']}"
     except Exception:
         pass
-    # SEA: the global limit runs before @require_auth. Read the user from
-    # the signed token itself (no database): behind the company network
-    # every phone shares one public IP, and a per-IP budget would block the
-    # whole operation at a few dozen phones.
+    # O limite global roda antes do @require_auth, então o usuário é lido do próprio token
+    # (sem banco). Na rede da empresa todos saem pelo mesmo IP; por IP, algumas dezenas de
+    # celulares bloqueariam a operação.
     user_id = _token_user_id()
     if user_id is not None:
         return f"user:{user_id}"
@@ -73,8 +72,9 @@ def _rate_limit_key() -> str:
 
 
 def _token_user_id():
-    """user_id of a valid, signed JWT in the Bearer header or the panel
-    cookie; None otherwise (missing, forged or expired: the IP bucket)."""
+    """user_id de um JWT válido (cabeçalho Bearer ou cookie do painel); None se faltar, for falso ou
+    estiver vencido.
+    """
     from services.auth_service import decode_token
     from services.cookie_auth import AUTH_COOKIE_NAME
 

@@ -1,7 +1,4 @@
-/**
- * SEA: the log says when a process that requires authentication had it,
- * shows the order (PM12 - number) and never shows an operation in English.
- */
+/* O log mostra a autenticação, a ordem (PM12 - número) e nenhuma operação em inglês. */
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';

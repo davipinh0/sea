@@ -10,7 +10,6 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 
 const BIN_TYPES = ['Staging', 'PickableStaging', 'Pickable'];
-// The stored values are the SEA ones; the operator sees these names.
 const BIN_TYPE_LABELS = {
   Staging: 'Recebimento',
   PickableStaging: 'Recebimento (permite retirada)',
@@ -160,7 +159,7 @@ export default function Bins() {
       zone_id: form.zone_id ? Number(form.zone_id) : null,
       aisle: form.aisle || null,
       pick_sequence: form.pick_sequence !== '' && form.pick_sequence != null ? Number(form.pick_sequence) : 0,
-      // SEA SP12 rules: blank = not configured (no limit / any size).
+      // Em branco = sem regra (sem limite, qualquer tamanho).
     };
     const res = editing
       ? await api.put(`/admin/bins/${selected.bin_id}`, { ...body, is_active: !!form.is_active })

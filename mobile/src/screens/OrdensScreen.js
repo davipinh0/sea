@@ -11,10 +11,6 @@ import { apiError, formatQuantity, orderName } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Ordens: the OTs of the selected location and, for each one, its
-// materials with what was received, where it is and what was withdrawn
-// (read-only).
-
 const STATUS = { OPEN: 'Aberta', PARTIAL: 'Recebimento parcial', RECEIVED: 'Recebida', CLOSED: 'Fechada', ARCHIVED: 'Arquivada' };
 
 export default function OrdensScreen({ navigation }) {

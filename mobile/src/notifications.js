@@ -5,25 +5,18 @@ import * as Notifications from 'expo-notifications';
 import { withoutLock } from './auth/appLock';
 import client from './api/client';
 
-// SEA notifications on the phone (withdrawal requested, materials
-// received, storage concluded).
-//
-//   * App open: the app asks the API every few seconds and shows what is
-//     new as a notification of the phone (sound + banner).
-//   * App closed: the notification comes through the push service, when
-//     the server has it switched on (SEA_PUSH=expo) and the app was built
-//     with the Firebase key. Without that, this part simply stays off.
+// Notificações no celular.
+// - App aberto: o app consulta a API de tempos em tempos e mostra o que é novo.
+// - App fechado: o aviso chega pelo push, quando o servidor está com SEA_PUSH=expo e o app tem a
+// chave do Firebase.
 
-// Android keeps the sound of a channel for good, so the channel carries
-// the sound in its name.
+// O Android guarda o som do canal para sempre, por isso o som vai no nome do canal.
 const CHANNEL = 'sea-avisos';
-// The two short tones of the panel (assets/sea_aviso.wav).
 const SOUND = 'sea_aviso.wav';
 const POLL_MS = 15000;
 const TOKEN_KEY = 'sea_push_token';
 const SEEN_KEY = 'sea_notif_seen';
 
-// Screen each notification leads to.
 export const KIND_SCREEN = {
   RETIRADA_SOLICITADA: 'Retirada',
   RETIRADA_APROVADA: 'Retirada',
@@ -32,11 +25,8 @@ export const KIND_SCREEN = {
   ARMAZENAGEM_CONCLUIDA: 'Estoque',
 };
 
-// Push of a login waiting for this phone (mig 092).
 export const LOGIN_APPROVAL = 'login_approval';
 
-// Calls ``onLoginApproval()`` when a push of a login to confirm arrives or
-// is tapped. Returns a function that stops listening.
 export function onLoginApprovalPush(onLoginApproval) {
   const isApproval = (n) => n?.request?.content?.data?.kind === LOGIN_APPROVAL;
   const received = Notifications.addNotificationReceivedListener((n) => { if (isApproval(n)) onLoginApproval(); });
@@ -54,8 +44,7 @@ export const KIND_LABEL = {
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
-    // With the app open the poller shows the notification itself; a push
-    // of the same event would be a duplicate.
+    // Com o app aberto quem mostra é a consulta periódica; o push do mesmo evento seria repetido.
     const remote = notification.request.trigger?.type === 'push';
     const show = !(remote && AppState.currentState === 'active');
     return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: show, shouldSetBadge: false };
@@ -71,20 +60,17 @@ async function allowed() {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
-  // The permission window puts the app in the background: no lock for it.
   return (await withoutLock(() => Notifications.requestPermissionsAsync())).granted;
 }
 
-// Push token of this phone saved at the last registration (the app sends
-// it at login: a registered phone confirms its own login, mig 092).
+// Token de push deste celular. O app manda no login: o celular cadastrado confirma o próprio login.
 export async function getDeviceToken() {
   return AsyncStorage.getItem(TOKEN_KEY).catch(() => null);
 }
 
-// Register this phone to receive notifications while the app is closed.
-// ``secureLock``: the app lock (fingerprint or PIN/pattern) is on, so this
-// phone also confirms the logins of the user (mig 092).
-// Fails quietly when the build has no push key or the server refuses.
+// Registra o celular para receber avisos com o app fechado. Com a trava do app ligada
+// (``secureLock``), ele também confirma os logins do usuário. Falha em silêncio se o build não tem
+// chave de push.
 export async function registerDevice({ secureLock = false } = {}) {
   try {
     if (!(await allowed())) return;
@@ -95,20 +81,19 @@ export async function registerDevice({ secureLock = false } = {}) {
     await client.post('/api/sea/push/registrar', { token, secure_lock: !!secureLock, device_name: deviceName });
     await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch {
-    // No push available here: notifications still work with the app open.
+    // Sem push aqui: as notificações continuam com o app aberto.
   }
 }
 
-// Called before logout, while the session is still valid. The phone stops
-// receiving the notifications of the day but stays registered to confirm
-// the user's logins, so the token is kept here too (mig 092).
+// Chamado antes de sair, com a sessão ainda válida. O celular para de receber avisos, mas continua
+// cadastrado para confirmar os logins do usuário.
 export async function unregisterDevice() {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     if (!token) return;
     await client.post('/api/sea/push/remover', { token });
   } catch {
-    // The server drops the device at the next login on this phone.
+    // O servidor tira o aparelho no próximo login neste celular.
   }
 }
 
@@ -121,8 +106,6 @@ export async function writeSeen(id) {
   await AsyncStorage.setItem(SEEN_KEY, String(id)).catch(() => {});
 }
 
-// Ask the API for what is new and show it. Returns a function that stops.
-// ``onNew(list)`` lets the app update what is on screen.
 export function startPolling(onNew) {
   let last = null;
   let stopped = false;
@@ -135,7 +118,7 @@ export function startPolling(onNew) {
       const list = resp.data?.notifications || [];
       if (first) {
         last = list[0]?.notification_id ?? 0;
-        // Nothing is announced as new the first time the app is used here.
+        // Na primeira vez neste celular nada é anunciado como novo.
         const seen = await readSeen();
         if (seen === null) { await writeSeen(last); return; }
         const missed = list.filter((n) => n.notification_id > seen);
@@ -147,7 +130,7 @@ export function startPolling(onNew) {
       announce(list);
       onNew?.(list);
     } catch {
-      // Offline or session ended: the next round tries again.
+      // Sem conexão ou sessão encerrada: a próxima consulta tenta de novo.
     }
   }
 
@@ -158,7 +141,6 @@ export function startPolling(onNew) {
 }
 
 function announce(list) {
-  // Newest last, so the most recent ends on top of the phone's list.
   [...list].reverse().forEach((n) => {
     Notifications.scheduleNotificationAsync({
       content: {
@@ -170,11 +152,10 @@ function announce(list) {
   });
 }
 
-// Open the related screen when a notification is tapped.
 export function onNotificationTap(navigate) {
   const sub = Notifications.addNotificationResponseReceivedListener((response) => {
     const kind = response.notification.request.content.data?.kind;
-    // A login to confirm opens over any screen (LoginApproval).
+    // Login para confirmar abre por cima de qualquer tela (LoginApproval).
     if (kind === LOGIN_APPROVAL) return;
     navigate(KIND_SCREEN[kind] || 'Notificacoes');
   });

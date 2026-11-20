@@ -1,12 +1,9 @@
-// SEA helpers shared by the mobile screens. Pure functions only (they are
-// unit-tested without React Native).
+// Só funções puras, testadas sem o React Native.
 
-// Code of the location where orders arrive. Receiving and storage are
-// only offered while it is selected, like the Expedição section of the panel.
+// Recebimento e armazenagem só aparecem com o local Expedição selecionado, como no painel.
 export const EXPEDICAO_CODE = 'Expedição';
 
-// Quantity as the operator reads it. A material kept in KG with a box
-// weight is counted in boxes: 36 KG in boxes of 18 KG = "2 cx (36 KG)".
+// Material em KG com peso de caixa é contado em caixas: 36 KG em caixas de 18 KG = "2 cx (36 KG)".
 export function formatQuantity(quantity, uom, packWeightKg) {
   if (quantity == null) return '-';
   if (packWeightKg) {
@@ -17,16 +14,13 @@ export function formatQuantity(quantity, uom, packWeightKg) {
   return uom ? `${quantity} ${uom}` : String(quantity);
 }
 
-// How a material is named on screen: by its order, e.g. "PM12 2002349234".
 export function orderName(row) {
   if (!row) return '-';
   return [row.order_type, row.order_number].filter(Boolean).join(' ') || '-';
 }
 
-// Modules of the app. A module shows when the user is an administrator,
-// holds one of its page permissions (Sistema > Usuários) or, for the two
-// original modules, the matching mobile function. ``onlyAt`` limits it to
-// one location.
+// Um módulo aparece para o administrador, para quem tem uma das permissões dele ou, nos dois
+// módulos originais, a função de celular correspondente. ``onlyAt`` limita a um local.
 export const MODULES = [
   { key: 'receive', label: 'RECEBER', sub: 'Recebimento de ordem', screen: 'Receber', accent: 'red', fn: 'receive', pages: ['receiving'], onlyAt: EXPEDICAO_CODE },
   { key: 'putaway', label: 'ARMAZENAR', sub: 'Guardar o que foi recebido', screen: 'Armazenar', accent: 'copper', fn: 'putaway', pages: ['putaway'], onlyAt: EXPEDICAO_CODE },
@@ -48,8 +42,7 @@ export function visibleModules(me, warehouseCode) {
   });
 }
 
-// mig 096: what the user may do with a withdrawal of the queue.
-// Evaluate needs "retirada-avaliar"; accept and finish need "retirada-fazer".
+// Avaliar pede "retirada-avaliar"; aceitar e concluir pedem "retirada-fazer".
 export function withdrawalActions(w, me) {
   const pages = me?.allowed_pages || [];
   const admin = me?.role === 'ADMIN';
@@ -64,14 +57,13 @@ export function withdrawalActions(w, me) {
   if (w.status === 'APPROVED' && canDo) {
     return [{ action: 'separar', label: 'ACEITAR E SEPARAR', done: `Retirada nº ${w.withdrawal_id} aceita: prepare o material.` }];
   }
-  // mig 098: once accepted, only who accepted carries it on.
+  // Depois do aceite, só quem aceitou dá andamento.
   if (w.status === 'PICKING' && canDo && (!w.picked_by || w.picked_by === me?.username)) {
     return [{ action: 'pronta', label: 'PRONTA PARA ENTREGA', done: `Retirada nº ${w.withdrawal_id} pronta. O funcionário confirma no terminal.` }];
   }
   return [];
 }
 
-// Message of a failed request, written for the operator.
 export function apiError(err, fallback) {
   if (err?.isTimeout) return 'O servidor demorou a responder. Verifique a rede e tente de novo.';
   if (!err?.response) return 'Sem conexão com o servidor. Verifique a rede e o endereço do servidor.';
@@ -82,7 +74,6 @@ export function apiError(err, fallback) {
   return fallback;
 }
 
-// Whole number typed by the operator, or null.
 export function parseQuantity(text) {
   const clean = String(text ?? '').trim();
   if (!/^\d+$/.test(clean)) return null;
@@ -90,8 +81,7 @@ export function parseQuantity(text) {
   return value > 0 ? value : null;
 }
 
-// Why a quantity cannot be used, or null. ``max`` is the balance that may
-// move; a material with a box weight only goes in whole boxes.
+// Material com peso de caixa só anda em caixas inteiras.
 export function quantityProblem(text, { max, packWeightKg } = {}) {
   const value = parseQuantity(text);
   if (value === null) return 'Informe a quantidade (número inteiro maior que zero).';
@@ -100,7 +90,6 @@ export function quantityProblem(text, { max, packWeightKg } = {}) {
   return null;
 }
 
-// Addresses grouped by location, for the destination lists.
 export function groupByLocation(bins, excludeBinId) {
   const groups = [];
   for (const bin of bins || []) {

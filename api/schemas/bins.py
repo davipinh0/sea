@@ -19,7 +19,7 @@ class CreateBinRequest(BaseModel):
     position_num: Optional[int] = Field(None, ge=0)
     pick_sequence: int = Field(0, ge=0)
     putaway_sequence: int = Field(0, ge=0)
-    # SEA SP12 rules. NULL = not configured.
+    # Regras de armazenagem. NULL = sem regra.
     capacity_units: Optional[int] = Field(None, gt=0, le=10000000)
     size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
 
@@ -43,7 +43,7 @@ class UpdateBinRequest(BaseModel):
     putaway_sequence: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
     zone_id: Optional[int] = Field(None, gt=0)
-    # SEA SP12 rules. NULL = not configured.
+    # Regras de armazenagem. NULL = sem regra.
     capacity_units: Optional[int] = Field(None, gt=0, le=10000000)
     size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
 

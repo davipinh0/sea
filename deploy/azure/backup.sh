@@ -1,5 +1,5 @@
 #!/bin/sh
-# Backup diário do banco do SEA (executado pelo cron da VM). Mantém 14 dias.
+# Backup diário do banco (cron da VM). Guarda 14 dias.
 set -eu
 DEST=/var/backups/sea
 STAMP=$(date +%Y-%m-%d_%H%M)

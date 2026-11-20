@@ -34,7 +34,7 @@ from utils.validation import validate_body
 
 @admin_bp.route("/warehouses", methods=["GET"])
 @require_auth
-# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+# Outras páginas também leem; gravar continua exigindo a permissão própria.
 @require_any_page_permission("warehouses", "settings", "users")
 @with_db
 def list_warehouses():
@@ -185,8 +185,8 @@ def delete_warehouse(warehouse_id):
 
 @admin_bp.route("/zones", methods=["GET"])
 @require_auth
-# SEA: the Endereços page lists the zones to fill its form, so reading
-# them comes with the 'bins' page. Creating / editing zones stays 'zones'.
+# A página de Endereços lista as zonas no formulário, então ler zonas vem junto com 'bins'. Criar e
+# editar zonas continua em 'zones'.
 @require_any_page_permission("zones", "bins")
 @with_db
 def list_zones():
@@ -306,7 +306,7 @@ def delete_zone(zone_id):
 
 @admin_bp.route("/bins", methods=["GET"])
 @require_auth
-# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+# Outras páginas também leem; gravar continua exigindo a permissão própria.
 @require_any_page_permission("bins", "settings")
 @with_db
 def list_bins():

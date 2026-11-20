@@ -97,8 +97,7 @@ def require_auth(f):
                     {"uid": payload["user_id"]},
                 ).fetchall()
                 allowed_pages = [r.page_key for r in page_rows]
-            # SEA (mig 093): the session must still be open on the server
-            # ("Sair" ends it) and, for the web panel, recently used.
+            # A sessão precisa continuar aberta no servidor e, no painel, ter sido usada há pouco.
             session_problem = (
                 web_sessions.check(db, payload.get("jti"), web=source == "cookie")
                 if row and row.is_active else None
@@ -124,12 +123,9 @@ def require_auth(f):
         payload["role"] = row.role
         payload["warehouse_ids"] = list(row.warehouse_ids) if row.warehouse_ids else []
         payload["allowed_pages"] = allowed_pages  # None for ADMIN, list for USER
-        # Mobile modules granted to the user (receive, putaway).
         payload["allowed_functions"] = list(row.allowed_functions or [])
 
         g.current_user = payload
-        # SEA (mig 095): processes of the web panel (cookie) are released by
-        # the phone; Bearer clients (app, terminal) are not gated there.
         g.auth_source = source
 
         # Forced password change: when the flag is set the user can only
@@ -192,8 +188,7 @@ def require_auth(f):
     return decorated
 
 
-# What the log records about how the user proved who they are in a
-# process that requires it (Recebimento, Armazenagem, Retirada).
+# O que o log registra sobre como o usuário provou quem é, nos processos que exigem isso.
 IDENTITY_HEADER = "X-SEA-Identidade"
 IDENTITY_APP = "digital-pin"
 AUTH_PROOF_APP = "Digital/PIN no app"
@@ -201,18 +196,15 @@ AUTH_PROOF_PHONE = "Liberado no celular (painel web)"
 
 
 def require_step_up(purpose):
-    """SEA (mig 095): in the web panel (session in the cookie) the process
-    ``purpose`` must have been released on the user's registered phone.
-    Place after @require_auth. Bearer clients pass: the app confirms with
-    the fingerprint/PIN itself and the terminal only requests.
+    """No painel (cookie), o processo precisa estar liberado no celular. Usar depois de
+    @require_auth. Clientes Bearer passam: o app pede a digital/PIN e o terminal só faz pedidos.
     """
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             if getattr(g, "auth_source", None) != "cookie":
-                # The app confirms the fingerprint/PIN on the phone and says
-                # so in this header; it is recorded on the log (the API has
-                # no way to check the phone's own lock).
+                # O app confirma a digital/PIN no celular e avisa neste cabeçalho; vai para o log (a
+                # API não tem como conferir a trava do celular).
                 if request.headers.get(IDENTITY_HEADER) == IDENTITY_APP:
                     g.auth_proof = AUTH_PROOF_APP
                 return f(*args, **kwargs)
@@ -321,9 +313,9 @@ def has_override(override_key: str) -> bool:
 
 
 def require_any_page_permission(*page_keys):
-    """Like require_admin_or_page_permission, for data several pages
-    need: ADMIN passes, other users need at least one of ``page_keys``.
-    The 403 names the first key."""
+    """Para dados que várias páginas usam: administrador passa; os demais precisam de uma das
+    ``page_keys``.
+    """
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):

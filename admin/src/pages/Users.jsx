@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import DataTable from '../components/DataTable.jsx';
@@ -7,19 +7,17 @@ import Modal from '../components/Modal.jsx';
 import UserAvatar from '../components/UserAvatar.jsx';
 import UserPhotoField from '../components/UserPhotoField.jsx';
 import LoginApprovalField from '../components/LoginApprovalField.jsx';
+import { releaseOnPhone } from '../utils/phoneRelease.js';
+import { readError } from '../utils/sea.js';
 
 const ROLES = ['ADMIN', 'USER'];
 
-// Mobile app modules used by SEA (Expedição area): receiving and
-// put-away. The other SEA handheld modules are not part of SEA.
 const ALL_FUNCTIONS = [
   { key: 'receive', label: 'Receber' },
   { key: 'putaway', label: 'Armazenagem' },
 ];
 
-// Web page grants, grouped like the SEA menu. Keys match
-// api/constants.py ALL_PAGE_KEYS. ADMIN users bypass the permission
-// table server-side, so these only matter for USER accounts.
+// As permissões só valem para usuários comuns; o administrador passa direto.
 const PAGE_GROUPS = [
   {
     label: 'Estoque',
@@ -57,7 +55,6 @@ const PAGE_GROUPS = [
     ],
   },
   {
-    // Grants that are not pages (api/constants.py ALL_OVERRIDE_KEYS).
     label: 'Permissões extras',
     isOverride: true,
     pages: [
@@ -66,7 +63,7 @@ const PAGE_GROUPS = [
   },
 ];
 
-// Same rules as the API (services/auth_service.validate_password).
+// Mesmas regras da API (auth_service.validate_password).
 const PASSWORD_RULES = 'A senha precisa ter pelo menos 8 caracteres, com ao menos uma letra e um número.';
 
 function passwordProblem(password) {
@@ -77,7 +74,6 @@ function passwordProblem(password) {
   return null;
 }
 
-// What is missing or wrong on the form, by field. Empty = ready to save.
 function userFormProblems(form, { creating, pagePermissions = [] }) {
   const problems = {};
   const text = (v) => (v || '').trim();
@@ -109,7 +105,6 @@ const API_PASSWORD_ERRORS = {
   'Password must contain at least one digit': 'Senha muito fraca: falta pelo menos um número.',
 };
 
-// Turn a refusal from the API into field messages the operator can act on.
 function apiProblems(data) {
   const error = data?.error;
   if (API_PASSWORD_ERRORS[error]) return { password: API_PASSWORD_ERRORS[error] };
@@ -145,7 +140,6 @@ export default function Users() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({});
   const [error, setError] = useState('');
-  // Field key -> message, shown under each field of the form.
   const [problems, setProblems] = useState({});
   // mig 061: per-page web-admin grants. Edited inline alongside
   // the rest of the user form and saved via a follow-up PUT once the
@@ -247,7 +241,7 @@ export default function Users() {
       role: form.role,
       warehouse_ids: form.warehouse_ids || [],
       allowed_functions: form.allowed_functions || [],
-      // Empty string clears the e-mail on edit; omitted on create when blank.
+      // Texto vazio apaga o e-mail na edição; no cadastro, em branco não é enviado.
       email: (form.email || '').trim(),
       web_login_approval: !!form.web_login_approval,
     };
@@ -291,22 +285,51 @@ export default function Users() {
   }
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  // Excluir pede a confirmação no celular de quem exclui, a cada exclusão.
+  const [deleteMsg, setDeleteMsg] = useState('');
+  const [deleteLeft, setDeleteLeft] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const deleteCancelled = useRef(false);
 
   async function deleteUser(id) {
     if (id === currentUser?.user_id) { setError('Você não pode excluir a si mesmo'); return; }
+    setDeleteMsg('');
+    setDeleteLeft(null);
     setShowDeleteConfirm(id);
+  }
+
+  function closeDelete() {
+    deleteCancelled.current = true;
+    setShowDeleteConfirm(null);
+    setDeleteLeft(null);
+    setDeleting(false);
   }
 
   async function confirmDeleteUser() {
     const id = showDeleteConfirm;
-    setShowDeleteConfirm(null);
-    const res = await api.delete(`/admin/users/${id}`);
-    if (res?.ok) {
-      loadUsers();
-    } else {
-      const data = await res?.json();
-      setError(data?.error || 'Falha ao excluir usuário');
+    deleteCancelled.current = false;
+    setDeleteMsg('');
+    setDeleting(true);
+    let res = await api.delete(`/admin/users/${id}`);
+    const peek = res?.status === 403 ? await res.clone().json().catch(() => ({})) : {};
+    if (peek.step_up_required) {
+      try {
+        await releaseOnPhone('exclusao-usuario', { onWaiting: setDeleteLeft, isCancelled: () => deleteCancelled.current });
+      } catch (err) {
+        if (!deleteCancelled.current) { setDeleteMsg(err.message); setDeleteLeft(null); setDeleting(false); }
+        return;
+      }
+      setDeleteLeft(null);
+      res = await api.delete(`/admin/users/${id}`);
     }
+    setDeleting(false);
+    if (!res) return;
+    if (res.ok) {
+      setShowDeleteConfirm(null);
+      loadUsers();
+      return;
+    }
+    setDeleteMsg(await readError(res, 'Não foi possível excluir o usuário.'));
   }
 
   function toggleWarehouse(whId) {
@@ -359,7 +382,6 @@ export default function Users() {
       .join(', ');
   }
 
-  // A new photo shows at once in the list, the form and (own photo) the top bar.
   function photoChanged(version) {
     setForm((current) => ({ ...current, photo_version: version }));
     setUsers((list) => list.map((u) => (u.user_id === editId ? { ...u, photo_version: version } : u)));
@@ -618,16 +640,26 @@ export default function Users() {
       )}
 
       {showDeleteConfirm && (
-        <Modal title="Excluir usuário" onClose={() => setShowDeleteConfirm(null)}
+        <Modal title="Excluir usuário" onClose={closeDelete}
           footer={
             <>
-              <button className="btn" onClick={() => setShowDeleteConfirm(null)}>Cancelar</button>
-              <button className="btn btn-danger" onClick={confirmDeleteUser}>Excluir</button>
+              <button className="btn" onClick={closeDelete}>Cancelar</button>
+              <button className="btn btn-danger" disabled={deleting} onClick={confirmDeleteUser}>{deleting ? 'Aguardando…' : 'Excluir'}</button>
             </>
           }
         >
-          <p style={{ fontSize: 14, marginBottom: 8 }}>Tem certeza? Esta ação não pode ser desfeita.</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O usuário e todos os dados associados serão excluídos permanentemente.</p>
+          <p style={{ fontSize: 14, marginBottom: 8 }}>
+            Excluir <strong>{users.find((u) => u.user_id === showDeleteConfirm)?.full_name || users.find((u) => u.user_id === showDeleteConfirm)?.username}</strong>? Esta ação não pode ser desfeita.
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>O acesso do usuário é removido. O histórico (recebimentos, retiradas e log) continua, com o nome dele.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Por segurança, a exclusão é confirmada no app SEA do seu celular, com a digital ou a senha do celular.</p>
+          {deleteLeft !== null && (
+            <div className="login-approval" role="status">
+              <p>Abra o app SEA no seu celular e toque em <strong>SIM, SOU EU</strong>.</p>
+              <p className="login-approval-time">Tempo restante: {Math.floor(deleteLeft / 60)}:{String(deleteLeft % 60).padStart(2, '0')}</p>
+            </div>
+          )}
+          {deleteMsg && <div className="form-error" role="alert">{deleteMsg}</div>}
         </Modal>
       )}
     </div>

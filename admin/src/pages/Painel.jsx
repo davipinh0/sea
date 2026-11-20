@@ -6,11 +6,8 @@ import PageHeader from '../components/PageHeader.jsx';
 import { actionLabel, formatDateTime, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Painel: operational overview of the SP12 sector. KPI tiles link to the
-// tab where the work happens; the activity feed reads the audit log.
-
 const REFRESH_MS = 30000;
-// "Ocultar" is a choice of this browser; "Limpar" is kept by the API.
+// "Ocultar" vale só para este navegador; "Limpar" fica guardado na API.
 const HIDDEN_KEY = 'sea_painel_movimentacoes_ocultas';
 
 function readHidden() {
@@ -20,7 +17,6 @@ function readHidden() {
 function describe(entry) {
   const d = entry.details || {};
   const parts = [];
-  // OT numbers may already start with "OT-": do not repeat the prefix.
   const order = d.ot || d.po_number || d.lot_number;
   if (order) parts.push(/^OT/i.test(order) ? order : `OT ${order}`);
   if (d.sku) parts.push(d.sku);
@@ -45,7 +41,6 @@ export default function Painel() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  // Bumping ``tick`` re-runs the fetch (Atualizar button and auto-refresh).
   const [tick, setTick] = useState(0);
   const [hidden, setHidden] = useState(readHidden);
   const [busy, setBusy] = useState(false);
@@ -56,7 +51,7 @@ export default function Painel() {
     try { localStorage.setItem(HIDDEN_KEY, next ? '1' : '0'); } catch { /* private mode */ }
   }
 
-  // mig 094: "Limpar" restarts this user's list; the history keeps it all.
+  // "Limpar" recomeça a lista deste usuário; o histórico continua completo.
   async function changeList(action) {
     setBusy(true);
     const res = await api.post(`/sea/painel/movimentacoes/${action}`, {});

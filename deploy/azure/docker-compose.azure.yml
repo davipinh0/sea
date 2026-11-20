@@ -1,9 +1,7 @@
-# SEA na VM do Azure. Usado junto com o compose principal:
+# SEA na VM do Azure, junto com o compose principal:
 #   docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d
-#
-# O Caddy é a única porta aberta (80/443): obtém e renova o certificado
-# HTTPS sozinho (Let's Encrypt) e entrega /api à API e o resto ao painel.
-# API, painel, banco, Redis e Mailpit ficam presos ao 127.0.0.1 da VM.
+# Só o Caddy fica exposto (80/443): ele cuida do certificado HTTPS e entrega /api à API e o resto ao
+# painel. O restante fica preso ao 127.0.0.1 da VM.
 
 services:
   caddy:

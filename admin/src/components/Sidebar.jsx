@@ -6,18 +6,13 @@ import { useWarehouse } from '../warehouse.jsx';
 import { EXPEDICAO_CODE } from '../utils/sea.js';
 import { isTerminalAccount } from '../utils/permissions.js';
 
-// SEA navigation. Each item carries the page_key(s) that grant it
-// (api/constants.py ALL_PAGE_KEYS); the sidebar hides entries the user
-// cannot open and the backend rejects direct URL hits via
-// @require_admin_or_page_permission. Painel has no key: any
-// authenticated user can see it.
+// Cada item tem as permissões que o liberam. O menu só esconde; quem barra de verdade é a API.
 const NAV = [
   {
     label: 'Operação',
     items: [
       { to: '/', label: 'Painel' },
       { to: '/estoque', label: 'Estoque', pageKeys: ['inventory', 'items', 'bins', 'audit-log'] },
-      // Only offered while the Expedição location is selected (EXPEDICAO_CODE).
       { to: '/expedicao', label: 'Expedição', pageKeys: ['receiving', 'putaway', 'purchase-orders'], onlyAt: EXPEDICAO_CODE },
       { to: '/retirada', label: 'Retirada', pageKeys: ['retirada', 'retirada-avaliar', 'retirada-fazer', 'terminal-retirada'] },
     ],
@@ -34,7 +29,6 @@ const NAV = [
 ];
 
 function canOpen(user, item) {
-  // mig 098: the terminal account sees only Retirada.
   if (isTerminalAccount(user)) return item.to === '/retirada';
   if (!item.pageKeys) return true;
   if (user?.role === 'ADMIN') return true;
@@ -61,7 +55,7 @@ export default function Sidebar() {
       const data = await res.json();
       setCounts({
         '/expedicao': data.unreceived_ots ?? data.open_ots ?? 0,
-        // Requests of every location the user works in, not only the selected one.
+        // Pedidos de todos os locais do usuário, não só do selecionado.
         '/retirada': data.pending_withdrawals_all ?? data.pending_withdrawals ?? 0,
       });
     });

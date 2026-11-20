@@ -75,7 +75,7 @@ class ItemImportRow(_BaseImportRow):
     default_bin: Optional[str] = Field(None, max_length=64)
     quantity: Optional[int] = Field(None, ge=0, le=1000000)
     qty: Optional[int] = Field(None, ge=0, le=1000000)  # synonym accepted
-    # SEA SP12 rules (blank = none).
+    # Regras de armazenagem (vazio = sem regra).
     size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
     compat_group: Optional[str] = Field(None, max_length=50)
 
@@ -115,7 +115,7 @@ class BinImportRow(_BaseImportRow):
     pick_sequence: Optional[int] = Field(None, ge=0)
     putaway_sequence: Optional[int] = Field(None, ge=0)
     description: Optional[str] = Field(None, max_length=200)
-    # SEA SP12 rules (blank = not configured).
+    # Regras de armazenagem (vazio = sem regra).
     capacity_units: Optional[int] = Field(None, gt=0, le=10000000)
     size_class: Optional[Literal["PEQUENO", "GRANDE"]] = None
 
@@ -141,7 +141,7 @@ class PurchaseOrderImportRow(_BaseImportRow):
     warehouse_id: Optional[int] = Field(None, gt=0)
     vendor: Optional[str] = Field(None, max_length=200)
     expected_date: Optional[str] = Field(None, max_length=32)
-    # SEA: OT type. Blank keeps a plain purchase order.
+    # Tipo da OT. Vazio mantém um pedido comum.
     order_type: Optional[Literal["PM11", "PM12"]] = None
 
     @field_validator("po_number", "sku", "vendor", "expected_date", mode="before")

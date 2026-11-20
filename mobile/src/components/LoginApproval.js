@@ -10,10 +10,8 @@ import { approvalSummary } from '../utils/loginApproval';
 import { Button } from './ui';
 import { colors, radii } from '../theme/styles';
 
-// "Você está entrando no SEA?" (mig 092). A password login of this user
-// outside this phone (web panel, terminal, another phone) waits here: the
-// user confirms with the fingerprint or the phone's PIN/pattern, or denies.
-// It shows over any screen once the app is unlocked.
+// Login deste usuário feito fora deste celular (painel, terminal, outro celular) esperando
+// confirmação: o usuário confirma com a digital ou o PIN, ou nega.
 
 const REFRESH_MS = 10000;
 
@@ -29,7 +27,7 @@ export default function LoginApproval() {
       const resp = await client.get('/api/sea/login/pendentes');
       setPending(resp.data?.pending || []);
     } catch {
-      // Offline: the next round (or the next push) tries again.
+      // Sem conexão: a próxima consulta (ou o próximo push) tenta de novo.
     }
   }, []);
 

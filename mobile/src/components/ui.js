@@ -3,8 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, StyleSheet 
 import { colors, fonts, radii, buttonStyles } from '../theme/styles';
 import { groupByLocation } from '../utils/sea';
 
-// Small building blocks shared by the SEA screens.
-
 export function Message({ message }) {
   if (!message) return null;
   const ok = message.type === 'ok';
@@ -57,7 +55,6 @@ export function QuantityInput({ label = 'QUANTIDADE', value, onChangeText, hint 
   );
 }
 
-// Destination picker: storage addresses of every location, grouped.
 export function AddressPicker({ visible, bins, excludeBinId, suggestedBinId, onPick, onClose }) {
   const groups = groupByLocation(bins, excludeBinId);
   return (

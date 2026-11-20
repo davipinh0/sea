@@ -9,10 +9,7 @@ import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } f
 import { screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Transferência entre endereços. Find a material by its code, see where
-// it is, and move it to another shelf of the same location (A1 to B2) or
-// to another location (SP12 to the SP13). The API applies
-// the rules (free balance, whole boxes, size class, capacity, compatibility).
+// Busca um material e move para outra prateleira ou outro local. As regras ficam na API.
 
 export default function TransferirScreen({ navigation, route }) {
   const [item, setItem] = useState(null);
@@ -53,7 +50,6 @@ export default function TransferirScreen({ navigation, route }) {
     }
   }, [loadStock]);
 
-  // Opened from a code read on the home screen.
   const initialCode = route?.params?.code;
   useEffect(() => { if (initialCode) find(initialCode); }, [initialCode, find]);
 

@@ -1,8 +1,5 @@
-"""SEA: withdrawal evaluated before it is done (mig 096).
-
-REQUESTED -> the evaluator approves (APPROVED) or denies (REJECTED, with
-the reason) -> someone with "Fazer retirada" accepts it (PICKING); the
-terminal shows the name and photo of who accepted -> READY -> DELIVERED.
+"""Retirada avaliada antes de ser feita: o avaliador aprova ou nega (com motivo), alguém com "Fazer
+retirada" aceita e aparece com nome e foto no terminal, depois pronta e entregue.
 """
 
 import base64
@@ -45,7 +42,6 @@ class TestEvaluation:
         w = _get(client, auth_headers, wid)
         assert (w["status"], w["evaluated_by"]) == ("APPROVED", "admin")
         assert _notes(conn, notifications.KIND_WITHDRAWAL_APPROVED) == before + 1
-        # Evaluated once only.
         assert (
             _step(client, auth_headers, wid, "avaliar", {"approve": False, "note": "x"}).status_code
             == 409
@@ -90,7 +86,7 @@ class TestRoles:
         )
 
     def test_the_old_retirada_grant_keeps_doing_withdrawals(self):
-        # mig 096 gives "retirada-fazer" to every holder of "retirada".
+        # Quem tinha "retirada" ganhou "retirada-fazer" na migração 096.
         from pathlib import Path
 
         sql = (

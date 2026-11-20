@@ -50,7 +50,7 @@ const CATEGORY_TAG_CLASS = {
 
 const ACTION_OPTIONS = [
   { value: '', label: 'Todas as ações' },
-  // Only the actions the SEA records (the rest belong to modules it does not use).
+  // Só as ações que o SEA registra.
   ...Object.keys(ACTION_LABELS)
     .map((a) => ({ value: a, label: actionLabel(a) }))
     .filter((o, i, all) => all.findIndex((x) => x.label === o.label) === i)
@@ -99,7 +99,6 @@ function ActionBadge({ action }) {
   );
 }
 
-// SEA: a process that required authentication says how it was done.
 function AuthTag({ row }) {
   const how = parseDetails(row.details)?.autenticacao;
   if (!how) return null;

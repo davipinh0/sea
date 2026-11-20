@@ -3,11 +3,8 @@ import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import { readError } from '../utils/sea.js';
 
-// Expedição > SAP > Nova OT: put an OT together in the SAP base by hand.
-// Each material is typed by its code; the description, the unit and the
-// box weight come from Sistema > Cadastro de materiais. The OT then
-// behaves like one that came from SAP: reading its code at receiving
-// brings these materials.
+// Monta uma OT na base do SAP à mão. Descrição, unidade e peso da caixa vêm do Cadastro de
+// materiais; depois ela se comporta como uma OT vinda do SAP.
 
 const EMPTY_LINE = { order_number: '', order_type: 'PM11', material_code: '', quantity: '', found: null, missing: false };
 
@@ -21,7 +18,6 @@ export default function NovaOtSapModal({ onClose, onCreated }) {
     setLines((all) => all.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
 
-  // The code brings the material from the catalogue.
   async function lookup(index) {
     const code = lines[index].material_code.trim();
     if (!code) { setLine(index, { found: null, missing: false }); return; }

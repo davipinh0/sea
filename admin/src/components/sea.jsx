@@ -4,9 +4,7 @@ import Modal from './Modal.jsx';
 import StatusTag from './StatusTag.jsx';
 import { MOVEMENT_LABELS, OT_HEADER_FIELDS, formatDate, formatDateTime, readError } from '../utils/sea.js';
 
-// Shared SEA UI pieces: OT type tag, date-time formatting and the OT
-// detail modal (lines, receipts with responsible + timestamp, stock per
-// address and withdrawal history) used by Estoque, Expedição and Retirada.
+// Peças comuns das telas do SEA: etiqueta do tipo da OT e o detalhe da OT.
 
 export function OtTypeTag({ type }) {
   if (!type) return null;

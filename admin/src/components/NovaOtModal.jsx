@@ -3,9 +3,7 @@ import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import { readError } from '../utils/sea.js';
 
-// Create an Ordem de Transferência (PM11/PM12) by hand. In the prototype
-// the SAP lookup is simulated, so the OT and its materials are typed in;
-// a future SAP integration would create the same purchase_orders rows.
+// Cadastro manual de OT (PM11/PM12). Uma integração com o SAP criaria os mesmos registros.
 
 const EMPTY_LINE = { item_id: '', quantity: '' };
 

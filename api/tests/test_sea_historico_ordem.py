@@ -1,6 +1,5 @@
-"""SEA: the history names the order (PM11 / PM12 - number), not the OT,
-and the log says how the user was authenticated in the processes that
-require it (Recebimento, Armazenagem, Retirada).
+"""O histórico mostra a ordem (PM11/PM12 - número), não a OT, e o log mostra como o usuário se
+autenticou nos processos que exigem isso.
 """
 
 from sqlalchemy import text
@@ -55,7 +54,7 @@ class TestOrderInsteadOfOt:
         wid = resp.get_json()["withdrawal"]["withdrawal_id"]
         row = next(m for m in _history(client, auth_headers)
                    if m["action_type"] == "WITHDRAWAL_REQUESTED" and m["entity_id"] == wid)
-        # Registered without an order number: the order answers by the OT number.
+        # Cadastrada sem número de ordem: a ordem responde pelo número da OT.
         assert row["orders"] == ["PM11 - OT-W-1"]
 
         log = client.get("/api/admin/audit-log?action_type=WITHDRAWAL_REQUESTED",
@@ -71,7 +70,6 @@ class TestAuthenticationOnTheLog:
         assert _receive(client, confirmed, po_id, sp12["small"], 2).status_code == 200
         assert _last(conn, "RECEIVE")["autenticacao"] == "Digital/PIN no app"
 
-        # Without the confirmation the row says nothing about it.
         assert _receive(client, auth_headers, po_id, sp12["small"], 2).status_code == 200
         assert "autenticacao" not in _last(conn, "RECEIVE")
 
@@ -105,6 +103,6 @@ class TestAuthenticationOnTheLog:
     def test_operations_without_the_requirement_carry_nothing(
         self, client, auth_headers, stored_ot  # noqa: F811
     ):
-        # Requesting at the terminal does not require it, even with the header.
+        # Pedir no terminal não exige autenticação extra, nem com o cabeçalho.
         _request(client, {**auth_headers, **APP_CONFIRMED}, stored_ot["inventory_id"], 1)
         assert "autenticacao" not in _last(stored_ot["conn"], "WITHDRAWAL_REQUESTED")

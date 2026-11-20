@@ -1,7 +1,6 @@
 import { friendlyError } from './friendlyError.js';
 
-// SEA UI helpers shared by the SEA pages (no components here so React
-// fast refresh keeps working for the component modules).
+// Sem componentes aqui, para o fast refresh do React continuar funcionando.
 
 export function formatDateTime(value) {
   if (!value) return '-';
@@ -10,15 +9,13 @@ export function formatDateTime(value) {
   return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-// Date-only values (ISO yyyy-mm-dd) shown as dd/mm/aaaa without going
-// through Date, which would shift the day across time zones.
+// Datas sem horário são formatadas sem passar por Date, que mudaria o dia por causa do fuso.
 export function formatDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
   return match ? `${match[3]}/${match[2]}/${match[1]}` : '-';
 }
 
-// Receipt header as printed on the label. OT, reserva and ordem de
-// serviço are three different identifiers and each has its own field.
+// OT, reserva e ordem de serviço são três identificadores diferentes.
 export const OT_HEADER_FIELDS = [
   { key: 'origin_company', label: 'Empresa de origem' },
   { key: 'label_date', label: 'Data da etiqueta', type: 'date' },
@@ -30,19 +27,14 @@ export const OT_HEADER_FIELDS = [
   { key: 'pickup_location', label: 'Local de retirada' },
   { key: 'unload_location', label: 'Local de descarga' },
   { key: 'requester_name', label: 'Solicitante' },
-  // Filled in by the SEA with the user who registers the delivery.
   { key: 'receiver_name', label: 'Recebedor', readOnly: true },
 ];
 
-// What the operator types or corrects (everything but the receiver).
 export const OT_HEADER_FORM = OT_HEADER_FIELDS.filter((f) => !f.readOnly);
 
-// Code of the location where orders arrive. The Expedição section
-// (receiving, storage, orders, SAP) is only offered while it is selected.
 export const EXPEDICAO_CODE = 'Expedição';
 
-// Quantity as the operator reads it. A material kept in KG with a box
-// weight is counted in boxes: 36 KG in boxes of 18 KG = "2 cx (36 KG)".
+// Material em KG com peso de caixa é contado em caixas: 36 KG em caixas de 18 KG = "2 cx (36 KG)".
 export function formatQuantity(quantity, uom, packWeightKg) {
   if (quantity == null) return '-';
   if (packWeightKg) {
@@ -62,8 +54,6 @@ export const OT_MATERIAL_FIELDS = [
   { key: 'expiry_date', label: 'Vencimento', type: 'date' },
 ];
 
-// Audit log in the operator's words. Unknown values (kept from the
-// original system) are shown in a readable form instead of raw codes.
 export const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
   USER_PHOTO: 'Foto do usuário',
@@ -72,6 +62,7 @@ export const ACTION_LABELS = {
   LOGIN_DENIED: 'Login negado no celular',
   LOGIN_APPROVAL_SETTING: 'Confirmação de login no celular',
   USER_DEVICES_REMOVED: 'Celulares do usuário removidos',
+  USER_DELETED: 'Usuário excluído',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',
   PUTAWAY: 'Armazenagem',
@@ -120,7 +111,6 @@ export const ENTITY_LABELS = {
   SETTING: 'Configuração',
 };
 
-// Words of a code without a label, in Portuguese, so no English shows.
 const WORDS = {
   WITHDRAWAL: 'retirada', RECEIVE: 'recebimento', RECEIVED: 'recebido', PUTAWAY: 'armazenagem',
   TRANSFER: 'transferência', STOCK: 'estoque', ITEM: 'material', BIN: 'endereço', PO: 'ordem',
@@ -153,8 +143,6 @@ export const MOVEMENT_LABELS = {
   RETIRADA: 'Retirada',
 };
 
-// Form state keeps every value as a string; the API wants null for a
-// blank ("pendente") and a number for the quantity.
 export function fieldsToPayload(fields, values) {
   const out = {};
   for (const f of fields) {
@@ -169,9 +157,8 @@ export function payloadToFields(fields, values) {
   return Object.fromEntries(fields.map((f) => [f.key, values?.[f.key] == null ? '' : String(values[f.key])]));
 }
 
-// SEA business-rule errors are written for the operator and flagged
-// user_facing by the API; everything else goes through friendlyError so
-// raw backend diagnostics are never shown (V-021).
+// Erros de regra do SEA vêm escritos para o operador (user_facing); os demais passam por
+// friendlyError, para nunca mostrar mensagens internas.
 export function errorMessage(payload, fallback) {
   if (payload && payload.user_facing === true && typeof payload.error === 'string') {
     return payload.error;

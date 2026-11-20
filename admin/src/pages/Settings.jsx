@@ -5,10 +5,8 @@ import { useWarehouse } from '../warehouse.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { useDirtyFormGuard } from '../hooks/useDirtyFormGuard.js';
 
-// SEA settings: warehouse identification and receiving behaviour. The
-// SP12 storage rules (capacity, size class, compatibility) are set per
-// address and per material in Estoque > Endereços / Materiais, so they
-// stay next to the data they constrain.
+// As regras de armazenagem ficam em cada endereço e material (Estoque > Endereços / Materiais),
+// junto dos dados.
 
 const SETTING_DEFAULTS = {
   default_receiving_bin: '',

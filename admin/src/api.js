@@ -28,7 +28,6 @@ async function apiFetch(path, options = {}) {
     credentials: 'include',
   });
   if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/me')) {
-    // SEA (mig 093): tell the login screen why the session ended.
     try {
       const body = await res.clone().json();
       if (/inatividade/i.test(body?.error || '')) setLoginFlash(IDLE_MESSAGE);
@@ -61,7 +60,7 @@ async function apiFetch(path, options = {}) {
       }
     } catch (_) { /* non-JSON 403 (legacy / unrelated) */ }
   }
-  // Something changed on the server: open screens refresh (useLiveRefresh).
+  // Algo mudou no servidor: as telas abertas se atualizam (useLiveRefresh).
   if (needsCsrf && res.ok) window.dispatchEvent(new Event('sea:changed'));
   return res;
 }

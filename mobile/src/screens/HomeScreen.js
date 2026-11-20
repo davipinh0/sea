@@ -14,9 +14,6 @@ import { visibleModules } from '../utils/sea';
 import { colors, radii, saveTheme, spacing, themeChoice } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Tela inicial: local selecionado, sino de notificações e menu do usuário
-// no topo; abaixo, os módulos que o usuário pode abrir.
-
 const ACCENT = { red: colors.accentRed, copper: colors.copper, gray: colors.grayAccent };
 const THEMES = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']];
 
@@ -31,20 +28,19 @@ export default function HomeScreen({ navigation }) {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showServer, setShowServer] = useState(false);
 
-  // Who the user is and where they work change rarely: loaded once and
-  // refreshed in the background, never in the way of the screen.
+  // Dados do usuário e locais mudam pouco: carregados uma vez e atualizados em segundo plano.
   const loadProfile = useCallback(async () => {
     try {
       const [meResp, whResp] = await Promise.all([client.get('/api/auth/me'), client.get('/api/warehouses/list')]);
       setMe(meResp.data);
       setWarehouses(whResp.data.warehouses || []);
     } catch {
-      // Keeps what is on screen.
+      // Mantém o que está na tela.
     }
   }, []);
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  // The first location is chosen for who has only one.
+  // Quem tem um só local já entra nele.
   const chosen = useRef(false);
   useEffect(() => {
     if (warehouseId || chosen.current || warehouses.length !== 1) return;
@@ -52,8 +48,7 @@ export default function HomeScreen({ navigation }) {
     switchWarehouse(warehouses[0].id);
   }, [warehouseId, warehouses, switchWarehouse]);
 
-  // The selected location comes from what is already in memory, so
-  // changing it is immediate; the counters follow in the background.
+  // O local muda na hora, a partir do que já está na memória; os contadores vêm depois.
   const current = useMemo(() => warehouses.find((w) => w.id === warehouseId) || null, [warehouses, warehouseId]);
   const modules = visibleModules(me, current?.code);
 
@@ -81,7 +76,6 @@ export default function HomeScreen({ navigation }) {
     switchWarehouse(id);
   }
 
-  // The phone stops receiving notifications of who logs out.
   async function signOut() {
     setMenu(false);
     await unregisterDevice();
@@ -91,18 +85,15 @@ export default function HomeScreen({ navigation }) {
   async function chooseTheme(choice) {
     if (choice === themeChoice) return;
     await saveTheme(choice);
-    // Every screen builds its colours when the app starts.
     reloadAppAsync('Tema alterado').catch(() => {});
   }
 
-  // Cards adapt to the screen: two per row, one on a narrow screen or
-  // when the phone uses a large font.
+  // Dois cartões por linha; um só em tela estreita ou com fonte grande.
   const { width, fontScale } = useWindowDimensions();
   const oneColumn = width < 340 || fontScale > 1.3;
   const cardWidth = oneColumn ? width - 32 : (width - 32 - spacing.cardGap) / 2;
   const needsWarehouse = !warehouseId && warehouses.length > 1;
-  // The lock / fingerprint registration screen comes first: a window
-  // opened after it would cover it.
+  // A tela de bloqueio vem primeiro: uma janela aberta depois dela a cobriria.
   const covered = locked || needsEnrollment;
 
   return (

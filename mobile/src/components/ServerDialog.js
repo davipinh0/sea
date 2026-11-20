@@ -4,13 +4,9 @@ import { setApiUrl } from '../api/client';
 import { Button } from './ui';
 import { colors, radii } from '../theme/styles';
 
-// Change the address of the server this phone talks to. Only a system
-// administrator may do it: the change is accepted when the administrator's
-// user and password are valid AT THE NEW ADDRESS. That also works when the
-// current address stopped answering (e.g. the computer changed its IP),
-// which is exactly when the address needs changing.
-//
-// The current address is never shown.
+// Troca o endereço do servidor. Só um administrador: o usuário e a senha dele são conferidos NO
+// ENDEREÇO NOVO, o que funciona mesmo quando o endereço atual parou de responder. O endereço atual
+// nunca é mostrado.
 
 const TIMEOUT_MS = 8000;
 
@@ -24,7 +20,6 @@ async function adminLogin(url, username, password) {
     });
     if (resp.status === 401) return 'Usuário ou senha inválidos.';
     if (resp.status === 429) return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
-    // The address is right, but the system behind it is starting or down.
     if (resp.status >= 500) return 'O servidor do SEA está iniciando ou fora do ar. Tente de novo em instantes.';
     if (!resp.ok) return 'O endereço respondeu, mas não é um servidor do SEA.';
     const data = await resp.json();

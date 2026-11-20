@@ -1,13 +1,8 @@
-"""SEA: password login confirmed on the user's phone (mig 092).
-
-With ``users.web_login_approval`` on and a registered device (the SEA app
-with the lock by fingerprint or PIN/pattern turned on), a password login
-from anywhere else (web panel, withdrawal terminal, another phone) does
-not open a session at once: it creates a challenge, the phone gets a
-push, and the session is released only after the user confirms it in
-the app. The one who started the login follows the challenge with a
-secret of its own (only its hash is stored), so knowing the challenge id
-(which the phone sees) is not enough to take the session.
+"""Login com senha confirmado no celular do usuário.
+Com a confirmação ligada e um celular cadastrado (app com trava), o login feito em outro lugar
+não abre a sessão na hora: cria um pedido, o celular recebe um push e a sessão só abre depois da
+confirmação no app. Quem iniciou o login acompanha com um segredo próprio (só o hash é guardado),
+então conhecer o id do pedido, que o celular vê, não basta para pegar a sessão.
 """
 
 from __future__ import annotations
@@ -26,7 +21,6 @@ PENDING, APPROVED, DENIED, USED, EXPIRED = "PENDING", "APPROVED", "DENIED", "USE
 
 
 def _uuid(value) -> Optional[str]:
-    """Canonical form of a challenge id, or None when it is not a UUID."""
     try:
         return str(uuid.UUID(str(value)))
     except (ValueError, TypeError):
@@ -38,7 +32,6 @@ def _hash(secret: str) -> str:
 
 
 def trusted_tokens(db, user_id: int) -> list[str]:
-    """Devices of the user with the app lock on (they confirm logins)."""
     rows = db.execute(
         text("SELECT token FROM sea_push_tokens WHERE user_id = :u AND secure_lock = TRUE ORDER BY token"),
         {"u": user_id},
@@ -47,7 +40,6 @@ def trusted_tokens(db, user_id: int) -> list[str]:
 
 
 def approval_required(db, user_id: int, device_token: Optional[str]) -> bool:
-    """Whether this password login must be confirmed on the phone."""
     enabled = db.execute(
         text("SELECT web_login_approval FROM users WHERE user_id = :u"), {"u": user_id}
     ).scalar()
@@ -55,13 +47,12 @@ def approval_required(db, user_id: int, device_token: Optional[str]) -> bool:
         return False
     tokens = trusted_tokens(db, user_id)
     if not tokens:
-        # No phone to confirm on yet: the login goes on as before.
+        # Sem celular para confirmar: o login segue normal.
         return False
     return not (device_token and device_token in tokens)
 
 
 def create_challenge(db, user_id: int, client_ip: str, user_agent: str) -> tuple[str, str]:
-    """New challenge; returns its id and the secret of whoever started it."""
     secret = secrets.token_urlsafe(32)
     challenge_id = db.execute(
         text(
@@ -84,8 +75,7 @@ def _status(row) -> str:
 
 
 def poll(db, challenge_id: str, secret: str):
-    """Challenge seen by whoever started the login, or None when the id or
-    the secret does not match. Returns ``(status, user_id, seconds_left)``."""
+    """Retorna ``(status, user_id, seconds_left)``, ou None se o id ou o segredo não conferem."""
     challenge_id = _uuid(challenge_id)
     if challenge_id is None:
         return None
@@ -105,7 +95,7 @@ def poll(db, challenge_id: str, secret: str):
 
 
 def consume(db, challenge_id: str) -> Optional[int]:
-    """An approved challenge opens one session only: it becomes USED."""
+    """Um pedido aprovado abre uma única sessão: depois vira USED."""
     challenge_id = _uuid(challenge_id)
     if challenge_id is None:
         return None
@@ -134,16 +124,15 @@ def pending_for_user(db, user_id: int) -> list[dict]:
     return [
         {"challenge_id": str(r.challenge_id), "client_ip": r.client_ip, "user_agent": r.user_agent,
          "created_at": r.created_at.isoformat(), "seconds_left": r.seconds_left,
-         # mig 095: a process of the web panel instead of a login.
          "purpose": r.purpose}
         for r in rows
     ]
 
 
 def decide(db, challenge_id: str, user_id: int, approve: bool) -> Optional[str]:
-    """Approve or deny a pending challenge of this user. Returns the new
-    status, EXPIRED when it is too late, or None when there is no such
-    pending challenge."""
+    """Retorna o novo status, EXPIRED se passou do prazo, ou None se não existe esse pedido
+    pendente.
+    """
     new_status = APPROVED if approve else DENIED
     challenge_id = _uuid(challenge_id)
     if challenge_id is None:
@@ -172,7 +161,6 @@ def decide(db, challenge_id: str, user_id: int, approve: bool) -> Optional[str]:
 
 
 def describe_client(user_agent: str) -> str:
-    """Short name of the browser/app that tried to log in, for the phone."""
     ua = (user_agent or "").lower()
     browser = next((name for key, name in (
         ("edg/", "Edge"), ("opr/", "Opera"), ("chrome/", "Chrome"), ("firefox/", "Firefox"),

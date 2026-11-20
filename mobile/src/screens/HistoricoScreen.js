@@ -10,9 +10,8 @@ import { apiError } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Histórico (administrators and users granted "Histórico"):
-//   MOVIMENTAÇÕES - what happened in the selected location (stock moves);
-//   LOG           - every action recorded by the SEA, all locations.
+// MOVIMENTAÇÕES: o que aconteceu no local selecionado. LOG: tudo o que o SEA registrou, em todos os
+// locais.
 
 const TABS = [
   { key: 'mov', label: 'MOVIMENTAÇÕES' },
@@ -26,7 +25,6 @@ export default function HistoricoScreen({ navigation }) {
   const [next, setNext] = useState(null);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
-  // The record opened with a tap shows the order and the details.
   const [open, setOpen] = useState(null);
 
   const load = useCallback(async (more) => {

@@ -44,7 +44,7 @@ from utils.validation import validate_body
 
 @admin_bp.route("/items", methods=["GET"])
 @require_auth
-# SEA: read by other pages too (see require_any_page_permission); writing keeps its own key.
+# Outras páginas também leem; gravar continua exigindo a permissão própria.
 @require_any_page_permission("items", "purchase-orders")
 @with_db
 def list_items():

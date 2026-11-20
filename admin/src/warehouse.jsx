@@ -14,9 +14,8 @@ export function WarehouseProvider({ children }) {
 
   useEffect(() => {
     if (!user) return;
-    // SEA: every user needs the list of locations they can work in (the
-    // selector drives every page). /sea/locais returns it for any logged-in
-    // user; /admin/warehouses is only for those who administer locations.
+    // Todo usuário precisa da lista de locais onde trabalha; /sea/locais responde para qualquer
+    // usuário logado.
     api.get('/sea/locais', { silentPermissionDenied: true }).then(async (res) => {
       if (!res?.ok) return;
       const data = await res.json();

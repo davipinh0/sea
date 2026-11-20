@@ -2,10 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Regression: AppNavigator returned early (while the session loads) BEFORE
-// some of its hooks. React then fails on the next render ("rendered more
-// hooks than during the previous render"), which in an installed build
-// closes the app right at start. Every hook must come before the return.
+// Regressão: o AppNavigator retornava antes de alguns hooks. O React quebrava na renderização
+// seguinte e o app instalado fechava logo ao abrir. Todo hook tem de vir antes do return.
 
 const source = readFileSync(fileURLToPath(new URL('../AppNavigator.js', import.meta.url)), 'utf8');
 const body = source.slice(source.indexOf('export default function AppNavigator'));

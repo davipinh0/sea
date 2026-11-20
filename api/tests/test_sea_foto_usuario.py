@@ -1,4 +1,4 @@
-"""SEA: user photo (mig 091). Only an administrator sets or removes it."""
+"""Foto do usuário: só o administrador coloca ou tira."""
 
 import base64
 
@@ -91,7 +91,6 @@ class TestPhotoRoutes:
         assert client.put(f"/api/admin/users/{uid}/foto", json={"image": _b64(JPEG)},
                           headers=manager).status_code == 403
         assert client.delete(f"/api/admin/users/{uid}/foto", headers=manager).status_code == 403
-        # Whoever manages users sees the photos.
         assert client.put(f"/api/admin/users/{uid}/foto", json={"image": _b64(JPEG)},
                           headers=auth_headers).status_code == 200
         assert client.get(f"/api/admin/users/{uid}/foto", headers=manager).status_code == 200

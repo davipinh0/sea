@@ -1,7 +1,4 @@
-/**
- * SEA: user photo. Only an administrator sets or removes it, in
- * Sistema > Usuários; the list and the top bar show it.
- */
+/* Foto do usuário: só o administrador coloca ou tira; a lista e a barra do topo mostram. */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -111,8 +108,7 @@ describe('Foto em Sistema > Usuários', () => {
 
 describe('reading the chosen photo', () => {
   it('loads the picture from a data: URL, which the panel CSP allows', async () => {
-    // Regression: a blob: URL is refused by "img-src 'self' data:" and the
-    // photo was never loaded nor sent.
+    // Regressão: uma URL blob: era bloqueada pela CSP e a foto nunca carregava nem era enviada.
     const { squareJpeg } = await import('../utils/userPhoto.js');
     const sources = [];
     const RealImage = globalThis.Image;

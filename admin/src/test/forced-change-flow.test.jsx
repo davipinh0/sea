@@ -80,8 +80,7 @@ function mount(initialPath = '/') {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  // These tests start in the tab that signed in (mig 093: a fresh tab
-  // without this mark ends the session; see sea-sessao.test.jsx).
+  // Os testes começam na aba que fez login (uma aba nova sem essa marca encerra a sessão).
   markTabSession();
   document.cookie.split(';').forEach((c) => {
     const name = c.split('=')[0].trim();

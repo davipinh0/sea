@@ -1,15 +1,10 @@
-"""SEA (mig 095): processes of the web panel released by the phone.
-
-In the web panel (session in the cookie), Recebimento, Armazenagem and
-Retirada only work after the user confirms on the registered phone (the
-SEA app with the lock by fingerprint or PIN/pattern). The request rides
-on the login-approval queue (``sea_login_challenges``) with ``purpose``
-set and the panel session that asked in ``session_jti``. Approved, that
-session is released in that process (``sea_step_up``) until it goes
-``WINDOW_MINUTES`` without use.
-
-The app and the withdrawal terminal (Bearer token) are not gated here:
-the app asks for the fingerprint/PIN itself before each process.
+"""Processos do painel liberados pelo celular.
+No painel (sessão por cookie), Recebimento, Armazenagem e Retirada só funcionam depois da
+confirmação no celular cadastrado. O pedido usa a mesma fila da confirmação de login, com
+``purpose`` e a sessão que pediu. Aprovado, a sessão fica liberada naquele processo até passar
+WINDOW_MINUTES sem uso.
+O app e o terminal (token Bearer) não passam por aqui: o app pede a digital/PIN antes de cada
+processo.
 """
 
 from __future__ import annotations
@@ -24,7 +19,10 @@ PURPOSES = {
     "recebimento": "Recebimento",
     "armazenagem": "Armazenagem",
     "retirada": "Retirada",
+    "exclusao-usuario": "Exclusão de usuário",
 }
+# Liberação que vale para uma única ação: depois de usada, é preciso confirmar de novo.
+SINGLE_USE = {"exclusao-usuario"}
 WINDOW_MINUTES = 15
 
 
@@ -33,7 +31,6 @@ def label(purpose: str) -> str:
 
 
 def seconds_left(db, jti, purpose: str) -> int:
-    """Seconds this session stays released in ``purpose`` (0 = not)."""
     if not jti or not login_approval._uuid(jti):
         return 0
     value = db.execute(
@@ -50,7 +47,7 @@ def seconds_left(db, jti, purpose: str) -> int:
 
 
 def use(db, jti, purpose: str) -> bool:
-    """True when released; each use restarts the window. Caller commits."""
+    """Cada uso reinicia a janela. Quem chama faz o commit."""
     if seconds_left(db, jti, purpose) <= 0:
         return False
     db.execute(
@@ -61,6 +58,16 @@ def use(db, jti, purpose: str) -> bool:
         {"j": str(jti), "p": purpose},
     )
     return True
+
+
+def revoke(db, jti, purpose: str) -> None:
+    """Encerra a liberação. Quem chama faz o commit."""
+    if not jti or not login_approval._uuid(jti):
+        return
+    db.execute(
+        text("DELETE FROM sea_step_up WHERE jti = CAST(:j AS uuid) AND purpose = :p"),
+        {"j": str(jti), "p": purpose},
+    )
 
 
 def grant(db, jti, purpose: str) -> None:
@@ -77,13 +84,13 @@ def grant(db, jti, purpose: str) -> None:
 
 
 def start(db, user_id: int, jti, purpose: str, client_ip: str, user_agent: str):
-    """Ask the registered phone to release ``purpose`` for this session.
-    Returns the challenge id, or None when the user has no registered
-    phone. Caller commits."""
+    """Retorna o id do pedido, ou None se o usuário não tem celular cadastrado. Quem chama faz o
+    commit.
+    """
     if not login_approval.trusted_tokens(db, user_id):
         return None
-    # Nobody polls this challenge with a secret: the panel follows it by
-    # its own session (``status``). The hash only fills the column.
+    # Ninguém acompanha este pedido com segredo: o painel acompanha pela própria sessão. O hash só
+    # preenche a coluna.
     filler = login_approval._hash(secrets.token_urlsafe(32))
     return str(
         db.execute(
@@ -109,7 +116,6 @@ def start(db, user_id: int, jti, purpose: str, client_ip: str, user_agent: str):
 
 
 def status(db, challenge_id, user_id: int, jti) -> tuple[str, int] | None:
-    """(status, seconds_left) of a request of this session, or None."""
     challenge_id = login_approval._uuid(challenge_id)
     if challenge_id is None or not jti:
         return None
@@ -133,8 +139,9 @@ def status(db, challenge_id, user_id: int, jti) -> tuple[str, int] | None:
 
 
 def on_decision(db, challenge_id) -> str | None:
-    """After the phone approved: release the session that asked. Returns
-    the purpose, or None for a login challenge. Caller commits."""
+    """Depois da aprovação, libera a sessão que pediu. Retorna o processo, ou None se era um login.
+    Quem chama faz o commit.
+    """
     row = db.execute(
         text(
             "SELECT purpose, session_jti, status FROM sea_login_challenges "

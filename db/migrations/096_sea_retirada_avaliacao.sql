@@ -1,22 +1,10 @@
--- ============================================================
--- 096_sea_retirada_avaliacao.sql - SEA: retirada avaliada antes de
--- ser feita
--- ============================================================
--- Fluxo novo da retirada:
---   REQUESTED  solicitada no terminal, aguardando o avaliador
---   APPROVED   aprovada; os usuários com "Fazer retirada" são avisados
---   PICKING    aceita por um deles (picked_by), que prepara o material
---   READY      pronta; o solicitante confirma no terminal
---   DELIVERED  entregue (baixa no estoque)
---   REJECTED   negada pelo avaliador (com motivo); a reserva é desfeita
---   CANCELLED  cancelada
---
--- Permissões: "retirada" = solicitar; "retirada-avaliar" = aprovar ou
--- negar; "retirada-fazer" = aceitar e separar. Quem já tinha
--- "retirada" recebe também "retirada-fazer", para nada parar.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 096_sea_retirada_avaliacao.sql - retirada avaliada antes de ser feita
+-- REQUESTED (espera o avaliador) -> APPROVED (avisa quem faz retirada) -> PICKING (aceita,
+-- picked_by prepara) -> READY (quem pediu confirma no terminal) -> DELIVERED (baixa). REJECTED =
+-- negada com motivo, a reserva é desfeita. CANCELLED = cancelada.
+-- Permissões: "retirada" pede, "retirada-avaliar" aprova ou nega, "retirada-fazer" aceita e separa.
+-- Quem já tinha "retirada" ganha "retirada-fazer", para nada parar.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE withdrawals DROP CONSTRAINT IF EXISTS withdrawals_status_check;
 ALTER TABLE withdrawals ADD CONSTRAINT withdrawals_status_check

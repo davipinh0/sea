@@ -2,10 +2,8 @@ import React, { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { colors } from '../theme/styles';
 
-// A ScrollView that reloads its screen when pulled down. Sometimes a
-// change made elsewhere (a new request, a receipt) only shows on the next
-// automatic refresh; pulling the screen fetches it at once.
-// ``onRefresh`` may return a promise: the spinner stays until it ends.
+// Recarrega a tela ao puxar para baixo. Às vezes uma mudança feita em outro lugar só apareceria na
+// próxima atualização automática.
 export default function RefreshScroll({ onRefresh, children, ...props }) {
   const [refreshing, setRefreshing] = useState(false);
   const running = useRef(false);
@@ -17,7 +15,7 @@ export default function RefreshScroll({ onRefresh, children, ...props }) {
     try {
       await onRefresh();
     } catch {
-      // Each screen shows its own load errors.
+      // Cada tela mostra os próprios erros de carregamento.
     } finally {
       running.current = false;
       setRefreshing(false);

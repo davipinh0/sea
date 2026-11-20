@@ -26,8 +26,7 @@ import Settings from './pages/Settings.jsx';
 import Imports from './pages/Imports.jsx';
 import CadastroMateriais from './pages/CadastroMateriais.jsx';
 
-// SEA sections. Sub-pages keep the page_key that gates their backend
-// endpoints, so per-tab permissions keep working unchanged.
+// As sub-páginas mantêm a permissão dos seus endpoints.
 const ESTOQUE_TABS = [
   { to: 'sp12', label: 'Visão Geral', pageKey: 'inventory' },
   { to: 'materiais', label: 'Materiais', pageKey: 'items' },
@@ -54,7 +53,6 @@ function ProtectedRoute({ children }) {
   if (user.must_change_password && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
   }
-  // SEA (mig 098): the terminal account goes only to the terminal.
   if (isTerminalAccount(user) && !TERMINAL_PATHS.has(location.pathname)) {
     return <Navigate to="/retirada" replace />;
   }
@@ -63,8 +61,6 @@ function ProtectedRoute({ children }) {
 
 const TERMINAL_PATHS = new Set(['/retirada', '/retirada/terminal', '/change-password']);
 
-// mig 098: the Retirada page of the terminal account is the button that
-// opens the terminal.
 function RetiradaPage() {
   const { user } = useAuth();
   if (isTerminalAccount(user)) return <TerminalInicio />;
@@ -75,10 +71,8 @@ function RetiradaPage() {
   );
 }
 
-// Pages opened by URL without the permission go back to the Painel
-// (the API refuses them anyway; this avoids an empty screen with an error).
-// The Expedição section exists only at the Expedição location: with
-// another location selected it goes back to the Painel.
+// Página aberta pela URL sem permissão volta ao Painel (a API recusaria de qualquer jeito). A
+// Expedição só existe no local Expedição.
 function OnlyAtExpedicao({ children }) {
   const { warehouse } = useWarehouse();
   if (warehouse && warehouse.warehouse_code !== EXPEDICAO_CODE) return <Navigate to="/" replace />;
@@ -91,7 +85,6 @@ function RequirePage({ pageKey, pageKeys, children }) {
   return keys.some((key) => canSee(user, key)) ? children : <Navigate to="/" replace />;
 }
 
-// mig 096: request / evaluate / do withdrawals.
 const WITHDRAWAL_PAGES = ['retirada', 'retirada-avaliar', 'retirada-fazer'];
 
 function page(element, fallbackMessage) {
@@ -102,10 +95,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      {/* Withdrawal terminal: full-screen kiosk without the admin chrome,
-          sized for a touchscreen. mig 098: it opens under the terminal
-          account (or an administrator); each employee then identifies
-          with the SEA login or, without access, the corporate e-mail. */}
+      {/* Terminal em tela cheia, sem o menu do painel. Abre com o usuário do terminal ou um
+         administrador.
+      */}
       <Route
         path="/retirada/terminal"
         element={page(
@@ -138,7 +130,7 @@ export default function App() {
         <Route path="/cadastro-materiais" element={page(<RequirePage pageKey="material-catalog"><CadastroMateriais /></RequirePage>, 'Não foi possível carregar o cadastro de materiais.')} />
         <Route path="/imports" element={page(<RequirePage pageKey="imports"><Imports /></RequirePage>, 'Não foi possível carregar a importação.')} />
 
-        {/* Old SEA paths that still have a home in SEA. */}
+        {/* Endereços antigos que ainda levam a algum lugar. */}
         <Route path="/inventory" element={<Navigate to="/estoque/sp12" replace />} />
         <Route path="/items" element={<Navigate to="/estoque/materiais" replace />} />
         <Route path="/bins" element={<Navigate to="/estoque/enderecos" replace />} />

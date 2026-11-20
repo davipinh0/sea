@@ -1,4 +1,4 @@
-"""SEA: notifications (panel + e-mail) and the Materiais listing."""
+"""Notificações (painel e e-mail) e a lista de Materiais."""
 
 import smtplib
 
@@ -38,10 +38,10 @@ class TestEvents:
         (receipt,) = _rows(conn)
         assert receipt.kind == "RECEBIMENTO" and receipt.ot == "OT-N-1"
         assert "10 unidade(s)" in receipt.message and receipt.created_by == "admin"
-        # No mail server in the test environment: recorded, not sent.
+        # Sem servidor de e-mail nos testes: registrada, não enviada.
         assert receipt.email_status == "NAO_CONFIGURADO"
 
-        # Part of the order still waits in the receiving area: no announcement.
+        # Parte da ordem ainda está na área de recebimento: sem aviso.
         assert _putaway(client, auth_headers, sp12["small"], sp12["c0"], 4, "OT-N-1").status_code == 200
         assert _rows(conn, "ARMAZENAGEM_CONCLUIDA") == []
         assert _putaway(client, auth_headers, sp12["small"], sp12["c0"], 6, "OT-N-1").status_code == 200
@@ -59,7 +59,6 @@ class TestEvents:
         assert f"nº {wid}" in row.title and "3 x SEA-SMALL (T-C0)" in row.message
 
     def test_panel_lists_and_polls_after_an_id(self, client, auth_headers, stored_ot):
-        # stored_ot already produced a receipt and a storage notification.
         data = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()
         kinds = [n["kind"] for n in data["notifications"]]
         assert kinds[:2] == ["ARMAZENAGEM_CONCLUIDA", "RECEBIMENTO"]
@@ -191,9 +190,8 @@ class TestMateriais:
         with_order = rows[("2005000001", "SEA-SMALL")]
         assert with_order["order_type"] == "PM12" and with_order["quantity"] == 7
         assert with_order["uom"] == "PC" and with_order["ot"] == "OT-M-1"
-        # No PM order number informed: the OT number identifies the order.
+        # Sem número de ordem PM: o número da OT identifica a ordem.
         assert rows[("OT-M-2", "SEA-SMALL")]["quantity"] == 2
-        # Material that is in no order still appears, without order data.
         assert rows[(None, "SEA-OTHER")]["quantity"] is None
         assert data["total"] == len(data["items"])
         assert len({r["row_id"] for r in data["items"]}) == len(data["items"])
@@ -211,8 +209,7 @@ class TestMateriais:
 
 @pytest.fixture()
 def other_location(_db_transaction):
-    """A second location with one shelf (the order is received in
-    warehouse 1 and stored here)."""
+    """Um segundo local com uma prateleira (a ordem é recebida no local 1 e guardada aqui)."""
     conn = _db_transaction
     wid = conn.execute(
         text(
@@ -240,7 +237,6 @@ def other_location(_db_transaction):
 
 
 class TestStorageInAnotherLocation:
-    """Received in one location (Expedição), stored in another (SP12)."""
 
     def test_order_is_stored_and_withdrawn_in_the_other_location(
         self, client, auth_headers, sp12, other_location
@@ -250,13 +246,12 @@ class TestStorageInAnotherLocation:
         po_id = _create_ot(client, auth_headers, "OT-X-1", [(sp12["small"], 10)])
         assert _receive(client, auth_headers, po_id, sp12["small"], 10).status_code == 200
 
-        # The shelves of the other location are offered as destinations.
         dest = client.get("/api/sea/armazenagem/destinos", headers=auth_headers).get_json()["bins"]
         assert ("T-SP12", "T-X0") in {(b["warehouse_code"], b["bin_code"]) for b in dest}
         assert STAGING_BIN not in {b["bin_id"] for b in dest}
 
         assert _putaway(client, auth_headers, sp12["small"], shelf, 6, "OT-X-1").status_code == 200
-        assert _rows(conn, "ARMAZENAGEM_CONCLUIDA") == []  # 4 still in the receiving area
+        assert _rows(conn, "ARMAZENAGEM_CONCLUIDA") == []
         assert _putaway(client, auth_headers, sp12["small"], shelf, 4, "OT-X-1").status_code == 200
         (done,) = _rows(conn, "ARMAZENAGEM_CONCLUIDA")
         assert "T-SP12 · T-X0" in done.message
@@ -271,7 +266,6 @@ class TestStorageInAnotherLocation:
             (other_location["warehouse_id"], 10)
         ]
 
-        # The order shows its stock there, and is listed in both locations.
         detail = client.get("/api/sea/ots/OT-X-1", headers=auth_headers).get_json()
         assert [(s["warehouse_code"], s["bin_code"], s["stored"]) for s in detail["stock"]] == [
             ("T-SP12", "T-X0", True)
@@ -284,7 +278,6 @@ class TestStorageInAnotherLocation:
             row = next(o for o in ots["ots"] if o["ot"] == "OT-X-1")
             assert row["qty_stored"] == 10 and row["bins"] == "T-SP12 · T-X0"
 
-        # The withdrawal belongs to the location where the material is.
         resp = _request(client, auth_headers, stock[0].inventory_id, 3, ot="OT-X-1")
         assert resp.status_code == 201, resp.get_json()
         withdrawal = resp.get_json()["withdrawal"]
@@ -308,7 +301,6 @@ class TestStorageInAnotherLocation:
         self, client, auth_headers, sp12, other_location
     ):
         conn = sp12["conn"]
-        # Leave the receiving location without any storage address.
         conn.execute(
             text("UPDATE bins SET is_active = FALSE WHERE warehouse_id = :w AND bin_id <> :s"),
             {"w": WAREHOUSE, "s": STAGING_BIN},
@@ -370,7 +362,6 @@ class TestStorageInAnotherLocation:
 
 class TestClearNotifications:
     def test_clearing_empties_the_list_of_that_user_only(self, client, auth_headers, stored_ot):
-        """stored_ot produced a receipt and a storage notification."""
         conn = stored_ot["conn"]
         other = _other_admin(client, conn)
         before = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"]
@@ -380,12 +371,10 @@ class TestClearNotifications:
         assert resp.status_code == 200
         assert resp.get_json()["cleared_id"] == before[0]["notification_id"]
         assert client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"] == []
-        # Another user still has theirs, and the records are kept.
         theirs = client.get("/api/sea/notificacoes", headers=other).get_json()["notifications"]
         assert len(theirs) == len(before)
         assert len(_rows(conn, "RECEBIMENTO")) >= 1
 
-        # What arrives afterwards shows up again.
         _request(client, auth_headers, stored_ot["inventory_id"], 1)
         fresh = client.get("/api/sea/notificacoes", headers=auth_headers).get_json()["notifications"]
         assert [n["kind"] for n in fresh] == ["RETIRADA_SOLICITADA"]

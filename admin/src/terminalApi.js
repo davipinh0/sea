@@ -1,10 +1,6 @@
-// API access for the withdrawal terminal.
-//
-// The terminal has its own session, separate from the panel: the token
-// returned by the login is kept in memory by the terminal screen and
-// sent as a Bearer header. ``credentials: 'omit'`` makes the browser
-// neither send nor store cookies, so signing in or out at the terminal
-// never touches a panel session open in the same browser.
+// API do terminal. A sessão é própria, separada da do painel: o token fica na memória da tela e
+// ``credentials: 'omit'`` impede o navegador de mexer nos cookies do painel aberto no mesmo
+// navegador.
 
 import { waitForApproval } from './utils/loginApproval.js';
 
@@ -22,11 +18,8 @@ async function send(path, { method = 'GET', token, body } = {}) {
   });
 }
 
-// Identify the employee. Returns { token, user } where user carries
-// allowed_pages and must_change_password; throws an Error whose message
-// can be shown to the employee. When the employee confirms logins on the
-// phone (mig 092), ``onWaiting(secondsLeft)`` is called while the
-// terminal waits for that confirmation.
+// Identifica o funcionário. Se ele confirma logins no celular, ``onWaiting`` é chamado enquanto o
+// terminal espera.
 export async function terminalLogin(identifier, password, { onWaiting, isCancelled } = {}) {
   const res = await send('/auth/login', { method: 'POST', body: { username: identifier, password } });
   if (res.status === 429) throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
@@ -43,8 +36,6 @@ export async function terminalLogin(identifier, password, { onWaiting, isCancell
   return { token, user: await me.json() };
 }
 
-// Ends the terminal session on the server (mig 093). Best effort: the
-// screen is reset either way and an unused session dies with the token.
 export function terminalLogout(token) {
   return send('/auth/logout', { method: 'POST', token }).catch(() => null);
 }

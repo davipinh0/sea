@@ -1,9 +1,8 @@
 import { Appearance, Platform, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// Theme. The choice (Sistema / Claro / Escuro) is read once, when the app
-// starts, because every screen builds its styles from ``colors`` at load.
-// Changing it saves the choice and restarts the app (see setTheme).
+// O tema é lido uma vez, ao abrir o app, porque as telas montam os estilos a partir de ``colors``.
+// Trocar salva a escolha e reinicia o app.
 export const THEME_KEY = 'sea_theme';
 
 function savedTheme() {
@@ -23,8 +22,6 @@ export async function saveTheme(choice) {
   else await SecureStore.setItemAsync(THEME_KEY, choice);
 }
 
-// Brand: orange + graphite. Key names kept so every screen picks the
-// palette up without further changes.
 const light = {
   accentRed: '#C2410C',
   copper: '#F26522',

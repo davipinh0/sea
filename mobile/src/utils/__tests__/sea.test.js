@@ -92,7 +92,7 @@ describe('apiError', () => {
     expect(apiError({ response: { status: 500, data: { error: 'psycopg2 ...' } } }, 'Falhou')).toBe('Falhou');
     expect(apiError({ response: { status: 403, data: { error: 'Permission denied' } } }, 'x')).toMatch(/não tem permissão/);
     expect(apiError({ isTimeout: true, response: null }, 'x')).toMatch(/demorou a responder/);
-    // The proxy answers 502 while the API behind it is restarting.
+    // O proxy responde 502 enquanto a API está reiniciando.
     expect(apiError({ response: { status: 502, data: '<html>' } }, 'x')).toMatch(/iniciando ou fora do ar/);
     expect(apiError(new Error('Network request failed'), 'x')).toMatch(/Sem conexão/);
   });

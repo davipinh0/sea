@@ -24,7 +24,6 @@ OT-7100002,PM12,1,SAP (simulado),MAT-600603,2,2026-12-05`,
 D0,D0,PRAT,1,D,0,Pickable,40,40,,,Prateleira D nível 0
 D1,D1,PRAT,1,D,1,Pickable,41,41,,,Prateleira D nível 1
 D3,D3,PRAT,1,D,3,Pickable,43,43,,PEQUENO,Prateleira D nível 3 (peças pequenas)`,
-  // Base do SAP (dados fictícios). Ordem de carga: ordens, materiais, OTs.
   'sap-ordens': `order_number,order_type,description
 2005113840,PM12,Manutenção corretiva (fictício)
 2005113841,PM11,Manutenção preventiva (fictício)`,
@@ -36,7 +35,6 @@ D3,D3,PRAT,1,D,3,Pickable,43,43,,PEQUENO,Prateleira D nível 3 (peças pequenas)
 1003329915,0285365145,Solicitante Fictício,2026-12-01,2005113841,74165326,10,PAR,L2026-0458`,
 };
 
-// Imports that load the SAP base go to their own endpoint.
 const SAP_IMPORTS = { 'sap-ordens': 'ordens', 'sap-materiais': 'materiais', 'sap-reservas': 'reservas' };
 
 function downloadTemplate(type) {

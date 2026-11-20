@@ -6,13 +6,9 @@ import { OtTypeTag } from '../components/sea.jsx';
 import { formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Expedição > Armazenagem: material waiting in a receiving area, with an
-// automatic address suggestion (whole order in one address, size class,
-// capacity, compatibility). Material is received in one location (the
-// Expedição has a single address) and stored in the shelves of another
-// (SP12, SP13), so the page lists what is waiting in every
-// location and offers the storage addresses of all of them. The operator
-// confirms or picks another address; the API re-validates every rule.
+// Material na área de recebimento com sugestão de endereço. O material chega num local e é guardado
+// nas prateleiras de outro (SP12, SP13), por isso a tela lista o que espera em todos os locais. A
+// API valida as regras de novo.
 
 function Row({ row, destinations, onDone }) {
   const [suggestion, setSuggestion] = useState(null);
@@ -112,7 +108,6 @@ function Row({ row, destinations, onDone }) {
   );
 }
 
-// Storage addresses grouped by location, in the order the API returns.
 function groupByLocation(bins) {
   const groups = [];
   bins.forEach((b) => {
@@ -134,12 +129,11 @@ export default function ArmazenagemSP12() {
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
 
-  // Bumping ``tick`` re-runs the fetch (Atualizar button, after a put-away).
   const [tick, setTick] = useState(0);
   const load = () => setTick((n) => n + 1);
   useLiveRefresh(load);
-  // What the last load showed. The rows are only rebuilt when it changes,
-  // so an automatic refresh never erases a destination being chosen.
+  // As linhas só são refeitas quando os dados mudam, para a atualização automática não apagar um
+  // destino sendo escolhido.
   const shown = useRef('');
 
   useEffect(() => {
@@ -157,7 +151,6 @@ export default function ArmazenagemSP12() {
         return;
       }
       const rows = pendRes?.ok ? (await pendRes.json()).pending_items || [] : [];
-      // What waits in the selected location comes first.
       rows.sort((a, b) => (b.warehouse_id === warehouseId) - (a.warehouse_id === warehouseId));
       const dest = destRes?.ok ? (await destRes.json()).bins || [] : null;
       if (cancelled) return;

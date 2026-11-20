@@ -3,9 +3,8 @@ import { api } from '../api.js';
 import UserAvatar from './UserAvatar.jsx';
 import { squareJpeg } from '../utils/userPhoto.js';
 
-// Photo of a user in Sistema > Usuários. Only an administrator sees this
-// field (the API refuses anyone else). The picture is cut to a square
-// and reduced to 256 px JPEG in the browser before it is sent.
+// Só o administrador vê este campo. A foto é cortada em quadrado e reduzida para 256 px no
+// navegador antes do envio.
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
 

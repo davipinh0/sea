@@ -1,4 +1,4 @@
-"""SEA: the withdrawal terminal asks for the order (PM11 / PM12), not the OT."""
+"""O terminal pede a ordem (PM11/PM12), não a OT."""
 
 from sqlalchemy import text
 
@@ -49,7 +49,7 @@ class TestOrderLookup:
 
         body = client.get("/api/sea/ordens/2000000901", headers=auth_headers).get_json()
         assert body["order_number"] == "2000000901" and body["order_type"] == "PM11"
-        # ORD-B belongs to another order; ORD-C is still in the receiving area.
+        # ORD-B é de outra ordem; ORD-C ainda está na área de recebimento.
         assert [(s["sku"], s["ot"], s["bin_code"], s["available"]) for s in body["stock"]] == [
             ("ORD-A", "OT-ORD-1", "T-C0", 5)
         ]
@@ -57,7 +57,6 @@ class TestOrderLookup:
         assert other["order_type"] == "PM12"
         assert [s["sku"] for s in other["stock"]] == ["ORD-B"]
 
-        # The withdrawal is requested with what the lookup returned.
         row = body["stock"][0]
         resp = _request(client, auth_headers, row["inventory_id"], 2, ot=row["ot"])
         assert resp.status_code == 201, resp.get_json()
@@ -86,10 +85,9 @@ class TestOrderLookup:
     def test_material_stored_in_a_location_the_employee_does_not_work_in(
         self, client, auth_headers, sp12, second_location
     ):
-        """Regression: an employee whose locations do not include the one
-        that holds the material (e.g. the Contêiner de Solda) saw nothing
-        at the terminal. They request it all the same; separating stays
-        with the users of that location."""
+        """Regressão: funcionário sem acesso ao local que guarda o material não via nada no
+        terminal. Ele pede do mesmo jeito; separar continua com o pessoal daquele local.
+        """
         conn = sp12["conn"]
         po_id = _register(client, auth_headers, "OT-ORD-4", [
             {"material_code": "ORD-F", "description": "Peça F", "quantity": 4,
@@ -104,11 +102,10 @@ class TestOrderLookup:
         resp = _request(client, employee, row["inventory_id"], 2, ot=row["ot"])
         assert resp.status_code == 201, resp.get_json()
         wid = resp.get_json()["withdrawal"]["withdrawal_id"]
-        # The request went to the location that holds the material.
         assert resp.get_json()["withdrawal"]["warehouse_id"] == WAREHOUSE
         assert client.get(f"/api/sea/retiradas/{wid}", headers=employee).status_code == 200
 
-        # The employee does not separate: that needs "Fazer retirada" (mig 096).
+        # O funcionário não separa: isso exige "Fazer retirada".
         assert client.post(f"/api/sea/retiradas/{wid}/separar", headers=employee,
                            json={}).status_code == 403
         assert client.post(f"/api/sea/retiradas/{wid}/avaliar", headers=auth_headers,
@@ -123,7 +120,6 @@ class TestOrderLookup:
             {"i": row["inventory_id"]},
         ).scalar() == 2
 
-        # Someone else from another location still cannot see or touch it.
         stranger = _user(client, conn, "sea.ordem.2", ["retirada"], [second_location])
         assert client.get(f"/api/sea/retiradas/{wid}", headers=stranger).status_code == 404
         again = _request(client, employee, row["inventory_id"], 1, ot=row["ot"])
@@ -144,7 +140,6 @@ class TestOrderLookup:
 
 
 class TestBoxWeight:
-    """A material kept in KG with a box weight is withdrawn by whole boxes."""
 
     def _wire(self, client, headers, sp12, ot, order, qty=36, pack=18):
         po_id = _register(client, headers, ot, [
@@ -194,7 +189,7 @@ class TestBoxWeight:
         ).scalar() == 0
 
     def test_box_weight_only_applies_to_kg(self, client, auth_headers, sp12):
-        """PC: withdrawing 1 takes 1, whatever number sits in the box-weight field."""
+        """PC: retirar 1 é 1, seja qual for o peso da caixa cadastrado."""
         conn = sp12["conn"]
         po_id = _register(client, auth_headers, "OT-CX-3", [
             {"material_code": "PECA-CX", "description": "Peça", "quantity": 5, "uom": "PC",
@@ -231,7 +226,7 @@ class TestBoxWeightOnTheLabel:
              "pack_weight_kg": 18}])
         assert tuple(self._one(conn, "ARAME-ETQ")) == ("KG", 18)
 
-        # A later label fills an empty box weight and never overwrites one.
+        # Uma etiqueta posterior preenche um peso de caixa vazio e nunca sobrescreve.
         _register(client, auth_headers, "OT-ETQ-2", [
             {"material_code": "ARAME-ETQ2", "description": "Arame 2", "quantity": 30, "uom": "KG"}])
         assert self._one(conn, "ARAME-ETQ2").pack_weight_kg is None

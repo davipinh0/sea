@@ -6,10 +6,7 @@ import NovaOtSapModal from '../components/NovaOtSapModal.jsx';
 import { formatDate, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Expedição > SAP: what the SEA holds from SAP (orders, materials
-// and the open OTs / reservations with their materials). Read-only: the
-// base is loaded in Sistema > Importação de dados and, later, by the
-// SAP integration. Receiving looks the scanned OT up here.
+// Só leitura: a base é carregada em Importação de dados e, no futuro, pela integração com o SAP.
 
 export default function BaseSap() {
   const [q, setQ] = useState('');

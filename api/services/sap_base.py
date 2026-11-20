@@ -1,12 +1,6 @@
-"""SAP base: the mirror of SAP data kept inside the SEA (mig 085).
-
-Three data sets come from SAP: orders (PM11 / PM12), materials and the
-open OTs / reservations with their materials. Receiving reads the OT
-barcode and looks it up here; what is found goes through the same
-registration as a label (sea_service.register_ot_materials).
-
-The base is loaded by import today and by the SAP integration later.
-Operation never writes to it.
+"""Base do SAP: cópia dos dados do SAP dentro do SEA (ordens, materiais e OTs/reservas). O
+recebimento busca a OT aqui e registra pelo mesmo caminho da etiqueta. Hoje é carregada por
+importação; a operação nunca escreve nela.
 """
 
 from __future__ import annotations
@@ -45,8 +39,6 @@ def _items(db, ot_number: str):
 
 
 def lookup(db, ot_code: str) -> OtData | None:
-    """The OT as the SAP base knows it, with every material and the
-    order each one belongs to; None when the code is not in the base."""
     head = db.execute(
         text(
             """
@@ -72,16 +64,14 @@ def lookup(db, ot_code: str) -> OtData | None:
         pickup_location=head.pickup_location,
         unload_location=head.unload_location,
         requester_name=head.requester_name,
-        # The OT keeps one type on its header; each material carries its
-        # own order. The order number goes on the header only when the
-        # whole OT belongs to a single order.
+        # O cabeçalho da OT tem um tipo só; cada material tem a sua ordem. O número da ordem só vai
+        # no cabeçalho quando a OT inteira é de uma ordem.
         service_order_type=items[0].order_type,
         service_order_number=items[0].order_number if len(orders) == 1 else None,
         materials=tuple(
             OtMaterialData(
                 material_code=i.material_code, description=i.description,
                 quantity=i.quantity, uom=i.uom, lot_number=i.lot_number,
-                # mig 098: the box weight of the catalogue goes with the material.
                 pack_weight_kg=i.pack_weight_kg,
                 service_order_type=i.order_type, service_order_number=i.order_number,
             )
@@ -104,8 +94,7 @@ def summary(db) -> dict[str, int]:
 
 
 def list_reservations(db, q: str = "", limit: int = 200) -> list[dict]:
-    """OTs of the base with their materials. ``registered`` tells whether
-    the SEA already registered the delivery of that OT."""
+    """``registered`` diz se o SEA já registrou a entrega dessa OT."""
     params: dict[str, object] = {"limit": limit}
     where = ""
     if q:
@@ -149,11 +138,9 @@ def list_reservations(db, q: str = "", limit: int = 200) -> list[dict]:
     return result
 
 
-# ------------------------------------------------- Cadastro de materiais
-#
-# sap_materials is the material catalogue: what the code of a material
-# brings (description, unit, box weight) when an OT is put together. It
-# is maintained in Sistema > Cadastro de materiais.
+# --- Cadastro de materiais
+# sap_materials é o que o código de um material traz (descrição, unidade, peso da caixa) ao montar
+# uma OT.
 
 class CatalogError(Exception):
     def __init__(self, message: str, status: int = 409):
@@ -187,8 +174,7 @@ def list_materials(db, q: str = "", page: int = 1, per_page: int = 50) -> dict[s
 
 
 def find_material(db, code: str) -> dict[str, object] | None:
-    """What a material code brings: the catalogue entry or, failing that,
-    a material already registered in the SEA (``source`` says which)."""
+    """Entrada do cadastro ou, na falta, um material já registrado no SEA (``source`` diz qual)."""
     row = db.execute(
         text("SELECT material_code, description, uom, pack_weight_kg FROM sap_materials "
              "WHERE material_code = :c"),
@@ -207,14 +193,14 @@ def find_material(db, code: str) -> dict[str, object] | None:
 def _clean_material(data: dict) -> dict[str, object]:
     uom = (data.get("uom") or "").strip().upper() or None
     pack = data.get("pack_weight_kg")
-    # The box weight only applies to a material kept in KG.
+    # Peso da caixa só vale para material em KG.
     return {"description": data["description"].strip(), "uom": uom,
             "pack_weight_kg": pack if uom == "KG" else None}
 
 
 def _sync_stock_material(db, code: str, clean: dict) -> None:
-    """mig 098: the material in stock follows the catalogue: the box
-    weight (KG por caixa) and the unit are what the withdrawal reads."""
+    """O material do estoque segue o cadastro: o peso da caixa e a unidade são o que a retirada usa.
+    """
     db.execute(
         text("UPDATE items SET pack_weight_kg = :pack_weight_kg, uom = COALESCE(:uom, uom) "
              "WHERE sku = :c"),
@@ -271,9 +257,9 @@ def delete_material(db, code: str) -> None:
 
 
 def create_reservation(db, data: dict) -> dict[str, object]:
-    """Put together an OT in the base by hand: header plus materials, each
-    with its order. The materials come from the catalogue; an order that
-    is not in the base yet is added with the type informed."""
+    """Os materiais vêm do cadastro; uma ordem que ainda não está na base entra com o tipo
+    informado.
+    """
     ot = data["ot_number"].strip()
     if db.execute(text("SELECT 1 FROM sap_reservations WHERE ot_number = :ot"),
                   {"ot": ot}).fetchone():
@@ -333,7 +319,7 @@ def create_reservation(db, data: dict) -> dict[str, object]:
     return {"ot": ot, "materials": len(codes)}
 
 
-# ------------------------------------------------------------- Import
+# --- Importação
 
 class _RowError(Exception):
     pass
@@ -371,8 +357,8 @@ def _import_material(db, row: SapMaterialRow) -> None:
         {"c": row.material_code, "d": row.description, "u": row.uom,
          "p": row.pack_weight_kg if (row.uom or "").strip().upper() == "KG" else None},
     ).fetchone()
-    # A box weight known for a material kept in KG reaches the stock; a
-    # sheet without it leaves the stock as it is.
+    # Peso de caixa conhecido de material em KG vai para o estoque; planilha sem ele não mexe no
+    # estoque.
     if saved.pack_weight_kg and (saved.uom or "").strip().upper() == "KG":
         _sync_stock_material(db, row.material_code,
                              {"uom": saved.uom, "pack_weight_kg": saved.pack_weight_kg})
@@ -400,7 +386,7 @@ def _import_reservation(db, row: SapReservationRow) -> None:
             "O SEA mantém um registro por material em cada OT."
         )
     header = {f: getattr(row, f) for f in _HEADER_FIELDS}
-    # A blank header cell on a later row keeps what an earlier row informed.
+    # Célula de cabeçalho vazia numa linha seguinte mantém o que uma linha anterior informou.
     db.execute(
         text(
             f"""
@@ -438,8 +424,7 @@ _IMPORTERS = {
 
 
 def import_rows(db, kind: str, records: list) -> dict[str, object]:
-    """Load ``records`` into the base. A row already in the base is
-    updated; a bad row is reported and the others still go in."""
+    """Linha já existente é atualizada; uma linha com erro é informada e as demais entram."""
     schema, importer = _IMPORTERS[kind]
     imported, errors = 0, []
     for idx, rec in enumerate(records, 1):

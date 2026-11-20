@@ -55,11 +55,8 @@ export default function AppNavigator() {
   // See issue #67 for the source-of-truth refactor that touches this area.
   const forced = !!user?.must_change_password;
 
-  // Notifications while a user is logged in: this phone is registered,
-  // new ones are shown as they arrive and a tap opens the related screen.
   const navigation = useRef(null);
   const active = !!user && !forced;
-  // With the app lock on, the phone also confirms the user's logins (mig 092).
   const secureLock = active && !needsEnrollment;
   useEffect(() => {
     if (active) registerDevice({ secureLock });
@@ -73,14 +70,13 @@ export default function AppNavigator() {
     return () => { stopPolling(); stopTaps(); };
   }, [active]);
 
-  // Every hook is above this line: an early return before a hook makes
-  // React fail on the next render, which closes the app in a release build.
+  // Todo hook fica acima desta linha: um return antes de um hook faz o React quebrar e fecha o app
+  // no build de produção.
   if (isLoading) {
     return null; // Splash screen stays visible
   }
 
-  // AppLock covers the screens (lock / fingerprint registration) without
-  // unmounting them, so whatever was in progress survives the lock.
+  // O AppLock cobre as telas sem desmontá-las; o que estava em andamento sobrevive ao bloqueio.
   return (
     <>
     <NavigationContainer ref={navigation}>

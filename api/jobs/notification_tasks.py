@@ -1,7 +1,5 @@
-"""SEA: e-mail delivery of operational notifications.
-
-Runs in the Celery worker so the request that produced the event never
-waits for the mail server. See services/notification_service.py.
+"""Envio por e-mail das notificações do SEA. Roda no worker Celery para a operação nunca esperar o
+servidor de e-mail.
 """
 
 import logging

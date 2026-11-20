@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { readError } from '../utils/sea.js';
 
-// SEA (mig 095): Recebimento, Armazenagem and Retirada in the web panel
-// open only after the user confirms on the SEA app of the registered
-// phone (fingerprint or PIN). The release lasts while the process is used;
-// when it ends the API answers 403 step_up_required and the gate closes.
+// Recebimento, Armazenagem e Retirada no painel só abrem depois da confirmação no app do celular
+// cadastrado. Quando a liberação vence, a API responde 403 step_up_required e a tela fecha de novo.
 
 const POLL_MS = 2000;
 
@@ -26,7 +24,6 @@ export default function ProcessGate({ purpose, label, children }) {
       setPhase('locked');
       setMessage(data.has_phone ? '' : `Para usar ${label} no painel, cadastre o app SEA no seu celular (entre no app e ative o bloqueio com digital ou PIN).`);
     });
-    // The release ended while the screen was open (15 min without use).
     const onExpired = (event) => {
       if (event.detail?.purpose !== purpose) return;
       setPhase('locked');

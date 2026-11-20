@@ -1,6 +1,5 @@
-/**
- * SEA: the "Exportar CSV" grant and the user form telling the operator
- * exactly what is missing or wrong.
+/*
+ * Permissão "Exportar CSV" e o formulário de usuário dizendo exatamente o que falta ou está errado.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -161,7 +160,7 @@ describe('Erro de permissão', () => {
       </MemoryRouter>,
     );
     act(() => { window.dispatchEvent(new CustomEvent('sea:permission-denied', { detail: { page_key: 'zones' } })); });
-    // The permission is named as the operator knows it, not by its key.
+    // A permissão aparece com o nome que o operador conhece, não com a chave.
     expect(await screen.findByText(/Estoque > Endereços/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('OK'));
   }
@@ -198,11 +197,10 @@ describe('Transferência entre endereços (Estoque > Materiais)', () => {
   it('moves stored material to another shelf or another location', async () => {
     apiPost.mockImplementation(() => ok({ sku: 'MAT-1', quantity: 5, from: 'SP12 · A1', to: 'Solda · SOLDA' }));
     render(<TransferirEstoque itemId={21} />);
-    // Material still in the receiving area is not transferred from here.
+    // Material ainda na área de recebimento não é transferido por aqui.
     fireEvent.click(await screen.findByLabelText('Transferir de SP12 · A1'));
     expect(screen.queryByLabelText('Transferir de SP12 · SP12-RECEB')).toBeNull();
 
-    // Destinations of every location, without the address the stock is in.
     const options = Array.from(screen.getByLabelText('Destino').querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toEqual(['Escolha o endereço', 'SP12 · B2', 'Solda · SOLDA']);
     expect(screen.getByText(/2 reservado\(s\) para retirada não podem ser movidos/)).toBeInTheDocument();

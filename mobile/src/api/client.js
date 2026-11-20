@@ -60,7 +60,6 @@ const DEFAULT_TIMEOUT_MS = 10000;
 
 async function request(method, path, body, requestOptions = {}) {
   const token = await getAuthItem('jwt_token');
-  // A fingerprint/PIN confirmed shortly before goes on the log (identityProof.js).
   const headers = { 'Content-Type': 'application/json', ...identityHeaders() };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -107,8 +106,8 @@ async function request(method, path, body, requestOptions = {}) {
     }
   }
 
-  // keepSession: a wrong password typed on the lock screen answers 401,
-  // which must not end the session (and lose what was in progress).
+  // Senha errada na tela de bloqueio responde 401, e isso não pode encerrar a sessão (perderia o
+  // que estava em andamento).
   if (response.status === 401 && logoutHandler && !requestOptions.keepSession) {
     await logoutHandler();
   }

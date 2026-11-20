@@ -3,10 +3,8 @@ import { api } from '../api.js';
 import { formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Estoque > Materiais > material: where the material is and the option to
-// move it to another address, in the same location (A1 to B2) or to
-// another one (SP12 to the SP13). The API applies the
-// rules (free balance, whole boxes, size class, capacity, compatibility).
+// Onde está o material e a transferência para outro endereço ou local. As regras (saldo, caixas
+// inteiras, capacidade) ficam na API.
 
 export default function TransferirEstoque({ itemId, onMoved }) {
   const [stock, setStock] = useState(null);
@@ -17,7 +15,6 @@ export default function TransferirEstoque({ itemId, onMoved }) {
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Bumping ``tick`` reloads the stock after a transfer.
   const [tick, setTick] = useState(0);
   useLiveRefresh(() => setTick((n) => n + 1));
 
@@ -60,7 +57,6 @@ export default function TransferirEstoque({ itemId, onMoved }) {
   }
 
   if (stock === null) return null;
-  // Destinations grouped by location, without the address the stock is in.
   const groups = {};
   for (const b of bins) {
     if (moving && b.bin_id === moving.bin_id) continue;

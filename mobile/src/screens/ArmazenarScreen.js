@@ -12,10 +12,8 @@ import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } f
 import { screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Armazenagem. Lists what waits in the receiving areas of every location
-// the user works in; the material goes to a shelf of any location (an
-// order received in the Expedição is stored in the SP12 or in the
-// SP13). The API applies the storage rules.
+// Lista o que espera nas áreas de recebimento de todos os locais do usuário; o material vai para
+// uma prateleira de qualquer local. As regras ficam na API.
 
 export default function ArmazenarScreen({ navigation }) {
   const { warehouseId } = useAuth();
@@ -31,7 +29,6 @@ export default function ArmazenarScreen({ navigation }) {
 
   const load = useCallback(async () => {
     try {
-      // What waits in every location of the user, with the order of each material.
       const [pendResp, binResp] = await Promise.all([
         client.get('/api/sea/armazenagem/pendentes'),
         client.get('/api/sea/armazenagem/destinos'),
@@ -44,10 +41,9 @@ export default function ArmazenarScreen({ navigation }) {
     }
   }, []);
 
-  // Not while a material is being stored: the form stays as it is.
+  // Não atualiza enquanto um material está sendo guardado.
   useAutoRefresh(load, { paused: !!active });
 
-  // Choosing where to store a material asks for the fingerprint or PIN.
   async function select(row) {
     const problem = await confirmIdentity('Confirme para armazenar o material');
     if (problem) { setMessage({ type: 'error', text: problem }); return; }
@@ -60,13 +56,12 @@ export default function ArmazenarScreen({ navigation }) {
       const resp = await client.get(`/api/sea/armazenagem/sugestao/${row.inventory_id}`);
       if (resp.data?.bin_id) setSuggested(resp.data);
     } catch {
-      // No suggestion: the operator chooses the address.
+      // Sem sugestão: o operador escolhe o endereço.
     }
   }
 
-  // An address code read or typed must be one of the offered destinations.
-  // SP12 and SP13 share shelf codes (A0, B1 ...): the printed label
-  // (SP13-A0) names one; a bare code goes to the location in use.
+  // SP12 e SP13 têm os mesmos códigos de prateleira (A0, B1...): a etiqueta impressa (SP13-A0)
+  // aponta uma só; um código sem prefixo vai para o local em uso.
   function pickByCode(code) {
     const wanted = code.trim().toUpperCase();
     const byLabel = bins.filter((b) => (b.bin_barcode || '').toUpperCase() === wanted

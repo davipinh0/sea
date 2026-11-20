@@ -1,7 +1,5 @@
-"""Draw the SEA brand mark (the shelf of admin/src/components/SeaLogo.jsx)
-into the app images: icon.png, adaptive-icon.png and splash.png.
-
-Standard library only. Run from this folder:  python make_icons.py
+"""Desenha o logo do SEA nas imagens do app (icon.png, adaptive-icon.png e splash.png). Só
+biblioteca padrão. Rodar nesta pasta: python make_icons.py
 """
 import math
 import struct
@@ -10,15 +8,13 @@ from pathlib import Path
 
 ORANGE = (0xF2, 0x65, 0x22)
 WHITE = (255, 255, 255)
-SS = 3  # supersampling per axis (antialiasing)
+SS = 3
 
-# The mark in the 32 x 32 box of the SVG: (x, y, width, height, radius).
 BACKGROUND = (1, 1, 30, 30, 5)
 STROKE = 1.8
 
 
 def _line(x1, y1, x2, y2):
-    """A stroked line with round caps is a rounded rectangle."""
     half = STROKE / 2
     return (min(x1, x2) - half, min(y1, y2) - half,
             abs(x2 - x1) + STROKE, abs(y2 - y1) + STROKE, half)
@@ -39,8 +35,6 @@ class Canvas:
         self.rows = [bytearray(pixel * width) for _ in range(height)]
 
     def draw(self, shapes, color, opacity, scale, dx, dy):
-        """Fill the union of ``shapes`` (box units -> pixels by ``scale``,
-        ``dx``, ``dy``) with ``color``."""
         top = max(0, int(min(s[1] for s in shapes) * scale + dy) - 1)
         bottom = min(self.height, int(max(s[1] + s[3] for s in shapes) * scale + dy) + 2)
         for py in range(top, bottom):
@@ -72,7 +66,6 @@ class Canvas:
                 row[i + 3] = round(out * 255)
 
     def mark(self, size, left, top, background=True):
-        """The brand mark in a square of ``size`` pixels."""
         scale = size / 32
         if background:
             self.draw([BACKGROUND], ORANGE, 1.0, scale, left, top)
@@ -94,18 +87,16 @@ class Canvas:
 def main():
     here = Path(__file__).parent
 
-    # Launcher icon: orange square edge to edge (the phone rounds it).
     icon = Canvas(1024, 1024, ORANGE)
     icon.mark(1024 * 32 / 30, -1024 / 30, -1024 / 30, background=False)
     icon.save(here / "icon.png")
 
-    # Adaptive icon foreground: the shelf inside the safe zone, transparent
-    # around it (the orange comes from android.adaptiveIcon.backgroundColor).
+    # Ícone adaptável: a prateleira dentro da área segura; o laranja vem do backgroundColor do
+    # app.json.
     adaptive = Canvas(1024, 1024)
     adaptive.mark(620, (1024 - 620) / 2, (1024 - 620) / 2, background=False)
     adaptive.save(here / "adaptive-icon.png")
 
-    # Splash: the mark centred on white.
     splash = Canvas(924, 2000, WHITE)
     splash.mark(420, (924 - 420) / 2, (2000 - 420) / 2)
     splash.save(here / "splash.png")

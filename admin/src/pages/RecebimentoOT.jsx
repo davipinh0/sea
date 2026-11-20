@@ -11,16 +11,9 @@ import { DadosOtModal, MaterialOtModal, RegistroOtModal } from '../components/Ot
 import { OT_HEADER_FIELDS, formatDate, formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Expedição > Recebimento: read the OT barcode, check material code,
-// description and expected quantity, receive partially or in full into
-// the receiving area. The responsible user and timestamp are recorded by
-// the API (same endpoints the mobile app uses, so both stay in sync).
-//
-// An OT that is not registered yet is looked up in the SAP base: when it
-// is there, its materials (order, quantity, unit) and requester are shown
-// and the delivery is registered as the base holds it. An OT that is not
-// in the base can still be registered from its label. The receiver is
-// always the logged-in user.
+// Recebimento da OT. Usa os mesmos endpoints do app, então os dois ficam iguais. Uma OT ainda não
+// cadastrada é buscada na base do SAP; fora da base, pode ser cadastrada pela etiqueta. O recebedor
+// é sempre o usuário logado.
 
 export default function RecebimentoOT() {
   const { user } = useAuth();
@@ -34,8 +27,6 @@ export default function RecebimentoOT() {
   const [binId, setBinId] = useState('');
   const [openOts, setOpenOts] = useState([]);
   const [info, setInfo] = useState(null);
-  // OT scanned but not registered: { code, prefill } (prefill is the OT
-  // as the SAP base holds it; null when the code is not in the base).
   const [unknown, setUnknown] = useState(null);
   const [registering, setRegistering] = useState(null);
   const [editingData, setEditingData] = useState(false);
@@ -46,11 +37,10 @@ export default function RecebimentoOT() {
   const [unreceiving, setUnreceiving] = useState(null);
   const [reason, setReason] = useState('');
 
-  // Bumping ``openTick`` refreshes the list of OTs waiting for receipt.
   const [openTick, setOpenTick] = useState(0);
   const loadOpenOts = () => setOpenTick((n) => n + 1);
-  // Only the list of orders waiting: the order being received is not
-  // reloaded under the operator (it would erase the quantities typed).
+  // Só a lista de ordens é recarregada: recarregar a ordem aberta apagaria as quantidades
+  // digitadas.
   useLiveRefresh(loadOpenOts);
 
   useEffect(() => {
@@ -68,7 +58,6 @@ export default function RecebimentoOT() {
     if (!warehouseId) return;
     api.get(`/sea/recebimentos/areas?warehouse_id=${warehouseId}`).then(async (res) => {
       if (!res?.ok) return;
-      // The API returns only the active receiving areas of the location.
       const bins = (await res.json()).bins || [];
       setStagingBins(bins);
       setBinId((current) => current || (bins[0] ? String(bins[0].bin_id) : ''));
@@ -146,8 +135,6 @@ export default function RecebimentoOT() {
     loadOt(code);
   }
 
-  // ``full`` receives every pending line in its remaining quantity
-  // (integral receipt) instead of the quantities typed by the operator.
   async function receive(linesToReceive, { full = false } = {}) {
     const items = linesToReceive
       .map((l) => ({ line: l, quantity: full ? l.quantity_remaining : parseInt(qty[l.po_line_id], 10) }))

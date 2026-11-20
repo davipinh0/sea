@@ -21,7 +21,7 @@ class CreatePurchaseOrderRequest(BaseModel):
     vendor_name: Optional[str] = Field(None, max_length=256)
     expected_date: Optional[str] = Field(None, max_length=32)
     notes: Optional[str] = Field(None, max_length=1000)
-    # SEA: Ordem de Transferência type. NULL keeps a plain SEA PO.
+    # Tipo da OT. NULL mantém um pedido comum.
     order_type: Optional[Literal["PM11", "PM12"]] = None
 
 

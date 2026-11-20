@@ -1,7 +1,6 @@
 #!/bin/sh
-# Configura o envio de e-mails reais (SEA_SMTP_*) no .env da VM, reinicia a
-# API e o worker e testa o login no servidor SMTP. A senha é digitada aqui,
-# sem aparecer na tela, e só fica gravada no .env da VM.
+# Configura o envio real de e-mails (SEA_SMTP_*) no .env da VM e testa o login no servidor SMTP. A
+# senha é digitada aqui, não aparece na tela e só fica no .env da VM.
 #   ssh -t -i ~/.ssh/sea_azure seaadmin@<dominio> 'sh /opt/sea/deploy/azure/configure-smtp.sh'
 set -eu
 cd /opt/sea
@@ -15,7 +14,7 @@ USER_NAME=$(ask "Usuário (e-mail da conta)" "")
 [ -n "$USER_NAME" ] || { echo "Informe o usuário." >&2; exit 1; }
 printf 'Senha (no Gmail, a senha de app de 16 letras; não aparece ao digitar): ' >&2
 stty -echo; read -r PASSWORD; stty echo; echo >&2
-# A senha de app do Gmail é mostrada em grupos com espaços: eles não fazem parte dela.
+# A senha de app do Gmail aparece em grupos com espaços; os espaços não fazem parte dela.
 PASSWORD=$(printf '%s' "$PASSWORD" | tr -d ' ')
 FROM=$(ask "Remetente" "SEA <$USER_NAME>")
 case "$SECURITY" in starttls|ssl|none) ;; *) echo "Segurança inválida: $SECURITY" >&2; exit 1;; esac

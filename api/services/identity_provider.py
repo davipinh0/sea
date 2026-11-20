@@ -1,15 +1,8 @@
-"""Employee identification by corporate e-mail (integration seam).
-
-The withdrawal terminal identifies the employee by their login. The
-company directory (e.g. Microsoft Entra ID) is not available to the
-prototype, so the default provider resolves the e-mail against the SEA
-user table and the password is checked locally.
-
-A future directory integration implements ``IdentityProvider``,
-registers itself in ``_PROVIDERS`` and is selected with the
-``SEA_IDENTITY_PROVIDER`` environment variable. Nothing about that
-system (endpoints, tenant, claims) is assumed here: the only contract
-is "identifier typed at the login -> SEA username, or None".
+"""Identificação do funcionário (ponto de integração).
+Sem o diretório da empresa, o padrão busca o e-mail na tabela de usuários do SEA e confere a
+senha aqui. Uma integração (Entra ID, por exemplo) implementa ``IdentityProvider``, entra em
+``_PROVIDERS`` e é escolhida por SEA_IDENTITY_PROVIDER. O contrato é só: identificador digitado
+-> usuário do SEA, ou None.
 """
 
 from __future__ import annotations
@@ -24,11 +17,10 @@ class IdentityProvider(Protocol):
     name: str
 
     def resolve_username(self, db, identifier: str) -> Optional[str]:
-        """SEA username for a login identifier, or None when unknown."""
+        """Usuário do SEA para o identificador, ou None."""
 
 
 class LocalIdentityProvider:
-    """E-mail registered on the SEA user (Sistema > Usuários)."""
 
     name = "local"
 

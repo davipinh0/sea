@@ -1,7 +1,5 @@
-"""SEA: movements on the Painel and in the app history (mig 094).
-
-Only administrators and users granted "Histórico" (audit-log) see them.
-"Limpar" restarts the Painel list of that user; the history keeps it all.
+"""Movimentações no Painel e no histórico do app: só para administradores e quem tem "Histórico".
+"Limpar" recomeça a lista do Painel daquele usuário; o histórico continua completo.
 """
 
 from services.audit_service import write_audit_log
@@ -18,7 +16,7 @@ def _painel(client, headers):
 
 
 def _movement(conn, label):
-    # audit_log is append-only (V-025): rows are never edited, not even here.
+    # O audit_log não aceita edição, nem nos testes.
     write_audit_log(conn, "SEA_TESTE", "BIN", 1, "sea.teste", WAREHOUSE, {"reason": label})
 
 
@@ -32,7 +30,7 @@ class TestWhoSeesTheMovements:
         _movement(_db_transaction, "oculto")
         body = _painel(client, headers)
         assert body["recent"] is None
-        assert "open_ots" in body  # the rest of the Painel is unchanged
+        assert "open_ots" in body
 
     def test_with_historico_they_are_listed(self, client, _db_transaction):
         headers = _user(client, _db_transaction, "sea.mov.com", ["audit-log"], [WAREHOUSE])
@@ -59,8 +57,8 @@ class TestClearingTheList:
         assert "antigo" in _reasons(_painel(client, other))
         assert _db_transaction.execute(text("SELECT COUNT(*) FROM audit_log")).scalar() == total
 
-        # What happens after the moment of "Limpar" is listed again (the
-        # test transaction freezes NOW(), so the moment is moved back).
+        # O que acontece depois do "Limpar" volta a aparecer (a transação do teste congela NOW(),
+        # então o momento é recuado).
         _db_transaction.execute(
             text(
                 "UPDATE users SET movements_cleared_at = movements_cleared_at - INTERVAL '1 hour' "

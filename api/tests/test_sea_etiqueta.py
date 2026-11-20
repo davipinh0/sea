@@ -1,8 +1,5 @@
-"""SEA: label interpretation, OT / material registration and traceability.
-
-The label below is the reference example of the receiving operation.
-API tests run inside the conftest transaction (rolled back afterwards)
-on top of the standard seed (warehouse 1, staging bin 1).
+"""Etiqueta, cadastro da OT e dos materiais e rastreabilidade. A etiqueta abaixo é o exemplo de
+referência do recebimento.
 """
 
 import uuid
@@ -39,7 +36,7 @@ Hora: 10:32
 """
 
 
-# ------------------------------------------------------------- Parser
+# --- Interpretação da etiqueta
 
 
 class TestLabelParser:
@@ -70,7 +67,7 @@ class TestLabelParser:
         }
         assert parsed.pending == []
         assert parsed.warnings == []
-        # Print information is dropped, not kept as "unrecognized".
+        # Dados de impressão são descartados, não vão para "não reconhecido".
         assert parsed.unrecognized == []
 
     def test_ot_reservation_and_service_order_stay_separate(self):
@@ -89,7 +86,6 @@ class TestLabelParser:
         assert parsed.header["service_order_type"] is None
         for key in ("quantity", "lot_number", "reservation_number", "service_order_type"):
             assert key in parsed.pending
-        # Optional by nature.
         assert "expiry_date" not in parsed.pending
 
     def test_unknown_text_is_flagged_for_review(self):
@@ -153,7 +149,7 @@ class TestOtSource:
             get_ot_source()
 
 
-# ---------------------------------------------------------------- API
+# --- API
 
 
 def _payload(**overrides):
@@ -271,7 +267,7 @@ class TestRegistration:
         assert material["item_name"] == "ARAME SÓLIDO 1,2MM MIG A5.18 ER 70S6"
         assert material["quantity_ordered"] == 54
         assert material["uom"] == "KG"
-        # Leading zeros preserved; lot kept apart from the material code.
+        # Zeros à esquerda preservados; o lote fica separado do código do material.
         assert material["lot_number"] == "0000245045"
         assert material["expiry_date"] is None
 
@@ -351,7 +347,6 @@ class TestRegistration:
         other = _detail(client, auth_headers, "1003330000")["materials"][0]
         assert (other["lot_number"], other["quantity_ordered"]) == ("0000245099", 12)
         assert _detail(client, auth_headers)["materials"][0]["lot_number"] == "0000245045"
-        # One material master shared by both OTs.
         count = _db_transaction.execute(
             text("SELECT COUNT(*) FROM items WHERE sku = '74165325'")
         ).scalar()
@@ -430,7 +425,6 @@ class TestCorrections:
         _receive(client, auth_headers, registered, 10)
         url = f"/api/sea/ots/{registered['po_id']}/materiais/{registered['line_id']}"
         assert client.put(url, headers=auth_headers, json={"quantity": 40}).status_code == 409
-        # The lot can still be corrected.
         assert client.put(url, headers=auth_headers, json={"lot_number": "X"}).status_code == 200
         assert client.delete(url, headers=auth_headers).status_code == 409
 
@@ -467,7 +461,6 @@ class TestTraceability:
                       "item_id": detail["materials"][0]["item_id"]}
         address = _storage_bin(conn, "T-ETQ")
 
-        # Partial receipt, then storage.
         _receive(client, auth_headers, registered, 30)
         resp = client.post(
             "/api/putaway/confirm", headers=auth_headers,
@@ -485,7 +478,6 @@ class TestTraceability:
             text("SELECT inventory_id FROM inventory WHERE bin_id = :b"), {"b": address}
         ).scalar()
 
-        # Withdrawal of part of it, confirmed by the user who requested it.
         resp = client.post(
             "/api/sea/retiradas", headers=auth_headers,
             json={"ot": "1003329915",

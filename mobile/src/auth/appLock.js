@@ -1,18 +1,13 @@
-// App lock: after the first password login on a phone the user registers
-// the fingerprint; from then on the app locks whenever it goes to the
-// background or is closed, and the fingerprint (or the account password)
-// unlocks it. The lock screen covers the screens without unmounting them,
-// so whatever was in progress is still there after unlocking.
-//
-// The rules live here, apart from React, so they can be tested.
+// Trava do app: depois do primeiro login com senha no celular, o usuário cadastra a digital e o app
+// trava sempre que vai para segundo plano. A tela de bloqueio cobre as telas sem desmontá-las,
+// então o que estava em andamento continua lá.
+// As regras ficam aqui, fora do React, para poderem ser testadas.
 
-// SecureStore key with the user that registered the fingerprint on this
-// phone. It is not an auth key: logging out keeps it.
+// Usuário que cadastrou a digital neste celular. Não é chave de login: sair mantém.
 export const BIOMETRIC_USER_KEY = 'sea_biometric_user';
 
-// Android system dialogs started by the app itself (camera or notification
-// permission, the device PIN screen of the fingerprint prompt) put the app
-// in the background for a moment; those must not lock it.
+// Diálogos do Android abertos pelo próprio app (permissões, PIN da digital) jogam o app para
+// segundo plano por um instante; isso não pode travar o app.
 let suspended = 0;
 
 export function suspendLock() {
@@ -29,9 +24,7 @@ export function isLockSuspended() {
   return suspended > 0;
 }
 
-// Runs ``fn`` (which may open a system dialog) without locking the app.
-// The release waits a little: the "active" event of the app can arrive
-// just after the dialog's promise resolves.
+// A liberação espera um pouco: o evento "active" pode chegar logo depois da promise do diálogo.
 export async function withoutLock(fn, releaseDelayMs = 700) {
   const release = suspendLock();
   try {
@@ -41,32 +34,26 @@ export async function withoutLock(fn, releaseDelayMs = 700) {
   }
 }
 
-// Whether a change of the app state must lock the app.
 export function shouldLock(nextState, { enabled }) {
   return !!enabled && nextState === 'background' && !isLockSuspended();
 }
 
-// SecurityLevel of expo-local-authentication: 0 none, 1 PIN/pattern/
-// password of the phone, 2-3 biometrics.
 export const SECURITY_SECRET = 1;
 
-// How this phone unlocks the app: 'biometric' (a fingerprint registered;
-// the phone's PIN/pattern also works in the same prompt), 'device' (no
-// fingerprint: the phone's PIN, pattern or password) or 'none' (the phone
-// has no screen lock at all: the user must set one up).
+// Como este celular destrava o app: 'biometric' (digital; o PIN também funciona no mesmo aviso),
+// 'device' (sem digital: PIN, padrão ou senha) ou 'none' (sem bloqueio de tela; o usuário precisa
+// ativar um).
 export function unlockMode({ isEnrolled, securityLevel }) {
   if (isEnrolled) return 'biometric';
   if ((securityLevel ?? 0) >= SECURITY_SECRET) return 'device';
   return 'none';
 }
 
-// The user that registered the fingerprint, compared without case.
 export function sameUser(stored, username) {
   return !!stored && !!username && String(stored).toLowerCase() === String(username).toLowerCase();
 }
 
-// Message for a failed fingerprint prompt (expo-local-authentication's
-// error codes); null when the user just cancelled.
+// null quando o usuário só cancelou.
 export function biometricError(result) {
   if (!result || result.success) return null;
   switch (result.error) {
@@ -85,8 +72,6 @@ export function biometricError(result) {
   }
 }
 
-// Why the identity check before a process (receive, store, withdrawal)
-// failed, in the operator's words; null when it succeeded.
 export function identityError(result) {
   if (result?.success) return null;
   switch (result?.error) {

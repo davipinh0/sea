@@ -4,11 +4,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { colors, fonts, radii } from '../theme/styles';
 import { withoutLock } from '../auth/appLock';
 
-// Code entry for a phone: type the code or read the barcode with the
-// camera. ``onSubmit(code)`` receives the trimmed code.
-//
-// The older ScanInput keeps the keyboard closed for collectors with a
-// built-in reader; this one is for an ordinary phone.
+// Digitar o código ou ler o código de barras com a câmera. O ScanInput antigo é para coletores com
+// leitor embutido; este é para celular comum.
 
 const BARCODE_TYPES = ['code128', 'code39', 'code93', 'ean13', 'ean8', 'itf14', 'qr', 'datamatrix'];
 
@@ -28,7 +25,6 @@ export default function CodeInput({ placeholder, onSubmit, disabled = false, aut
   async function openCamera() {
     setCameraNote('');
     let granted = permission?.granted;
-    // The permission window puts the app in the background: no lock for it.
     if (!granted) granted = (await withoutLock(requestPermission))?.granted;
     if (!granted) {
       setCameraNote('Sem permissão para usar a câmera. Libere nas configurações do aparelho ou digite o código.');
@@ -97,7 +93,7 @@ const styles = StyleSheet.create({
     minHeight: 48, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center',
     backgroundColor: colors.copper, borderRadius: radii.button,
   },
-  // Fixed dark grey: in the dark theme textPrimary is white, like the label.
+  // Cinza escuro fixo: no tema escuro textPrimary é branco.
   camera: { backgroundColor: '#455A64' },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 12, letterSpacing: 0.5 },
   disabled: { opacity: 0.5 },

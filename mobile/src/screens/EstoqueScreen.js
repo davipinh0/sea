@@ -10,9 +10,6 @@ import { apiError, orderName } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Estoque: what is in each address of the selected location (read-only).
-// The filter looks at address, material code, description and OT.
-
 export default function EstoqueScreen({ navigation }) {
   const { warehouseId } = useAuth();
   const [data, setData] = useState(null);

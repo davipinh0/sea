@@ -1,12 +1,6 @@
--- ============================================================
--- 091_sea_foto_usuario.sql - SEA: foto do usuário
--- ============================================================
--- Só o administrador coloca ou remove a foto (Sistema > Usuários). A
--- imagem já chega reduzida pelo painel (256 px, JPEG); o limite de 1 MB
--- protege o banco de um envio fora do painel.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 091_sea_foto_usuario.sql - foto do usuário. O painel já manda reduzida; o limite de 1 MB protege
+-- o banco de um envio por fora do painel.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo BYTEA;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_mime VARCHAR(20);

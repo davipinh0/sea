@@ -5,8 +5,6 @@ import { getAuthItem } from '../auth/secureStorage';
 import { initialsOf, photoSource } from '../utils/userPhoto';
 import { colors } from '../theme/styles';
 
-// User photo set by an administrator or, without one, the initials.
-
 export default function UserPhoto({ userId, version, name, size = 40 }) {
   const [source, setSource] = useState(null);
   const [failed, setFailed] = useState(false);

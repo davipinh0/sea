@@ -1,16 +1,7 @@
--- ============================================================
--- 093_sea_sessoes.sql - SEA: sessões controladas pelo servidor
--- ============================================================
--- Cada login (painel, terminal, app) abre uma linha aqui, identificada
--- pelo jti do token. Com isso o servidor consegue:
---   * encerrar a sessão de verdade no "Sair" (o token deixa de valer,
---     mesmo que alguém tenha copiado o cookie);
---   * derrubar a sessão do painel web depois de um tempo sem uso
---     (SEA_WEB_IDLE_MINUTES), por exemplo quando o navegador foi
---     fechado sem sair.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 093_sea_sessoes.sql - sessões controladas pelo servidor
+-- Cada login abre uma linha, pelo jti do token. Assim o "Sair" encerra de verdade (mesmo com o
+-- cookie copiado) e a sessão do painel cai depois de SEA_WEB_IDLE_MINUTES sem uso.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 CREATE TABLE IF NOT EXISTS sea_sessions (
     jti           UUID PRIMARY KEY,

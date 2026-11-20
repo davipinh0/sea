@@ -10,9 +10,6 @@ import { apiError } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Notificações: what happened in the locations the user works in. Tap
-// one to open the related screen; "Limpar" empties the user's own list.
-
 function when(value) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });

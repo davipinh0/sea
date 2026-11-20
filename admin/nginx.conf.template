@@ -30,9 +30,8 @@ map $http_x_forwarded_proto $admin_hsts_header {
     default $admin_scheme_hsts;
 }
 
-# SEA: index.html must always be revalidated, otherwise a browser may keep
-# serving an old page (and so an old build) after an update. Hashed
-# assets and API responses set their own caching.
+# O index.html sempre é revalidado; senão o navegador pode continuar mostrando a versão antiga
+# depois de uma atualização.
 map $uri $admin_cache_control {
     ~^/(assets|api)/ "";
     default          "no-cache";

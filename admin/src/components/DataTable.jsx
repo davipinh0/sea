@@ -100,7 +100,6 @@ export default function DataTable({
   sortDir,
   onSort,
 }) {
-  // Rendered without a session in a few places (and in tests): no export then.
   const canExport = canExportCsv(useAuth()?.user);
 
   function exportCSV() {

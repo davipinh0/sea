@@ -1,10 +1,5 @@
-"""SEA: the global request limit counts per user, not per IP.
-
-In the company network every phone and panel reaches the SEA from the
-same public IP. With the limit per IP (300 per minute), a few dozen
-phones polling the API would block everyone. The global limit now reads
-the user from the signed token; only requests without a valid token are
-counted by IP.
+"""O limite global de requisições conta por usuário, não por IP. Na rede da empresa todos saem pelo
+mesmo IP; por IP, algumas dezenas de celulares bloqueariam todo mundo.
 """
 
 import pytest
@@ -34,13 +29,12 @@ class TestSameNetworkManyUsers:
         self, client, auth_headers, _db_transaction
     ):
         other = _user(client, _db_transaction, "sea.limite.outro", ["retirada"], [WAREHOUSE])
-        limiter._storage.reset()  # the login above also counted
+        limiter._storage.reset()
 
-        # Same test client = same IP for both users.
+        # Mesmo cliente de teste = mesmo IP para os dois usuários.
         for _ in range(LIMIT):
             assert _poll(client, auth_headers).status_code == 200
         assert _poll(client, auth_headers).status_code == 429
-        # The colleague on the same network goes on working.
         assert _poll(client, other).status_code == 200
 
 

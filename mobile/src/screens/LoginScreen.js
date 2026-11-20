@@ -9,8 +9,7 @@ import ServerDialog from '../components/ServerDialog';
 import { Button } from '../components/ui';
 import { colors, radii } from '../theme/styles';
 
-// Login. The server address is not shown here; changing it is an
-// administrator's action (ServerDialog).
+// O endereço do servidor não aparece aqui; trocá-lo é tarefa do administrador (ServerDialog).
 
 const LAST_USER_KEY = 'sea_last_username';
 
@@ -21,7 +20,6 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showServer, setShowServer] = useState(false);
-  // mig 092: seconds left while the login waits for the registered phone.
   const [waiting, setWaiting] = useState(null);
   const cancelled = useRef(false);
 
@@ -58,8 +56,7 @@ export default function LoginScreen() {
     }
   }
 
-  // This phone is not the registered one: the login waits for the
-  // confirmation on the user's registered phone.
+  // Este não é o celular cadastrado: o login espera a confirmação no celular do usuário.
   async function waitForPhone(challenge) {
     cancelled.current = false;
     setWaiting(challenge.expires_in);

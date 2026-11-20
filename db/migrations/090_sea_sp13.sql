@@ -1,14 +1,6 @@
--- ============================================================
--- 090_sea_sp13.sql - SEA: o Contêiner de Solda passa a ser o SP13
--- ============================================================
--- O local "Solda - Contêiner de Solda" é renomeado para
--- "SP13 - Setor SP13 - Almoxarifado", com os seus endereços
--- (SOLDA-RECEB -> SP13-RECEB, SOLDA -> SP13). Estoque, histórico e
--- permissões apontam para os ids, que não mudam.
---
--- Idempotent: safe to run more than once. Só dados (db/seed-sea.sql já
--- cria o local com os nomes novos).
--- ============================================================
+-- 090_sea_sp13.sql - o Contêiner de Solda vira o SP13, com os seus endereços. Os ids não mudam,
+-- então estoque, histórico e permissões continuam apontando certo.
+-- Pode rodar mais de uma vez. Só dados.
 
 UPDATE warehouses SET warehouse_code = 'SP13', warehouse_name = 'Setor SP13 - Almoxarifado'
 WHERE warehouse_code = 'Solda'

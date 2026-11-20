@@ -1,14 +1,12 @@
-// SEA (mig 092): logins confirmed on the registered phone.
+// Logins confirmados no celular cadastrado.
 
 function pad(n) {
   return String(n).padStart(2, '0');
 }
 
-// mig 095: processes of the web panel released by the phone.
-export const PROCESS_LABELS = { recebimento: 'Recebimento', armazenagem: 'Armazenagem', retirada: 'Retirada' };
+// Processos do painel liberados pelo celular.
+export const PROCESS_LABELS = { recebimento: 'Recebimento', armazenagem: 'Armazenagem', retirada: 'Retirada', 'exclusao-usuario': 'Exclusão de usuário' };
 
-// What the phone shows about a login (or a process of the web panel)
-// waiting for it.
 export function approvalSummary(pending, now = new Date()) {
   const created = pending.created_at ? new Date(pending.created_at) : null;
   const sameDay = created && created.toDateString() === now.toDateString();
@@ -24,7 +22,6 @@ export function approvalSummary(pending, now = new Date()) {
   };
 }
 
-// Message for the end of a wait on another phone's confirmation.
 export function approvalEndMessage(status) {
   switch (status) {
     case 403: return 'O acesso foi negado no celular cadastrado.';

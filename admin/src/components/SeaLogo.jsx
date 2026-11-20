@@ -1,6 +1,5 @@
-// SEA brand mark: a shelf with four levels (0-3), echoing the SP12
-// addressing scheme (A0..A3). Colors come from the brand CSS variables
-// in App.css so the palette stays defined in a single place.
+// Logo do SEA: uma prateleira de quatro níveis (0 a 3), como os endereços do SP12. As cores vêm das
+// variáveis de App.css.
 export default function SeaLogo({ size = 28 }) {
   return (
     <svg

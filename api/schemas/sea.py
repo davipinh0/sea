@@ -1,4 +1,3 @@
-"""SEA request schemas (label receiving and withdrawal terminal)."""
 
 from datetime import date
 from typing import Annotated, List, Literal, Optional
@@ -7,8 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 
 class _LabelModel(BaseModel):
-    """Text fields are trimmed and a blank becomes None ("pendente"),
-    so an empty form field is never stored as an empty string."""
+    """Campo vazio vira None ("pendente"), nunca uma string vazia."""
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -24,7 +22,7 @@ class _LabelModel(BaseModel):
 
 
 class OtHeaderFields(_LabelModel):
-    """Label header. Every field is optional: unknown stays pending."""
+    """Todo campo é opcional: o que não se sabe fica pendente."""
 
     barcode: Optional[str] = Field(None, max_length=100)
     origin_company: Optional[str] = Field(None, max_length=200)
@@ -41,20 +39,18 @@ class OtHeaderFields(_LabelModel):
 
 class OtHeader(OtHeaderFields):
     ot_code: str = Field(..., min_length=1, max_length=50)
-    # A label may print a receiver. It is accepted and ignored: the
-    # receiver is the user who registers the delivery.
+    # A etiqueta pode trazer um recebedor; ele é ignorado: o recebedor é quem registra a entrega.
     receiver_name: Optional[str] = Field(None, max_length=120)
 
 
 class OtMaterial(_LabelModel):
-    # Codes and lots are text: leading zeros are part of the identifier.
+    # Códigos e lotes são texto: zeros à esquerda fazem parte.
     material_code: str = Field(..., min_length=1, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
     quantity: int = Field(..., gt=0, le=1000000)
     uom: Optional[str] = Field(None, max_length=10)
     lot_number: Optional[str] = Field(None, max_length=50)
     expiry_date: Optional[date] = None
-    # Weight of one box, for a material kept in KG and withdrawn by box.
     pack_weight_kg: Optional[int] = Field(None, gt=0, le=100000)
 
     @field_validator("uom")
@@ -62,7 +58,6 @@ class OtMaterial(_LabelModel):
     def _unit_in_capitals(cls, v):
         return v.upper() if isinstance(v, str) else v
 
-    # The order this material belongs to, when it differs from the header's.
     service_order_type: Optional[Literal["PM11", "PM12"]] = None
     service_order_number: Optional[str] = Field(None, max_length=40)
 
@@ -72,14 +67,13 @@ class RegisterOtRequest(BaseModel):
     header: OtHeader
     materials: List[OtMaterial] = Field(..., min_length=1, max_length=50)
     source: Literal["MANUAL", "ETIQUETA"] = "ETIQUETA"
-    # Label text the interpreter could not classify, kept for review.
+    # Texto da etiqueta que não foi reconhecido, guardado para revisão.
     unrecognized: List[Annotated[str, Field(max_length=300)]] = Field(
         default_factory=list, max_length=50
     )
 
 
 class RegisterFromBaseRequest(BaseModel):
-    """Register the delivery of an OT exactly as the SAP base holds it."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -92,7 +86,7 @@ class InterpretLabelRequest(BaseModel):
 
 
 class UpdateOtDataRequest(OtHeaderFields):
-    """Correction of the header. Only the fields sent are changed."""
+    """Só os campos enviados mudam."""
 
 
 class UpdateOtMaterialRequest(_LabelModel):
@@ -111,8 +105,7 @@ class CreateWithdrawalRequest(BaseModel):
     ot: str = Field(..., min_length=1, max_length=128)
     lines: List[WithdrawalLine] = Field(..., min_length=1, max_length=200)
     note: Optional[str] = Field(None, max_length=500)
-    # mig 098: at the terminal, an employee without access to the SEA is
-    # identified only by the corporate e-mail.
+    # No terminal, quem não tem acesso ao SEA é identificado só pelo e-mail corporativo.
     requester_email: Optional[str] = Field(None, max_length=254)
 
     @field_validator("requester_email")
@@ -140,7 +133,7 @@ class CreateCatalogMaterialRequest(CatalogMaterialFields):
 
 
 class UpdateCatalogMaterialRequest(CatalogMaterialFields):
-    """Change of a catalogue entry (the code is in the address)."""
+    """O código vem no endereço."""
 
 
 class BaseOtMaterial(_LabelModel):
@@ -152,7 +145,6 @@ class BaseOtMaterial(_LabelModel):
 
 
 class CreateBaseOtRequest(_LabelModel):
-    """An OT put together by hand in the SAP base."""
 
     ot_number: str = Field(..., min_length=1, max_length=50)
     reservation_number: Optional[str] = Field(None, max_length=40)
@@ -168,14 +160,12 @@ class RegisterPushTokenRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     token: str = Field(..., min_length=10, max_length=200)
-    # mig 092: the app lock (fingerprint or PIN/pattern) is on in this
-    # phone, so it can confirm logins of the user.
+    # Trava do app ligada: este celular pode confirmar os logins do usuário.
     secure_lock: bool = False
     device_name: Optional[str] = Field(None, max_length=100)
 
 
 class LoginDecisionRequest(BaseModel):
-    """The phone confirms (or denies) a login waiting for it (mig 092)."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -184,7 +174,6 @@ class LoginDecisionRequest(BaseModel):
 
 
 class TransferStockRequest(BaseModel):
-    """Move stored material to another address (any location)."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -195,8 +184,7 @@ class TransferStockRequest(BaseModel):
 
 
 class EvaluateWithdrawalRequest(BaseModel):
-    """The evaluator approves or denies a request (mig 096). Denying
-    needs the reason; the service checks it."""
+    """Negar exige o motivo; o serviço confere."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -205,7 +193,6 @@ class EvaluateWithdrawalRequest(BaseModel):
 
 
 class CancelWithdrawalRequest(BaseModel):
-    """A cancellation always carries its reason (never blank)."""
 
     model_config = ConfigDict(str_strip_whitespace=True)
 

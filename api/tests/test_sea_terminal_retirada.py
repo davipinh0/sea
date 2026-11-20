@@ -1,6 +1,5 @@
-"""SEA (mig 098): the withdrawal terminal account, the withdrawal followed
-only by who accepted it, the box weight from the catalogue and the
-partial receipt of an OT.
+"""Usuário do terminal, retirada acompanhada só por quem aceitou, peso da caixa vindo do cadastro e
+recebimento parcial da OT.
 """
 
 from services import notification_service as notifications
@@ -25,7 +24,7 @@ EMAIL = "fulano.terminal@empresa-ficticia.com"
 
 
 class _NoCommit:
-    """The test connection, with commit() held back."""
+    """Conexão de teste com o commit() segurado."""
 
     def __init__(self, conn):
         self._conn = conn
@@ -83,7 +82,7 @@ class TestTerminalAccount:
         assert (w["requester_email"], w["requested_by"]) == (EMAIL, "sea.terminal")
         assert tuple(_stock(conn, inv)) == (10, 3)
 
-        # The whole flow ends at the terminal, under the terminal account.
+        # O fluxo inteiro termina no terminal, com o usuário do terminal.
         wid = w["withdrawal_id"]
         assert _step(client, auth_headers, wid, "avaliar", {"approve": True}).status_code == 200
         assert _step(client, auth_headers, wid, "separar").status_code == 200
@@ -128,7 +127,7 @@ class TestTerminalAccount:
                  "WHERE jti = ANY(CAST(:j AS uuid[]))"),
             {"j": jtis},
         )
-        # check() commits; the test keeps everything in its own transaction.
+        # check() faz commit; o teste mantém tudo na própria transação.
         db = _NoCommit(conn)
         assert web_sessions.check(db, jtis[0], web=True) is None
         assert web_sessions.check(db, jtis[1], web=True) == "idle"
@@ -158,7 +157,7 @@ class TestOnlyWhoAcceptedFollows:
         assert _step(client, first, wid, "separar").status_code == 200
         assert approved in self._kinds(client, first)
         assert approved not in self._kinds(client, second)
-        # The record stays for everyone.
+        # O registro continua visível para todos.
         assert client.get(f"/api/sea/retiradas/{wid}", headers=second).status_code == 200
 
     def test_only_who_accepted_carries_it_on(self, client, auth_headers, stored_ot):  # noqa: F811

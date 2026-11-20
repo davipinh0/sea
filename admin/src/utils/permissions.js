@@ -1,5 +1,3 @@
-// "Exportar CSV" buttons: ADMIN, or a USER holding the export-csv grant
-// (api/constants.py OVERRIDE_EXPORT_CSV, set in Sistema > Usuários).
 export const EXPORT_CSV_KEY = 'export-csv';
 
 export function canExportCsv(user) {
@@ -7,10 +5,7 @@ export function canExportCsv(user) {
   return Array.isArray(user?.allowed_overrides) && user.allowed_overrides.includes(EXPORT_CSV_KEY);
 }
 
-// Page-permission check shared by the SEA navigation (mirrors the API's
-// require_admin_or_page_permission: ADMIN passes, USER needs the key).
-// SEA (mig 098): the account of the withdrawal terminal. It holds this
-// permission only and sees nothing but the terminal.
+// Usuário do terminal: só tem esta permissão e só vê o terminal.
 export const TERMINAL_PAGE = 'terminal-retirada';
 
 export function isTerminalAccount(user) {

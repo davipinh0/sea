@@ -1,5 +1,4 @@
-"""SEA: material catalogue, OTs put together in the SAP base, shelf sizes
-and the phone notifications."""
+"""Cadastro de materiais, OTs montadas na base do SAP e notificações no celular."""
 
 import pytest
 from sqlalchemy import text
@@ -29,7 +28,6 @@ class TestCatalogue:
     def test_create_change_and_delete(self, client, auth_headers):
         created = _add(client, auth_headers)
         assert created.status_code == 201, created.get_json()
-        # The unit is stored in capitals.
         assert created.get_json()["uom"] == "KG"
         assert _add(client, auth_headers).status_code == 409
 
@@ -63,9 +61,7 @@ class TestCatalogue:
         conn = sp12["conn"]
         assert _add(client, auth_headers).status_code == 201
         reader = _user(client, conn, "sea.cat.1", ["receiving"], [WAREHOUSE])
-        # Whoever puts OTs together reads the catalogue...
         assert client.get("/api/sea/catalogo/CAT-ARAME", headers=reader).status_code == 200
-        # ...but does not change it.
         assert _add(client, reader, material_code="CAT-NOVO").status_code == 403
         assert client.put("/api/sea/catalogo/CAT-ARAME", headers=reader,
                           json={"description": "x"}).status_code == 403
@@ -118,7 +114,6 @@ class TestOtInTheBase:
             ("PM11", "2000000991", "CAT-ARAME", "Arame de soldagem", 36, "KG"),
             ("PM12", "2000000992", "CAT-PECA", "Peça", 4, "PC"),
         ]
-        # Registering the delivery works like any OT of the base.
         registered = client.post("/api/sea/recebimentos/base", headers=auth_headers,
                                  json={"warehouse_id": WAREHOUSE, "ot_code": "1000000991"})
         assert registered.status_code == 201, registered.get_json()
@@ -133,7 +128,6 @@ class TestOtInTheBase:
         resp = client.post("/api/sea/sap/ots", headers=auth_headers, json=unknown)
         assert resp.status_code == 400 and "Cadastro de materiais" in resp.get_json()["error"]
 
-        # The order already exists with another type.
         wrong = self._ot(ot_number="1000000993")
         wrong["materials"][0]["order_type"] = "PM12"
         resp = client.post("/api/sea/sap/ots", headers=auth_headers, json=wrong)
@@ -145,7 +139,7 @@ class TestOtInTheBase:
         assert client.post("/api/sea/sap/ots", headers=auth_headers,
                            json=self._ot(ot_number="1000000995", materials=[])).status_code == 400
 
-        # Nothing of the refused OTs stayed in the base.
+        # Nada das OTs recusadas ficou na base.
         base = client.get("/api/sea/sap/base", headers=auth_headers).get_json()
         assert [r["ot"] for r in base["reservations"]] == ["1000000991"]
 
@@ -163,7 +157,7 @@ class TestPhoneNotifications:
         conn = sp12["conn"]
         assert self._register(client, auth_headers).status_code == 200
         other = _user(client, conn, "sea.push.1", ["retirada"], [WAREHOUSE])
-        # The same phone, now used by someone else: it follows the last login.
+        # O mesmo celular usado por outra pessoa: segue o último login.
         assert self._register(client, other).status_code == 200
         rows = conn.execute(text("SELECT u.username FROM sea_push_tokens t JOIN users u "
                                  "USING (user_id)")).fetchall()
@@ -171,8 +165,8 @@ class TestPhoneNotifications:
         removed = client.post("/api/sea/push/remover", headers=other,
                               json={"token": "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]"})
         assert removed.status_code == 200
-        # mig 092: after logout the phone gets no notifications of the day but
-        # stays registered (it may still confirm the user's logins).
+        # Depois de sair, o celular não recebe mais avisos, mas continua cadastrado para confirmar
+        # os logins do usuário.
         assert conn.execute(text("SELECT signed_in FROM sea_push_tokens")).scalars().all() == [False]
         assert notifications.push_tokens(conn, WAREHOUSE) == []
         assert client.application.test_client().post(

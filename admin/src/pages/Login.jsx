@@ -12,7 +12,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // SEA (mig 092): seconds left to confirm on the phone (null = not waiting).
   const [waiting, setWaiting] = useState(null);
   const cancelled = useRef(false);
   // v1.4.2 #98: ChangePassword writes a flash message to sessionStorage
@@ -65,7 +64,6 @@ export default function Login() {
       if (err instanceof LoginApprovalCancelled) {
         setError('Login cancelado.');
       } else if (approving) {
-        // Messages of the confirmation step (denied, time is over...).
         setError(err.message);
       } else {
         setError(err.message === 'Not authorized' ? 'Não autorizado, contate o administrador' : 'Usuário ou senha incorretos');

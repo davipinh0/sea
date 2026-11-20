@@ -1,5 +1,4 @@
-// SEA: Histórico in the app (movements of the location and the full log).
-// Labels mirror admin/src/utils/sea.js so both read the same.
+// Os nomes das operações seguem os do painel (admin/src/utils/sea.js).
 
 export const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
@@ -9,6 +8,7 @@ export const ACTION_LABELS = {
   LOGIN_DENIED: 'Login negado no celular',
   LOGIN_APPROVAL_SETTING: 'Confirmação de login no celular',
   USER_DEVICES_REMOVED: 'Celulares do usuário removidos',
+  USER_DELETED: 'Usuário excluído',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',
   PUTAWAY: 'Armazenagem',
@@ -44,7 +44,7 @@ export const ACTION_LABELS = {
   forced_password_change_completed: 'Senha inicial trocada',
 };
 
-// Words of a code without a label, in Portuguese, so no English shows.
+// Palavras de um código sem tradução, em português, para nada aparecer em inglês.
 const WORDS = {
   WITHDRAWAL: 'retirada', RECEIVE: 'recebimento', RECEIVED: 'recebido', PUTAWAY: 'armazenagem',
   TRANSFER: 'transferência', STOCK: 'estoque', ITEM: 'material', BIN: 'endereço', PO: 'ordem',
@@ -66,9 +66,8 @@ export function actionLabel(action) {
   return action ? ACTION_LABELS[action] || readable(action) : '-';
 }
 
-// What a record shows when it is opened: the order (PM12 - number, never
-// the OT), the material and what happened to it, and how the user was
-// authenticated when the process required it.
+// Ao abrir um registro: a ordem (PM12 - número, nunca a OT), o material e como o usuário se
+// autenticou.
 export function orderText(entry) {
   const orders = entry?.orders || [];
   if (orders.length === 0) return null;
@@ -97,7 +96,6 @@ export function whenText(value) {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-// Who may open Histórico: administrators and users granted "Histórico".
 export function canSeeHistory(me) {
   if (!me) return false;
   return me.role === 'ADMIN' || (me.allowed_pages || []).includes('audit-log');

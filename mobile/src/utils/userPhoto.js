@@ -1,8 +1,6 @@
-// SEA: user photo (set by an administrator in the panel).
 
-// Image source for the photo, with the session token (the API only shows
-// it to the user, an administrator or whoever manages users). ``version``
-// changes with each new photo, so a new photo is a new URL.
+// A API só mostra a foto ao próprio usuário, ao administrador ou a quem gerencia usuários.
+// ``version`` muda a cada foto nova, então a URL muda.
 export function photoSource(baseUrl, token, userId, version) {
   if (!baseUrl || !token || !userId || !version) return null;
   return {

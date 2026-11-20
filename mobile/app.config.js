@@ -1,6 +1,5 @@
-// Extends app.json. The Firebase key (google-services.json) is what lets
-// Android deliver notifications while the app is closed; the build uses
-// it when the file is present in this folder and works without it.
+// Com a chave do Firebase (google-services.json) o Android recebe avisos com o app fechado. Sem o
+// arquivo o build funciona, só sem esses avisos.
 const fs = require('fs');
 const path = require('path');
 

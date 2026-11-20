@@ -10,10 +10,8 @@ import { apiError } from '../utils/sea';
 import { unregisterDevice } from '../notifications';
 import { colors, radii } from '../theme/styles';
 
-// Lock screen and fingerprint registration, shown over the app (see
-// auth/appLock.js). It is a Modal: it covers the screens and any window
-// they opened (camera, confirmations) without unmounting them, and the
-// back button does not reach the screen underneath.
+// Tela de bloqueio e cadastro da digital. É um Modal: cobre as telas e o que elas abriram sem
+// desmontá-las, e o botão voltar não chega à tela de baixo.
 
 async function phoneMode() {
   try {
@@ -27,8 +25,8 @@ async function phoneMode() {
   }
 }
 
-// Mode of the phone, checked again whenever the app comes back to the
-// front (the user may have registered a fingerprint in the settings).
+// Conferido de novo sempre que o app volta para a frente (o usuário pode ter cadastrado uma digital
+// nas configurações).
 function usePhoneMode() {
   const [mode, setMode] = useState(null);
   const refresh = useCallback(() => phoneMode().then(setMode), []);
@@ -64,8 +62,6 @@ function Frame({ title, children }) {
 
 function LogoutLink() {
   const { logout } = useAuth();
-  // Same as leaving from the home screen: this phone stops receiving the
-  // notifications of who logs out.
   async function signOut() {
     await unregisterDevice();
     logout();
@@ -77,7 +73,6 @@ function LogoutLink() {
   );
 }
 
-// After the first password login of this user on this phone.
 function Enroll() {
   const { user, enrollFingerprint } = useAuth();
   const [mode, refresh] = usePhoneMode();
@@ -165,8 +160,6 @@ function Unlock() {
     }
   }, [unlockWithFingerprint]);
 
-  // Asks for the fingerprint as soon as the app is in front: at once when
-  // it already is, otherwise when the user comes back to it.
   useEffect(() => {
     if ((mode !== 'biometric' && mode !== 'device') || usePassword) return undefined;
     if (AppState.currentState === 'active') fingerprint();

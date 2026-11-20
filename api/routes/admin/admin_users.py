@@ -16,7 +16,12 @@ from constants import (
     ALL_OVERRIDE_KEYS,
     ALL_PAGE_KEYS,
 )
-from middleware.auth_middleware import require_admin_or_page_permission, require_auth, require_role
+from middleware.auth_middleware import (
+    require_admin_or_page_permission,
+    require_auth,
+    require_role,
+    require_step_up,
+)
 from middleware.db import with_db
 from routes.admin import VALID_ROLES, admin_bp
 from schemas.inventory_adjustments import DirectAdjustmentRequest, ReviewAdjustmentsRequest
@@ -27,7 +32,7 @@ from schemas.users import (
     UpdateUserRequest,
     UserPhotoRequest,
 )
-from services import user_photo
+from services import step_up, user_photo
 from services.audit_service import write_audit_log
 from services.events_service import emit_event, get_user_external_id, resolve_source_external_id
 from services.auth_service import validate_password
@@ -81,7 +86,6 @@ def list_users():
 
 
 def _email_taken(email, exclude_user_id=None):
-    """SEA: True when another user already has this e-mail."""
     row = g.db.execute(
         text("SELECT 1 FROM users WHERE LOWER(email) = :e AND user_id <> COALESCE(:uid, -1)"),
         {"e": email.lower(), "uid": exclude_user_id},
@@ -242,9 +246,13 @@ def update_user(user_id, validated):
 @admin_bp.route("/users/<int:user_id>", methods=["DELETE"])
 @require_auth
 @require_admin_or_page_permission("users")
+@require_step_up("exclusao-usuario")
 @with_db
 def delete_user(user_id):
-    existing = g.db.execute(text("SELECT user_id FROM users WHERE user_id = :uid"), {"uid": user_id}).fetchone()
+    """Excluir exige a confirmação no celular de quem exclui, a cada exclusão."""
+    existing = g.db.execute(
+        text("SELECT user_id, username, full_name FROM users WHERE user_id = :uid"), {"uid": user_id}
+    ).fetchone()
     if not existing:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
@@ -269,11 +277,14 @@ def delete_user(user_id):
             return jsonify({"error": "Não é possível excluir o último administrador ativo"}), 400
 
     g.db.execute(text("DELETE FROM users WHERE user_id = :uid"), {"uid": user_id})
+    write_audit_log(g.db, "USER_DELETED", "USER", user_id, g.current_user["username"], None,
+                    {"username": existing.username, "nome": existing.full_name})
+    step_up.revoke(g.db, g.current_user.get("jti"), "exclusao-usuario")
     g.db.commit()
     return jsonify({"message": "Usuário excluído"})
 
 
-# ── SEA: phones that confirm the user's logins (mig 092) ─────────────────────
+# ── Celulares que confirmam os logins do usuário ──
 
 
 @admin_bp.route("/users/<int:user_id>/aparelhos", methods=["GET"])
@@ -288,7 +299,7 @@ def list_user_devices(user_id):
         ),
         {"u": user_id},
     ).fetchall()
-    # The push token is a credential of the phone: only its end is shown.
+    # O token de push é uma credencial do celular: só o final aparece.
     return jsonify({"devices": [
         {"device": r.device_name or "Celular", "ending": r.token[-6:].strip("]"),
          "secure_lock": bool(r.secure_lock), "signed_in": bool(r.signed_in),
@@ -302,8 +313,9 @@ def list_user_devices(user_id):
 @require_admin_or_page_permission("users")
 @with_db
 def remove_user_devices(user_id):
-    """Phone lost or replaced: the user's phones stop confirming logins
-    (and receiving notifications) until the user logs in on the app again."""
+    """Celular perdido ou trocado: os celulares do usuário param de confirmar logins até ele entrar
+    de novo no app.
+    """
     removed = g.db.execute(
         text("DELETE FROM sea_push_tokens WHERE user_id = :u RETURNING token"), {"u": user_id}
     ).fetchall()
@@ -313,9 +325,9 @@ def remove_user_devices(user_id):
     return jsonify({"removed": len(removed)})
 
 
-# ── SEA: user photo (mig 091) ────────────────────────────────────────────────
-# Only an administrator sets or removes it. Seeing it: the user, an
-# administrator or whoever manages users.
+# ── Foto do usuário ──
+# Só o administrador coloca ou tira. Veem: o próprio usuário, o administrador e quem gerencia
+# usuários.
 
 
 @admin_bp.route("/users/<int:user_id>/foto", methods=["PUT"])
@@ -362,7 +374,7 @@ def get_user_photo(user_id):
     if row is None:
         return jsonify({"error": "Sem foto"}), 404
     response = Response(bytes(row.photo), mimetype=row.photo_mime)
-    # The clients ask with ?v=<photo_version>: a new photo is a new URL.
+    # Os clientes pedem com ?v=<photo_version>: foto nova, URL nova.
     response.headers["Cache-Control"] = "private, max-age=86400"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -449,7 +461,7 @@ def replace_user_permissions(user_id, validated):
             "unknown": unknown,
         }), 400
 
-    # mig 098: the terminal account does nothing but open the terminal.
+    # O usuário do terminal só abre o terminal.
     if "terminal-retirada" in requested and len(requested) > 1:
         return jsonify({
             "error": "O usuário do terminal de retirada só pode ter a permissão "
@@ -626,7 +638,6 @@ def list_audit_log():
             resolved[k] = v
         return resolved
 
-    # SEA: the order(s) of each row (PM12 - number), read from the OT.
     from services.sea_service import log_orders
 
     orders = log_orders(g.db, rows)

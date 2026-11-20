@@ -1,7 +1,4 @@
-/**
- * SEA (mig 095): Recebimento, Armazenagem and Retirada in the web panel
- * open only after the confirmation on the user's phone.
- */
+/* Recebimento, Armazenagem e Retirada no painel só abrem depois da confirmação no celular. */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';

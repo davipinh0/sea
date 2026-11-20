@@ -1,31 +1,14 @@
-"""SEA business rules on top of the SEA core.
-
-Two concerns live here, both scoped to SEA Ordens de Transferência (OT):
-a purchase_orders row with order_type PM11/PM12 whose received stock
-carries the OT number as inventory.lot_number.
-
-1. Storage (put-away): shelves are free. Any material of any order goes
-   to any storage address, in any quantity, and an order may be spread
-   over several addresses. Only a receiving area or a switched-off
-   address is refused as a destination.
-
-2. Withdrawals (retiradas) at the touchscreen terminal:
-   REQUESTED -> PICKING -> READY -> DELIVERED, or CANCELLED.
-   Requesting reserves stock in inventory.quantity_allocated; delivery
-   (confirmed by the employee who requested it, identified by their
-   login) removes it from quantity_on_hand. Nothing is ever deleted:
-   cancelled and undelivered requests stay in ``withdrawals``. Every transition runs under row locks and checks
-   the expected current status, so a double click, a retry or two
-   terminals racing can never decrement stock twice or below zero.
-
-An order's stock is found by its lot (the OT number, unique across the
-system) wherever it is: an order received in one location (Expedição)
-may be stored in another (SP12, SP13). The order keeps the
-location where it was received; each stock row and each withdrawal
-carries the location where the material physically is.
-
-Functions raise SeaError; routes translate it to an HTTP response.
-Callers own the transaction (g.db.commit()).
+"""Regras de negócio do SEA para as OTs (purchase_orders com order_type PM11/PM12). O estoque
+recebido de uma OT leva o número dela como lote.
+1. Armazenagem: prateleiras livres. Qualquer material vai para qualquer endereço de armazenagem;
+só área de recebimento e endereço desligado são recusados.
+2. Retirada: pedido reserva estoque (quantity_allocated); a entrega, confirmada por quem pediu,
+dá a baixa (quantity_on_hand). Nada é apagado. Toda transição trava as linhas e confere o status
+atual, então clique duplo, repetição ou dois terminais ao mesmo tempo nunca baixam duas vezes nem
+deixam o estoque negativo.
+O estoque de uma ordem é achado pelo lote em qualquer local: a ordem recebida na Expedição pode
+estar guardada no SP12 ou no SP13.
+As funções lançam SeaError; quem chama faz o commit.
 """
 
 import uuid
@@ -40,8 +23,7 @@ from services.inventory_service import move_inventory
 OT_TYPES = ("PM11", "PM12")
 STAGING_TYPES = (BIN_STAGING, BIN_PICKABLE_STAGING)
 
-# mig 096: REQUESTED waits for the evaluator; APPROVED waits for someone
-# with "Fazer retirada" to accept it (PICKING); REJECTED = denied.
+# REQUESTED espera o avaliador; APPROVED espera alguém aceitar (PICKING); REJECTED = negada.
 W_REQUESTED = "REQUESTED"
 W_APPROVED = "APPROVED"
 W_PICKING = "PICKING"
@@ -64,18 +46,16 @@ UOM_KG = "KG"
 
 
 def pack_weight(uom, pack_weight_kg):
-    """Weight of one box when the material is withdrawn by box: only
-    materials whose unit is KG and that have a box weight. None = the
-    material is withdrawn unit by unit (1 = 1 PC, 1 PAR, 1 KG ...)."""
+    """Peso de uma caixa quando o material sai por caixa (unidade KG com peso definido). None = sai
+    de unidade em unidade.
+    """
     if pack_weight_kg and (uom or "").strip().upper() == UOM_KG:
         return int(pack_weight_kg)
     return None
 
 
-# The order (PM11 / PM12) is how the operation names a material; the OT is
-# the document it arrived with. A stock row carries the OT as its lot, so
-# its order is the one of that material on that OT. These fragments add
-# ``order_number`` / ``order_type`` to any query over ``inventory inv``.
+# A operação fala em ordem (PM11/PM12); a OT é o documento com que o material chegou. O estoque leva
+# a OT como lote, então a ordem dele é a do material naquela OT.
 ORDER_OF_STOCK_JOIN = """
     LEFT JOIN purchase_orders op
       ON op.po_number = inv.lot_number AND op.order_type IS NOT NULL
@@ -89,7 +69,7 @@ ORDER_OF_STOCK_COLUMNS = """
 
 
 class SeaError(Exception):
-    """Business-rule violation. ``status`` is the HTTP status to return."""
+    """Violação de regra de negócio. ``status`` é o código HTTP da resposta."""
 
     def __init__(self, message, status=409, **context):
         super().__init__(message)
@@ -97,10 +77,9 @@ class SeaError(Exception):
         self.context = context
 
 
-# ---------------------------------------------------------------- OTs
+# --- OTs
 
 def find_ot(db, code, scope_clause="", scope_params=None):
-    """Return the OT row matching an OT number or barcode, or None."""
     return db.execute(
         text(
             f"""
@@ -122,8 +101,7 @@ def find_ot(db, code, scope_clause="", scope_params=None):
 
 
 def ot_for_lot(db, lot_number):
-    """Return the OT whose number is ``lot_number``, or None. The lot
-    identifies the order in any location (po_number is unique)."""
+    """O lote identifica a ordem em qualquer local (po_number é único)."""
     if not lot_number:
         return None
     return db.execute(
@@ -139,8 +117,6 @@ def ot_for_lot(db, lot_number):
 
 
 def ot_stock(db, ot):
-    """Stock rows of an OT (lot = OT number) in every location, with
-    availability per address."""
     rows = db.execute(
         text(
             """
@@ -177,13 +153,9 @@ def ot_stock(db, ot):
     ]
 
 
-# ------------------------------------------- Label receiving (etiqueta)
-#
-# The label that travels with a material is registered onto the existing
-# SEA tables: the OT is a purchase_orders row, each material of the OT
-# is a purchase_order_lines row pointing at the material master (items).
-# The same function serves data typed by the operator, read from a label
-# and, later, returned by services.ot_source.
+# --- Recebimento pela etiqueta
+# A OT vira um purchase_orders e cada material um purchase_order_lines. A mesma função atende dados
+# digitados, lidos da etiqueta ou vindos da fonte de OTs.
 
 ACTION_OT_REGISTERED = "OT_REGISTERED"
 ACTION_OT_MATERIAL_ADDED = "OT_MATERIAL_ADDED"
@@ -193,8 +165,7 @@ ACTION_OT_MATERIAL_REMOVED = "OT_MATERIAL_REMOVED"
 
 PO_LOCKED_STATUSES = ("CLOSED", "ARCHIVED")
 
-# Request field -> purchase_orders column. Column names only ever come
-# from this constant, never from the request.
+# Os nomes de coluna só vêm desta constante, nunca da requisição.
 OT_HEADER_COLUMNS = {
     "origin_company": "vendor_name",
     "label_date": "label_date",
@@ -242,7 +213,7 @@ def _same(a, b):
 
 
 def _lock_ot_row(db, po_id, scope_clause="", scope_params=None):
-    """Lock an OT for a correction; refuses plain POs and closed OTs."""
+    """Recusa pedidos comuns e OTs fechadas."""
     columns = ", ".join(sorted(set(OT_HEADER_COLUMNS.values())))
     po = db.execute(
         text(
@@ -263,8 +234,7 @@ def _lock_ot_row(db, po_id, scope_clause="", scope_params=None):
 
 
 def material_conflict(db, po_id, material_code, lot_number):
-    """How a label's material relates to what the OT already holds:
-    'NOVO', 'DUPLICADO' (same material and lot) or 'LOTE_DIFERENTE'."""
+    """'NOVO', 'DUPLICADO' (mesmo material e lote) ou 'LOTE_DIFERENTE'."""
     line = db.execute(
         text(
             """
@@ -284,20 +254,11 @@ def material_conflict(db, po_id, material_code, lot_number):
 
 def register_ot_materials(db, *, warehouse_id, header, materials, username,
                           source="ETIQUETA", unrecognized=()):
-    """Register a label: create the OT when it is new, then add each
-    material as its own record linked to the OT.
-
-    The receiver is never taken from the caller: it is the user who
-    registers the delivery (``username``), recorded when the OT is created.
-
-    Existing data is never written over. Header fields still empty on an
-    existing OT are filled in; a value that disagrees with what is
-    registered is reported back (and noted on the OT for review) instead
-    of replacing it. A material already on the OT is refused before
-    anything is written, so one label can never be registered twice.
-
-    ``header`` / ``materials`` are dicts shaped like schemas.sea.OtHeader /
-    OtMaterial. Returns {po_id, ot, created, materials_added, divergences}.
+    """Registra uma etiqueta: cria a OT se for nova e adiciona cada material.
+    O recebedor nunca vem de quem chama: é o usuário que registra a entrega.
+    Nada é sobrescrito. Campos vazios do cabeçalho são preenchidos; um valor que diverge do
+    cadastrado é devolvido e anotado na OT para revisão. Material que já está na OT é recusado
+    antes de gravar qualquer coisa, então a mesma etiqueta nunca entra duas vezes.
     """
     code = header["ot_code"]
     header = {**header, "receiver_name": None}
@@ -305,8 +266,8 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
     if len(set(codes)) != len(codes):
         raise SeaError("O mesmo material aparece mais de uma vez no cadastro.", status=400)
 
-    # Two operators reading labels of the same new OT at once: the second
-    # waits here and then finds the OT created by the first.
+    # Dois operadores lendo etiquetas da mesma OT nova: o segundo espera aqui e encontra a OT criada
+    # pelo primeiro.
     db.execute(
         text("SELECT pg_advisory_xact_lock(:ns, hashtext(:code))"),
         {"ns": _LOCK_NS_OT, "code": code},
@@ -407,7 +368,6 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
             text("SELECT item_id, item_name, uom, pack_weight_kg FROM items WHERE sku = :sku"),
             {"sku": sku},
         ).fetchone()
-        # The box weight completes the material; it only applies to KG.
         pack = pack_weight(m.get("uom"), m.get("pack_weight_kg"))
         if item is None:
             if not m.get("description"):
@@ -436,8 +396,7 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
             if item.uom is None and m.get("uom"):
                 db.execute(text("UPDATE items SET uom = :u WHERE item_id = :id"),
                            {"u": m["uom"], "id": item_id})
-            # Like the description: an empty box weight is filled in, a
-            # different one is kept and reported for review.
+            # Peso da caixa vazio é preenchido; um diferente é mantido e informado para revisão.
             if pack and item.pack_weight_kg is None:
                 db.execute(text("UPDATE items SET pack_weight_kg = :p WHERE item_id = :id"),
                            {"p": pack, "id": item_id})
@@ -459,8 +418,6 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
                         :lot, :expiry, :uom, :so_number, :so_type)
                 """
             ),
-            # The order of the material; the one on the label / header
-            # when the material does not bring its own.
             {"po": po_id, "item": item_id, "qty": m["quantity"], "lot": m.get("lot_number"),
              "expiry": m.get("expiry_date"), "uom": m.get("uom"),
              "so_number": m.get("service_order_number") or header.get("service_order_number"),
@@ -469,7 +426,7 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
         added.append({"sku": sku, "quantity": m["quantity"], "lot_number": m.get("lot_number")})
 
     if not created:
-        # A fully received OT that gains a material has something to receive again.
+        # OT já recebida que ganha um material volta a ter o que receber.
         db.execute(
             text("UPDATE purchase_orders SET status = 'PARTIAL' "
                  "WHERE po_id = :id AND status = 'RECEIVED'"),
@@ -505,8 +462,7 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
 
 
 def update_ot_data(db, po_id, changes, username, scope=("", None)):
-    """Correct header fields of an OT. ``changes`` holds only the fields
-    the operator sent; None clears a field back to pending."""
+    """``changes`` traz só os campos enviados; None volta o campo para pendente."""
     po = _lock_ot_row(db, po_id, *scope)
     if "service_order_type" in changes and changes["service_order_type"] is None:
         raise SeaError("O tipo da ordem de serviço (PM11 ou PM12) é obrigatório.", status=400)
@@ -552,8 +508,7 @@ def _lock_ot_line(db, po_id, po_line_id):
 
 
 def update_ot_material(db, po_id, po_line_id, changes, username, scope=("", None)):
-    """Correct one material of an OT. The quantity can only change while
-    nothing of it has been received."""
+    """A quantidade só muda enquanto nada do material foi recebido."""
     po = _lock_ot_row(db, po_id, *scope)
     line = _lock_ot_line(db, po_id, po_line_id)
     updates, diff = {}, {}
@@ -587,7 +542,6 @@ def update_ot_material(db, po_id, po_line_id, changes, username, scope=("", None
 
 
 def remove_ot_material(db, po_id, po_line_id, username, scope=("", None)):
-    """Remove a material registered by mistake, before any receipt."""
     po = _lock_ot_row(db, po_id, *scope)
     line = _lock_ot_line(db, po_id, po_line_id)
     if line.quantity_received:
@@ -601,7 +555,6 @@ def remove_ot_material(db, po_id, po_line_id, username, scope=("", None)):
     if remaining == 0:
         raise SeaError("A OT precisa de ao menos um material.", status=409)
     db.execute(text("DELETE FROM purchase_order_lines WHERE po_line_id = :l"), {"l": po_line_id})
-    # Removing the only pending material leaves the OT fully received.
     db.execute(
         text(
             """
@@ -618,24 +571,21 @@ def remove_ot_material(db, po_id, po_line_id, username, scope=("", None)):
                              "quantity": line.quantity_ordered, "lot_number": line.lot_number})
 
 
-# ------------------------------------------------------------ Deletion
-#
-# Removing an order or a material takes everything that belongs to it
-# (stock, receipts, movements, withdrawals). The audit log is append-only
-# and keeps the record of what was removed and by whom.
+# --- Exclusão
+# Apagar uma ordem ou material leva junto o que pertence a ele. O log de auditoria não pode ser
+# apagado e guarda o que foi removido e por quem.
 
 ACTION_OT_DELETED = "OT_DELETED"
 ACTION_MATERIAL_DELETED = "MATERIAL_DELETED"
 
-# SEA tables the SEA does not use. A material referenced there is
-# left alone instead of having unrelated records removed.
+# Tabelas que o SEA não usa: um material citado nelas fica onde está, para não apagar registros que
+# não são dele.
 _FOREIGN_ITEM_TABLES = (
     "sales_order_lines", "pick_tasks", "item_fulfillment_lines", "transfer_order_lines",
 )
 
 
 def _delete_order_rows(db, po_id, po_number):
-    """Delete an order and what hangs on it. Returns the units of stock removed."""
     params = {"po": po_id, "lot": po_number}
     db.execute(
         text(
@@ -667,8 +617,7 @@ def _delete_order_rows(db, po_id, po_number):
 
 
 def delete_ot(db, po_id, username):
-    """Delete an order with its materials' records, stock, receipts,
-    movements and withdrawals. The materials stay in the master."""
+    """Os materiais continuam no cadastro."""
     po = db.execute(
         text(
             """
@@ -691,15 +640,13 @@ def delete_ot(db, po_id, username):
 
 
 def delete_material(db, item_id, username):
-    """Delete a material everywhere: master record, the orders it is in,
-    its stock, receipts, movements and withdrawals. An order left with no
-    material is deleted too."""
+    """Uma ordem que fica sem nenhum material também é apagada."""
     item = db.execute(
         text("SELECT item_id, sku FROM items WHERE item_id = :id FOR UPDATE"), {"id": item_id}
     ).fetchone()
     if item is None:
         raise SeaError("Material não encontrado", status=404)
-    for table in _FOREIGN_ITEM_TABLES:  # names come from the constant above
+    for table in _FOREIGN_ITEM_TABLES:
         if db.execute(text(f"SELECT 1 FROM {table} WHERE item_id = :id LIMIT 1"),
                       {"id": item_id}).fetchone():
             raise SeaError(
@@ -750,7 +697,6 @@ def delete_material(db, item_id, username):
             _delete_order_rows(db, o.po_id, o.po_number)
             removed_orders.append(o.po_number)
         else:
-            # The material that was still pending is gone: the order may be complete.
             db.execute(
                 text(
                     """
@@ -775,8 +721,6 @@ def delete_material(db, item_id, username):
 
 
 def ot_movements(db, ot):
-    """Every movement of an OT's materials, oldest first: receipt,
-    storage / transfer between addresses, and withdrawal."""
     params = {"po": ot.po_id, "lot": ot.po_number}
     rows = db.execute(
         text(
@@ -821,9 +765,6 @@ def ot_movements(db, ot):
 
 
 def ot_materials(db, ot):
-    """One record per material of the OT with its full trace: what was
-    registered (code, lot, quantity), what came in, where it is stored,
-    how much is still available and how much was withdrawn."""
     lines = db.execute(
         text(
             """
@@ -872,7 +813,7 @@ def ot_materials(db, ot):
     return result
 
 
-# ------------------------------------------------------- SP12 storage
+# --- Armazenagem
 
 def _bin(db, bin_id):
     return db.execute(
@@ -895,12 +836,8 @@ def _item(db, item_id):
 
 
 def storage_problems(db, *, item, target_bin, quantity):
-    """Why ``target_bin`` cannot receive the material, or [].
-
-    Shelves are free: any material, of any order, in any quantity. The
-    only refusals left are a receiving area (it is not storage) and an
-    address that was switched off. ``item`` and ``quantity`` stay in the
-    signature for the callers.
+    """Prateleiras livres: só área de recebimento e endereço desligado são recusados. ``item`` e
+    ``quantity`` continuam na assinatura por causa de quem chama.
     """
     problems = []
     if target_bin.bin_type in STAGING_TYPES:
@@ -917,20 +854,14 @@ def _staging_param():
     return bindparam("staging", expanding=True)
 
 
-# Advisory-lock namespace for put-away checks (two-int form).
 _LOCK_NS_BIN = 8202
 
 
 def check_putaway(db, *, item_id, to_bin_id, quantity, lot_number):
-    """Raise SeaError when a put-away of an OT lot breaks a storage rule.
-
-    No-op for stock that is not an SEA OT lot, so plain SEA put-aways
-    keep their original behaviour.
-    """
+    """Não faz nada para estoque que não é de uma OT do SEA."""
     if ot_for_lot(db, lot_number) is None:
         return
-    # Serialize concurrent put-aways into the same address (capacity,
-    # compatibility) until commit.
+    # Serializa armazenagens no mesmo endereço até o commit.
     db.execute(
         text("SELECT pg_advisory_xact_lock(:ns, :bin)"),
         {"ns": _LOCK_NS_BIN, "bin": int(to_bin_id)},
@@ -938,21 +869,15 @@ def check_putaway(db, *, item_id, to_bin_id, quantity, lot_number):
     item = _item(db, item_id)
     target = _bin(db, to_bin_id)
     if item is None or target is None:
-        return  # the caller already returns 404 for these
+        return
     problems = storage_problems(db, item=item, target_bin=target, quantity=quantity)
     if problems:
         raise SeaError(problems[0], status=409, problems=problems)
 
 
 def suggest_storage(db, *, inventory_id, warehouse_ids=None):
-    """Suggest a storage address for a staging inventory row.
-
-    Addresses of every location are candidates (``warehouse_ids`` limits
-    them to the locations the user may use; None = all). Preference: an
-    address already holding this OT (only a suggestion: the operator may
-    choose any other); then the material's own location; otherwise the first active storage address,
-    in put-away sequence, that satisfies size class, capacity and
-    compatibility.
+    """Preferência: um endereço que já tem esta OT (é só sugestão), depois o local do próprio
+    material, senão o primeiro endereço ativo na sequência de armazenagem.
     """
     inv = db.execute(
         text(
@@ -1009,12 +934,10 @@ def suggest_storage(db, *, inventory_id, warehouse_ids=None):
             "quantity": quantity, "rejected": rejected}
 
 
-# -------------------------------------------------------- Withdrawals
+# --- Retiradas
 
 def order_label(db, ot, item_ids=None):
-    """Text that names what a message is about: the order(s) of the
-    materials involved (all of the OT when ``item_ids`` is None), with the
-    OT they arrived with. E.g. "Ordem PM12 2002349234 (OT 1003307220)"."""
+    """Ex.: "Ordem PM12 2002349234 (OT 1003307220)"."""
     rows = db.execute(
         text(
             """
@@ -1037,7 +960,6 @@ def order_label(db, ot, item_ids=None):
 
 
 def find_employee(db, user_id):
-    """Active user who is confirming a withdrawal, or None."""
     return db.execute(
         text(
             """
@@ -1050,14 +972,10 @@ def find_employee(db, user_id):
 
 
 def amount_label(quantity, uom=None):
-    """A quantity as the notifications say it: "18 KG", "3 PC" or, when
-    the unit is not known, "3 unidade(s)"."""
     return f"{quantity} {uom}" if uom else f"{quantity} unidade(s)"
 
 
 def notify_receipt(db, po, receipt_ids, username):
-    """Announce the materials just received for an order (no-op for
-    purchase orders that are not SEA orders)."""
     if not po.order_type or not receipt_ids:
         return
     row = db.execute(
@@ -1079,8 +997,8 @@ def notify_receipt(db, po, receipt_ids, username):
     notifications.create(
         db, kind=notifications.KIND_RECEIPT, warehouse_id=po.warehouse_id,
         title=f"Recebimento de materiais: {order_label(db, po, row.item_ids)}",
-        # The unit is named when every material received shares it
-        # ("18 KG de 1 material(is)"); mixed units stay as "unidade(s)".
+        # A unidade só aparece quando todo o material recebido tem a mesma; unidades misturadas
+        # ficam "unidade(s)".
         message=(f"{amount_label(int(row.units), row.uom if row.units_of_measure == 1 else None)} "
                  f"de {row.materials} material(is) recebida(s) em {row.bins}. "
                  "Aguardando armazenagem."),
@@ -1089,8 +1007,7 @@ def notify_receipt(db, po, receipt_ids, username):
 
 
 def notify_storage_done(db, *, warehouse_id, lot_number, username):
-    """Announce that an order has no unit left in the receiving area.
-    Called after each put-away; no-op while something is still waiting."""
+    """Chamado depois de cada armazenagem; não faz nada enquanto ainda há material esperando."""
     ot = ot_for_lot(db, lot_number)
     if ot is None:
         return
@@ -1106,7 +1023,6 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
     ).scalar()
     if waiting:
         return
-    # Every address holding the order (it may be spread over several).
     places = db.execute(
         text(
             """
@@ -1127,17 +1043,12 @@ def notify_storage_done(db, *, warehouse_id, lot_number, username):
     )
 
 
-# ------------------------------------------------- Stock transfers
-#
-# Moving stored material between addresses, in the same location (A1 to
-# B2) or to another one (SP12 to the SP13).
+# --- Transferência entre endereços
 
 ACTION_STOCK_TRANSFERRED = "STOCK_TRANSFERRED"
 
 
 def item_stock(db, item_id, warehouse_ids=None):
-    """Where a material is, address by address, in the locations the user
-    may use (``warehouse_ids``; None = all)."""
     rows = db.execute(
         text(
             f"""
@@ -1172,13 +1083,7 @@ def item_stock(db, item_id, warehouse_ids=None):
 
 def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=None,
                    warehouse_ids=None):
-    """Move ``quantity`` of a stored stock row to another storage address.
-
-    Only what is not reserved for a withdrawal moves. The destination
-    follows the storage rules (size class, capacity, compatibility) and
-    both locations must be among the user's (``warehouse_ids``; None =
-    all). Returns a summary of the move.
-    """
+    """Só o que não está reservado para retirada se move. Os dois locais precisam ser do usuário."""
     src = db.execute(
         text(
             """
@@ -1238,8 +1143,7 @@ def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=No
             status=400, pack_weight_kg=pack,
         )
 
-    # Same rules as a put-away (also refuses receiving areas and inactive
-    # addresses), with the same lock on the destination.
+    # Mesmas regras e mesma trava da armazenagem.
     db.execute(
         text("SELECT pg_advisory_xact_lock(:ns, :bin)"),
         {"ns": _LOCK_NS_BIN, "bin": int(dest.bin_id)},
@@ -1285,8 +1189,6 @@ def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=No
 
 
 def pending_storage(db, warehouse_ids=None):
-    """What waits in the receiving areas, with the order of each material,
-    in the locations the user may use (``warehouse_ids``; None = all)."""
     rows = db.execute(
         text(
             f"""
@@ -1320,12 +1222,8 @@ def pending_storage(db, warehouse_ids=None):
 
 
 def order_rows(db, warehouse_id, *, order_type=None, status=None, q=None):
-    """The orders (PM11 / PM12) of a location, one row per order and OT:
-    what was expected and received, what waits for storage, what is
-    stored, what was withdrawn, where it is and when it came in.
-
-    An order belongs to a location when its OT was received there or part
-    of its stock is there.
+    """Uma ordem pertence a um local quando a OT dela foi recebida lá ou parte do estoque dela está
+    lá.
     """
     lines = db.execute(
         text(
@@ -1413,9 +1311,8 @@ def order_rows(db, warehouse_id, *, order_type=None, status=None, q=None):
             row["qty_stored"] += s.quantity_on_hand
             row["_bins"].add(f"{s.warehouse_code} · {s.bin_code}")
 
-    # mig 098: the OT as a whole. An order that arrived in full may belong
-    # to an OT whose other materials did not arrive yet: that OT is in
-    # partial receipt, and the order says so.
+    # A ordem pode ter chegado inteira e a OT dela ainda esperar outros materiais: a OT fica em
+    # recebimento parcial.
     ot_lines = {}
     for ln in lines:
         ot_lines.setdefault(ln.po_id, []).append(ln)
@@ -1456,16 +1353,8 @@ def order_rows(db, warehouse_id, *, order_type=None, status=None, q=None):
 
 
 def order_stock(db, order_number, warehouse_ids=None):
-    """Materials of a PM order that can be withdrawn now: what is stored
-    (not in a receiving area) with unreserved quantity. ``warehouse_ids``
-    limits the locations; the withdrawal terminal passes none, because the
-    material is offered wherever it is stored.
-
-    The order of a material is the one registered on it; an OT registered
-    without an order number answers by its own number. Returns None when
-    no material belongs to ``order_number``; otherwise
-    {"order_number", "order_type", "stock": [...]} where each stock row
-    carries the OT (``ot``) it was received with.
+    """O que está guardado e livre. O terminal não limita locais: o material é oferecido onde
+    estiver. Uma OT cadastrada sem número de ordem responde pelo próprio número.
     """
     rows = db.execute(
         text(
@@ -1508,20 +1397,15 @@ def order_stock(db, order_number, warehouse_ids=None):
 
 
 def order_display(order_type, number):
-    """How the operation names an order: "PM12 - 2002349234"."""
     if not number:
         return None
     return f"{order_type} - {number}" if order_type else str(number)
 
 
 def log_orders(db, rows):
-    """The orders (PM11 / PM12) each history row is about, by log_id.
-
-    The log keeps the OT and the material; the operation speaks of the
-    order. A withdrawal answers with the orders of its materials; the
-    other rows with the order of the material on the OT (all the orders of
-    the OT when the row names no material). ``rows`` need log_id,
-    entity_type, entity_id and details.
+    """O log guarda a OT e o material, mas a operação fala em ordem. Uma retirada responde com as
+    ordens dos seus materiais; as demais linhas, com a ordem do material na OT (todas as ordens
+    da OT quando a linha não cita material).
     """
     result = {}
     withdrawal_ids = {r.entity_id for r in rows if r.entity_type == "WITHDRAWAL" and r.entity_id}
@@ -1605,12 +1489,7 @@ def _unit_suffix(uom):
 
 
 def create_withdrawal(db, *, ot, lines, username, note=None, requester_email=None):
-    """Reserve stock of an OT and open a withdrawal request.
-
-    ``lines``: [{"inventory_id": int, "quantity": int}]. Each inventory
-    row must belong to the OT (lot = OT number), sit in a storage
-    address and have enough unreserved quantity.
-    """
+    """Cada linha precisa ser da OT, estar num endereço de armazenagem e ter saldo livre."""
     if ot.status == "CLOSED":
         raise SeaError(f"A OT {ot.po_number} está fechada.", status=400)
     seen = set()
@@ -1620,7 +1499,7 @@ def create_withdrawal(db, *, ot, lines, username, note=None, requester_email=Non
         seen.add(line["inventory_id"])
 
     locked = {}
-    # Lock in a stable order so two concurrent requests cannot deadlock.
+    # Travas numa ordem fixa, para dois pedidos simultâneos não se bloquearem.
     for inventory_id in sorted(seen):
         row = db.execute(
             text(
@@ -1648,8 +1527,8 @@ def create_withdrawal(db, *, ot, lines, username, note=None, requester_email=Non
             )
         locked[inventory_id] = row
 
-    # The withdrawal belongs to the location where the material is stored
-    # (its stock keeper separates it), not where the order was received.
+    # A retirada pertence ao local onde o material está (quem separa), não onde a ordem foi
+    # recebida.
     locations = {row.warehouse_id for row in locked.values()}
     if len(locations) != 1:
         raise SeaError("Os materiais de uma retirada devem estar no mesmo local.", status=400)
@@ -1779,9 +1658,7 @@ def _require_status(w, allowed, action):
 
 
 def evaluate(db, withdrawal_id, username, approve, note=None, scope=("", None)):
-    """The evaluator approves (APPROVED: the users with "Fazer retirada"
-    are told) or denies (REJECTED, with the reason; the reservation is
-    undone) a request (mig 096)."""
+    """Aprovar avisa quem faz retirada; negar exige motivo e desfaz a reserva."""
     note = (note or "").strip() or None
     if not approve and not note:
         raise SeaError("Informe o motivo para negar a retirada.", status=400)
@@ -1816,8 +1693,6 @@ def evaluate(db, withdrawal_id, username, approve, note=None, scope=("", None)):
 
 
 def start_picking(db, withdrawal_id, username, scope=("", None)):
-    """Someone with "Fazer retirada" accepts an approved request: their
-    name and photo show at the terminal while they prepare it."""
     w = _lock_withdrawal(db, withdrawal_id, *scope)
     _require_status(w, (W_APPROVED,), "aceitar a retirada")
     db.execute(
@@ -1834,7 +1709,6 @@ def start_picking(db, withdrawal_id, username, scope=("", None)):
 
 
 def _require_picker(w, username, action):
-    """mig 098: once accepted, only who accepted carries the withdrawal on."""
     if w.picked_by and w.picked_by != username:
         raise SeaError(
             f"Não é possível {action}: a retirada nº {w.withdrawal_id} foi aceita por "
@@ -1872,14 +1746,9 @@ def _withdrawal_lines(db, withdrawal_id):
 
 
 def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
-    """Confirm the handover and remove the stock.
-
-    The employee is the logged-in user (corporate login at the terminal)
-    and must be the one who requested the withdrawal.
-
-    Runs entirely under row locks: the withdrawal row first (so a second
-    confirmation waits and then sees DELIVERED), then each inventory row
-    in a stable order.
+    """Quem confirma tem de ser quem pediu.
+    Tudo roda sob trava: primeiro a retirada (uma segunda confirmação espera e encontra
+    DELIVERED), depois cada linha de estoque numa ordem fixa.
     """
     employee = find_employee(db, employee_user_id)
     if employee is None:
@@ -1907,8 +1776,8 @@ def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
         ).fetchone()
         short = inv is None or min(inv.quantity_on_hand, inv.quantity_allocated) < line.quantity
         if short:
-            # Stock changed under the reservation (e.g. an adjustment):
-            # refuse rather than drive on-hand negative.
+            # O estoque mudou debaixo da reserva (um ajuste, por exemplo): recusa em vez de deixar o
+            # saldo negativo.
             raise SeaError(
                 f"Saldo de {line.sku} em {line.bin_code} insuficiente para a baixa; "
                 f"verifique o estoque antes de entregar.",
@@ -1931,12 +1800,14 @@ def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
         text(
             """
             UPDATE withdrawals
-            SET status = :s, delivered_to_user_id = :emp,
+            SET status = :s, delivered_to_user_id = :emp, delivered_to_name = :name,
                 delivered_at = NOW(), confirmed_by = :u
             WHERE withdrawal_id = :id
             """
         ),
+        # O nome fica gravado: o registro continua certo mesmo se o usuário for excluído.
         {"s": W_DELIVERED, "emp": employee.user_id, "u": employee.username,
+         "name": w.requester_email or employee.full_name or employee.username,
          "id": withdrawal_id},
     )
     write_audit_log(
@@ -1946,7 +1817,6 @@ def deliver(db, withdrawal_id, employee_user_id, scope=("", None)):
             "ot": w.po_number,
             "employee_user_id": employee.user_id,
             "employee_name": employee.full_name,
-            # mig 098: who has no access to the SEA is known by the e-mail.
             "requester_email": w.requester_email,
             "identified_by": "email" if w.requester_email else "login",
             "lines": [{"sku": ln.sku, "bin_code": ln.bin_code, "quantity": ln.quantity}
@@ -1971,9 +1841,9 @@ def _release_reservation(db, withdrawal_id):
 
 
 def cancel(db, withdrawal_id, username, reason, scope=("", None), any_user=False):
-    """Cancel an open withdrawal. Once someone accepted it, only the
-    requester, who accepted it or an administrator (``any_user``) may; when
-    the requester cancels, who accepted it is told (mig 098)."""
+    """Depois do aceite, só quem pediu, quem aceitou ou um administrador (``any_user``) cancela. Se
+    quem pediu cancelar, quem aceitou é avisado.
+    """
     reason = (reason or "").strip()
     if not reason:
         raise SeaError("Informe o motivo do cancelamento.", status=400)

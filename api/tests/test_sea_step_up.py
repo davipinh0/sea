@@ -1,9 +1,6 @@
-"""SEA: processes of the web panel released by the phone (mig 095).
-
-In the web panel (cookie session), Recebimento, Armazenagem and Retirada
-only work after the registered phone confirms; the release lasts while
-the process is used (15 minutes without use end it). The app and the
-terminal (Bearer) are not gated by the API.
+"""Processos do painel liberados pelo celular: no painel (cookie), Recebimento, Armazenagem e
+Retirada só funcionam depois da confirmação; a liberação dura enquanto há uso (15 minutos parado
+encerram). App e terminal (Bearer) não passam por essa trava.
 """
 
 from services.step_up import WINDOW_MINUTES
@@ -30,7 +27,7 @@ def _setup(client, conn, username, *, phone=True):
 
 
 def _web_login(client, username):
-    """Panel session: cookies kept by the test client."""
+    """Sessão do painel: cookies guardados pelo cliente de teste."""
     resp = client.post("/api/auth/login", json={"username": username, "password": "Senha123"})
     assert resp.status_code == 200, resp.get_json()
     return {"X-CSRF-Token": client.get_cookie("sea_csrf").value}
@@ -112,9 +109,9 @@ class TestReleasingOnThePhone:
         assert self._decide(client, phone, challenge, True).status_code == 200
         resp = client.get(follow)
         assert resp.status_code == 200 and resp.get_json()["granted"] is True
-        # Released: the request reaches the route (which refuses the empty body).
+        # Liberado: a requisição chega à rota (que recusa o corpo vazio).
         assert not _gated(_putaway(client, csrf))
-        # Only this process.
+        # Só este processo.
         assert _gated(client.post("/api/receiving/receive", json={}, headers=csrf))
 
     def test_denied_on_the_phone_the_session_stays_blocked(self, client, _db_transaction):
@@ -130,7 +127,7 @@ class TestReleasingOnThePhone:
         phone = _phone(client, "sea.step.sessao")
         _, challenge = self._ask(client, "sea.step.sessao")
         self._decide(client, phone, challenge, True)
-        csrf = _web_login(client, "sea.step.sessao")  # a new panel session
+        csrf = _web_login(client, "sea.step.sessao")
         assert _gated(_putaway(client, csrf))
         assert client.get(f"/api/sea/confirmacao/armazenagem/{challenge}").status_code == 404
 

@@ -9,19 +9,13 @@ import { OtDetailModal } from '../components/sea.jsx';
 import { formatDateTime, formatQuantity, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Retirada: the queue of the requests made at the touchscreen terminal
-// (polled). mig 096: the evaluator ("Avaliar retirada") approves or
-// denies each request; someone with "Fazer retirada" accepts an approved
-// one, separates it and marks it ready; the employee who requested then
-// confirms the handover at the terminal.
-// Every request stays on record: the Histórico tab lists the delivered
-// and the cancelled ones, with who cancelled and why.
+// Fila das retiradas pedidas no terminal: o avaliador aprova ou nega, quem tem "Fazer retirada"
+// aceita, separa e marca como pronta, e quem pediu confirma no terminal.
 
 const OPEN = ['REQUESTED', 'APPROVED', 'PICKING', 'READY'];
 const CLOSED = ['DELIVERED', 'REJECTED', 'CANCELLED'];
 const POLL_MS = 10000;
 
-// Next step of someone with "Fazer retirada".
 const NEXT = {
   APPROVED: { action: 'separar', label: 'Aceitar e separar' },
   PICKING: { action: 'pronta', label: 'Separação concluída' },
@@ -33,12 +27,11 @@ const WAITING = {
 };
 
 export default function Retirada() {
-  // mig 098: once accepted, only who accepted carries the withdrawal on
-  // (the API refuses the others too).
+  // Depois do aceite, só quem aceitou dá andamento (a API também recusa os demais).
   const ownsNext = (w) => !w.picked_by || w.picked_by === user?.username;
   const canCancel = (w) => user?.role === 'ADMIN' || ownsNext(w) || w.requested_by === user?.username;
-  // The queue shows every location the user works in: a request must not
-  // be missed because another location is selected in the top bar.
+  // Mostra todos os locais do usuário, para nenhum pedido passar despercebido por causa do local
+  // selecionado.
   const [view, setView] = useState('open');
   const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
@@ -53,7 +46,6 @@ export default function Retirada() {
   const canEvaluate = canSee(user, 'retirada-avaliar');
   const canDo = canSee(user, 'retirada-fazer');
 
-  // Bumping ``tick`` re-runs the fetch (after actions and every POLL_MS).
   const [tick, setTick] = useState(0);
   const load = () => setTick((n) => n + 1);
 

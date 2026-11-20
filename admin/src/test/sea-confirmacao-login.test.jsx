@@ -1,6 +1,4 @@
-/**
- * SEA (mig 092): the web login waits for the confirmation on the phone.
- */
+/* Login no painel esperando a confirmação no celular. */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -141,7 +139,7 @@ describe('Terminal de retirada com confirmação no celular', () => {
     expect(session.token).toBe('tk');
     expect(waits[0]).toBe(120);
     expect(waits).toContain(110);
-    // The terminal never stores cookies, also while waiting.
+    // O terminal nunca guarda cookies, nem enquanto espera.
     expect(globalThis.fetch.mock.calls.every(([, opts]) => opts.credentials === 'omit')).toBe(true);
   }, 10000);
 });

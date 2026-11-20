@@ -1,6 +1,5 @@
-// Display labels (pt-BR) for status codes returned by the API.
-// Status values themselves stay in English: they are compared in code,
-// sent as query params and stored in the database. Translate only here.
+// Os códigos de status continuam em inglês (são comparados no código e gravados no banco); a
+// tradução fica só aqui.
 const STATUS_LABELS = {
   All: 'Todos',
   ACTIVE: 'Ativo',
@@ -40,7 +39,6 @@ const STATUS_LABELS = {
   'Ready to pick': 'Pronto para separar',
 };
 
-/** Return the pt-BR label for a status code, or the code itself when unknown. */
 export function statusLabel(status) {
   if (status === null || status === undefined) return status;
   return STATUS_LABELS[status] ?? status;

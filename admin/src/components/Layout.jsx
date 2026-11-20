@@ -8,10 +8,8 @@ import { reloadIfNewVersion } from '../utils/newVersion.js';
 
 const PERM_POPUP_COOLDOWN_MS = 5000;
 
-// Sections with tabs: their root opens the first tab the user may see.
 const SECTIONS = ['/estoque', '/expedicao'];
 
-// Names of the permissions as the operator sees them in Sistema > Usuários.
 const PAGE_LABELS = {
   inventory: 'Estoque > Visão Geral', items: 'Estoque > Materiais', bins: 'Estoque > Endereços',
   zones: 'Estoque > Endereços', 'audit-log': 'Estoque > Histórico',
@@ -25,8 +23,8 @@ const PAGE_LABELS = {
 
 export default function Layout() {
   const { user } = useAuth();
-  // A tab left open after an update keeps the old screens: on each
-  // navigation, reload once when the server has a newer build.
+  // Uma aba aberta antes de uma atualização mostraria telas antigas: recarrega uma vez quando o
+  // servidor tem versão nova.
   const { pathname } = useLocation();
   const navigate = useNavigate();
   useEffect(() => { reloadIfNewVersion(); }, [pathname]);
@@ -60,8 +58,6 @@ export default function Layout() {
   function dismissPermError() {
     dismissedAt.current = Date.now();
     setPermError(null);
-    // Leave the screen that was refused: back to the first option of the
-    // section the user is in (or to the Painel outside the sections).
     const section = SECTIONS.find((s) => pathname === s || pathname.startsWith(`${s}/`));
     navigate(section || '/', { replace: true });
   }

@@ -1,15 +1,9 @@
--- ============================================================
--- 084_sea_notificacoes.sql - SEA: e-mail dos usuários e notificações
--- ============================================================
---   * users.email: e-mail corporativo do usuário. Serve para (a) entrar
---     no terminal de retirada com o e-mail e (b) receber as notificações
---     por e-mail (somente administradores ativos com e-mail cadastrado).
---   * sea_notifications: uma linha por evento operacional (retirada
---     solicitada, recebimento, armazenagem concluída). O painel lê esta
---     tabela para avisar o operador; email_status registra o envio.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 084_sea_notificacoes.sql - e-mail dos usuários e notificações
+-- - users.email: e-mail corporativo, usado para entrar no terminal e para os administradores
+-- receberem as notificações.
+-- - sea_notifications: uma linha por evento (retirada, recebimento, armazenagem concluída);
+-- email_status registra o envio.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(254);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email
@@ -25,9 +19,8 @@ CREATE TABLE IF NOT EXISTS sea_notifications (
     ot              VARCHAR(50),
     created_by      VARCHAR(100),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- PENDENTE: aguardando envio. ENVIADO. SEM_DESTINATARIO: nenhum
-    -- administrador com e-mail. NAO_CONFIGURADO: servidor SMTP não
-    -- configurado. FALHA: o envio falhou (email_error guarda o motivo).
+    -- PENDENTE, ENVIADO, SEM_DESTINATARIO (nenhum administrador com e-mail), NAO_CONFIGURADO (sem
+    -- servidor SMTP) ou FALHA (motivo em email_error).
     email_status    VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
         CHECK (email_status IN ('PENDENTE', 'ENVIADO', 'SEM_DESTINATARIO',
                                 'NAO_CONFIGURADO', 'FALHA')),

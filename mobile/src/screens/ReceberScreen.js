@@ -11,21 +11,16 @@ import { apiError, formatQuantity, parseQuantity } from '../utils/sea';
 import { colors, fonts, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Recebimento de ordem. Same flow and same API as the panel:
-//   1. read or type the OT code;
-//   2. an OT not registered yet is looked up in the SAP base: its
-//      materials (order, quantity, unit) and requester are shown and the
-//      delivery is registered as the base holds it. The receiver is the
-//      logged-in user (the API fills it in);
-//   3. receive each material, in part or in full, into the receiving area.
+// Mesmo fluxo e mesma API do painel: ler a OT; se ainda não estiver cadastrada, buscar na base do
+// SAP e registrar a entrega; depois receber cada material, em parte ou inteiro.
 
 export default function ReceberScreen({ navigation, route }) {
   const { warehouseId, user } = useAuth();
   const [areas, setAreas] = useState([]);
   const [areaId, setAreaId] = useState(null);
-  const [ot, setOt] = useState(null);          // registered OT being received
+  const [ot, setOt] = useState(null);
   const [lines, setLines] = useState([]);
-  const [details, setDetails] = useState({});  // po_line_id -> material (order, unit, box)
+  const [details, setDetails] = useState({});
   const [qty, setQty] = useState({});
   const [fromBase, setFromBase] = useState(null); // OT found in the SAP base, not registered
   const [notFound, setNotFound] = useState(null);
@@ -55,7 +50,6 @@ export default function ReceberScreen({ navigation, route }) {
       setOt(order);
       setLines(orderLines);
       setQty(Object.fromEntries(orderLines.map((l) => [l.po_line_id, String(Math.max(0, l.quantity_remaining))])));
-      // Order, unit and box weight of each material.
       try {
         const detail = await client.get(`/api/sea/ots/${encodeURIComponent(order.po_number)}`);
         setDetails(Object.fromEntries((detail.data.materials || []).map((m) => [m.po_line_id, m])));
@@ -82,14 +76,12 @@ export default function ReceberScreen({ navigation, route }) {
     }
   }, []);
 
-  // Opening an OT to receive asks for the fingerprint or the phone's PIN.
   const openOt = useCallback(async (code) => {
     const problem = await confirmIdentity('Confirme para receber a OT');
     if (problem) { setMessage({ type: 'error', text: problem }); return; }
     await load(code);
   }, [load]);
 
-  // Opened from a code read on the home screen.
   const initialCode = route?.params?.code;
   useEffect(() => { if (initialCode) openOt(initialCode); }, [initialCode, openOt]);
 
@@ -105,7 +97,6 @@ export default function ReceberScreen({ navigation, route }) {
     }
   }
 
-  // ``full`` receives every pending material in its remaining quantity.
   async function receive(targets, full = false) {
     const items = targets
       .map((l) => ({ line: l, quantity: full ? l.quantity_remaining : parseQuantity(qty[l.po_line_id]) }))

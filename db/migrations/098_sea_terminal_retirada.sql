@@ -1,25 +1,11 @@
--- ============================================================
--- 098_sea_terminal_retirada.sql - SEA: usuário do terminal de
--- retirada, retirada acompanhada só por quem aceitou, KG por caixa
--- vindo do cadastro e prateleiras do SP13
--- ============================================================
--- 1. Terminal de retirada: um usuário com a permissão
---    "terminal-retirada" (e nenhuma outra) abre o terminal. Quem não
---    tem acesso ao SEA pede a retirada informando só o e-mail
---    corporativo: ele fica em withdrawals.requester_email.
--- 2. Depois que alguém aceita a retirada, só essa pessoa acompanha:
---    as notificações passam a apontar para a retirada
---    (sea_notifications.withdrawal_id) e as dos demais deixam de
---    aparecer. RETIRADA_CANCELADA avisa quem aceitou que o solicitante
---    cancelou.
--- 3. KG por caixa: o material que entrou pela base do SAP não levava o
---    peso da caixa do Cadastro de materiais, e a retirada não ia por
---    caixa. O peso (e a unidade) do cadastro passa para o material.
--- 4. SP13 recebe as mesmas prateleiras (endereços de armazenagem) do
---    SP12, com o mesmo código; o código de barras leva o prefixo SP13-.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 098_sea_terminal_retirada.sql
+-- 1. Usuário do terminal (só a permissão "terminal-retirada"). Quem não tem acesso ao SEA pede só
+-- com o e-mail corporativo (withdrawals.requester_email).
+-- 2. Depois do aceite, só quem aceitou acompanha: as notificações apontam para a retirada e somem
+-- para os demais. RETIRADA_CANCELADA avisa quem aceitou que o pedido foi cancelado.
+-- 3. O peso da caixa e a unidade do cadastro passam para o material do estoque.
+-- 4. SP13 recebe as mesmas prateleiras do SP12; o código de barras leva o prefixo SP13-.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS requester_email VARCHAR(254);
 

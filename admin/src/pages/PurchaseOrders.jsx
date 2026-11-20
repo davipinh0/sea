@@ -98,7 +98,6 @@ export default function PurchaseOrders() {
   const [resolvedItem, setResolvedItem] = useState(null);
 
   useEffect(() => { loadOrders(); }, [page, statusFilter, search, showArchived]);  // eslint-disable-line react-hooks/exhaustive-deps
-  // Keeps the list current; not while an order is being edited.
   useLiveRefresh(() => { if (!editing) loadOrders(); });
 
   // Debounced SKU lookup. Fires while the operator is typing in the

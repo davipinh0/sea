@@ -8,9 +8,7 @@ import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { formatDateTime, readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Estoque SP12: total stock of the sector, an address map (shelves A, B,
-// C... by level) and the list of PM11 / PM12 transfer orders with where
-// each one is stored. Read-only: movements happen in Expedição/Retirada.
+// Visão geral do estoque: mapa de endereços e as ordens com onde estão guardadas. Só leitura.
 
 const OT_STATUSES = ['', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED'];
 const OT_STATUS_LABELS = {
@@ -26,7 +24,6 @@ function shelvesFrom(bins) {
     byAisle.get(key).push(b);
   }
   for (const list of byAisle.values()) {
-    // Top level first, like looking at the shelf.
     list.sort((a, b) => Number(b.level ?? 0) - Number(a.level ?? 0) || a.bin_code.localeCompare(b.bin_code));
   }
   return [...byAisle.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -59,7 +56,6 @@ export default function EstoqueSP12() {
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState(null);
 
-  // Bumping ``tick`` re-runs both fetches (Atualizar button and auto-refresh).
   const [tick, setTick] = useState(0);
   useLiveRefresh(() => setTick((n) => n + 1));
 
@@ -86,7 +82,6 @@ export default function EstoqueSP12() {
     if (typeFilter) params.set('order_type', typeFilter);
     if (statusFilter) params.set('status', statusFilter);
     if (search) params.set('q', search);
-    // One row per order (PM11 / PM12); the OT is a reference column.
     api.get(`/sea/ordens?${params}`).then(async (res) => {
       if (cancelled || !res?.ok) return;
       const json = await res.json();
@@ -102,7 +97,7 @@ export default function EstoqueSP12() {
   const otColumns = [
     { key: 'order_number', label: 'Ordem', mono: true },
     { key: 'order_type', label: 'Tipo', render: (r) => <OtTypeTag type={r.order_type} />, csvValue: (r) => r.order_type },
-    // mig 098: an order that arrived may belong to an OT still waiting for other materials.
+    // A ordem pode ter chegado inteira e a OT dela ainda esperar outros materiais.
     { key: 'status', label: 'Status', render: (r) => (
       <>
         <StatusTag status={r.status} />

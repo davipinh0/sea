@@ -11,8 +11,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import TransferirEstoque from '../components/TransferirEstoque.jsx';
 
-// Units offered for a material. A unit read from a label that is not in
-// this list is kept as it is.
+// Uma unidade lida da etiqueta que não está na lista é mantida como veio.
 const UNITS = ['PC', 'KG', 'PAR'];
 
 const FILTER_OPTIONS = [
@@ -49,7 +48,6 @@ export default function Items() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [page, search, filter, warehouseId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keeps the list current; not while a form is open over it.
   useLiveRefresh(() => { if (!showModal) loadItems(); });
 
   // signal is supplied by the debounced effect so a superseded query
@@ -57,7 +55,6 @@ export default function Items() {
   // loadItems() with no signal and refetch unconditionally.
   async function loadItems(signal) {
     if (!warehouseId) return;
-    // One row per material of each order of the selected location.
     const params = new URLSearchParams({ page, per_page: 50, warehouse_id: warehouseId });
     if (search) params.set('q', search);
     if (filter === 'active') params.set('active', 'true');
@@ -103,8 +100,7 @@ export default function Items() {
 
   function openEdit(item) {
     setEditId(item.id || item.item_id);
-    // ``uom`` on a row may be the unit of the order line; the form edits
-    // the unit of the material itself.
+    // O ``uom`` da linha pode ser o da ordem; o formulário edita a unidade do material.
     setForm({ ...item, id: item.id || item.item_id, uom: item.item_uom ?? item.uom ?? '' });
     setError('');
     setShowModal(true);
@@ -118,10 +114,8 @@ export default function Items() {
       upc: form.upc || null,
       mpn: form.mpn || null,
       category: form.category || null,
-      // Informative only: shelves take material of any size.
       size_class: form.size_class || null,
       uom: (form.uom || '').trim().toUpperCase() || null,
-      // Box weight only makes sense for a material kept in KG.
       pack_weight_kg: (form.uom || '').trim().toUpperCase() === 'KG' && form.pack_weight_kg ? Number(form.pack_weight_kg) : null,
       weight_lbs: (form.weight_lbs || form.weight) ? Number(form.weight_lbs || form.weight) : null,
       default_bin_id: form.default_bin_id ? Number(form.default_bin_id) : null,
@@ -159,7 +153,6 @@ export default function Items() {
       setShowModal(false);
       loadItems();
     } else {
-      // Shown on the page: the form (and its error line) is closed here.
       setListError(await readError(res, 'Não foi possível excluir o material.'));
     }
   }

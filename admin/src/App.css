@@ -38,11 +38,10 @@
 }
 
 :root {
-  /* SEA brand palette (Ternium-inspired: orange + graphite).
-     --brand-orange is the vivid brand tone for logo/highlights on dark
-     surfaces; --accent is a darker orange so white text on buttons
-     meets WCAG AA (5.2:1). Replace with official brand-manual values
-     here if they differ. */
+  /*
+   * Cores do SEA. --accent é um laranja mais escuro para o texto branco dos botões ter contraste
+   * suficiente (WCAG AA).
+   */
   --brand-orange: #F26522;
   --accent: #C2410C;
   --accent-hover: #A8380A;
@@ -82,9 +81,7 @@
   --radius-lg: 8px;
 }
 
-/* Dark theme: the same variables with dark surfaces. Chosen in the top
-   bar (utils/theme.js) and kept per browser; without a choice it follows
-   the system. */
+/* Tema escuro: as mesmas variáveis com superfícies escuras. */
 :root[data-theme="dark"] {
   --accent: #F26522;
   --accent-hover: #FF7F45;
@@ -121,7 +118,6 @@
 
 :root[data-theme="dark"] .sea-badge-pm11 { background: #4A2A14; color: #FFC9A6; }
 :root[data-theme="dark"] .sea-badge-pm12 { background: #2F363D; color: #D5DBE2; }
-/* Buttons and tags that put white text on the accent keep a darker orange. */
 :root[data-theme="dark"] .btn-primary,
 :root[data-theme="dark"] .terminal-btn:not(.secondary),
 :root[data-theme="dark"] .topbar-avatar { background: #C2410C; color: #FFFFFF; }
@@ -993,7 +989,6 @@ a {
   margin-top: 4px;
 }
 
-/* Form that was not saved: the list of what to fix, and the fields. */
 .form-problems {
   border: 1px solid var(--danger);
   border-radius: 6px;
@@ -1322,7 +1317,7 @@ a {
   border-radius: 3px;
 }
 
-/* ── SEA: indicadores, mapa do SP12 e terminal de retirada ───────── */
+/* ── SEA: indicadores, mapa do SP12 e terminal de retirada ── */
 
 .sea-kpis {
   display: grid;
@@ -1385,7 +1380,7 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .sea-badge-pm11 { background: #FFE8D9; color: #8A3A08; }
 .sea-badge-pm12 { background: #E3E8EE; color: #2B2F33; }
 
-/* Terminal touchscreen: alvos grandes, alto contraste, sem menus. */
+/* Terminal: alvos grandes, alto contraste, sem menus. */
 .terminal {
   min-height: 100vh;
   background: var(--bg);
@@ -1462,7 +1457,7 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
   .terminal-title { font-size: 24px; }
 }
 
-/* SEA: panel notifications (bell in the top bar) */
+/* Notificações (sino) */
 .sea-notif { position: relative; margin-right: 12px; }
 .sea-notif-bell {
   position: relative; width: 32px; height: 30px; border-radius: 6px; border: 0; cursor: pointer;
@@ -1495,7 +1490,7 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .sea-notif-meta { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 .sea-notif-empty { padding: 14px; color: var(--text-secondary); }
 
-/* SEA: user photo (Sistema > Usuários and the top bar). */
+/* Foto do usuário */
 .user-avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; object-fit: cover; flex-shrink: 0; vertical-align: middle; }
 .user-avatar-initials { background: var(--accent); color: #fff; font-weight: 700; }
 .topbar-avatar { overflow: hidden; }
@@ -1503,7 +1498,7 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .user-photo-row { display: flex; align-items: center; gap: 14px; }
 .user-photo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* SEA: login waiting for the confirmation on the phone (mig 092). */
+/* Login esperando o celular */
 .login-approval { text-align: center; margin: 8px 0 20px; }
 .login-approval-icon { font-size: 40px; line-height: 1; margin-bottom: 8px; }
 .login-approval h2 { font-size: 18px; margin: 0 0 8px; }
@@ -1513,25 +1508,25 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .login-approval-device { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; padding: 6px 10px; border: 1px solid var(--border, #ddd); border-radius: 6px; }
 .login-approval-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
 
-/* SEA (mig 094): Painel "Últimas movimentações" with Ocultar / Limpar. */
+/* Painel: últimas movimentações */
 .sea-section-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sea-section-actions .btn + .btn { margin-left: 6px; }
 .btn-link { background: none; border: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font: inherit; }
 .btn-link:disabled { opacity: .6; cursor: default; }
 
-/* SEA (mig 095): process released by the phone. */
+/* Processo liberado pelo celular */
 .process-gate { display: flex; justify-content: center; padding: 48px 16px; }
 .process-gate-card { max-width: 520px; width: 100%; text-align: center; color: var(--text); background: var(--white); border: 1px solid var(--border, #e3e5e8); border-radius: 12px; padding: 28px 24px; }
 .process-gate-card h2 { margin: 8px 0 12px; font-size: 20px; }
 .process-gate-card p { margin: 0 0 14px; line-height: 1.5; }
 .process-gate-icon { font-size: 40px; }
 
-/* SEA (mig 096): who accepted the withdrawal, at the terminal. */
+/* Quem aceitou a retirada, no terminal */
 .terminal-picker { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
 .terminal-picker-photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; flex: none; }
 .terminal-picker-initials { display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; font-size: 40px; font-weight: 700; }
 
-/* SEA (mig 098): terminal, how the employee identifies. */
+/* Terminal: como o funcionário se identifica */
 .terminal-choice { display: flex; flex-wrap: wrap; gap: 16px; }
 .terminal-choice .terminal-btn { flex: 1 1 260px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 20px; }
 .terminal-choice-sub { font-size: 15px; font-weight: 500; opacity: .85; }

@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
-// Keeps a screen current without leaving and coming back: ``refresh``
-// runs when the screen opens, every ``intervalMs`` while it is on top and
-// the app is in use, and when the app returns from the background.
-// ``paused`` holds it (e.g. while the operator fills in a form).
+// Mantém a tela atualizada: ao abrir, a cada ``intervalMs`` enquanto ela está na frente e quando o
+// app volta do segundo plano. ``paused`` segura (por exemplo, com um formulário aberto).
 
 export default function useAutoRefresh(refresh, { intervalMs = 8000, paused = false } = {}) {
   const latest = useRef(refresh);

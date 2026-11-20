@@ -1,8 +1,6 @@
-/**
- * SEA (mig 093): the panel session belongs to the open tab.
- *
- * Regression: closing the tab or the browser and opening the panel again
- * went straight in, without the login.
+/*
+ * A sessão do painel pertence à aba aberta.
+ * Regressão: fechar a aba ou o navegador e abrir o painel de novo entrava direto, sem login.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

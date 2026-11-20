@@ -1,18 +1,9 @@
-"""SEA (mig 093): sessions tracked by the server.
-
-Every login opens a row in ``sea_sessions`` keyed by the token's ``jti``.
-The token still carries its own 8 h expiry; the row adds what a bare JWT
-cannot do:
-
-* ``end`` -- "Sair" really ends the session; a copied cookie or token
-  stops working at once.
-* idle timeout -- a web-panel session (token sent in the cookie) that
-  made no request for ``WEB_IDLE_MINUTES`` is ended, so a browser closed
-  without "Sair" does not stay signed in.
-
-Bearer-token clients (mobile app, withdrawal terminal) are only checked
-for an ended session: the app has its own lock and must not fall to the
-login screen because the phone sat in a pocket.
+"""Sessões controladas pelo servidor, uma linha por token (``jti``).
+O token continua vencendo em 8 h; a linha acrescenta o que um JWT sozinho não faz:
+- "Sair" encerra de verdade: uma cópia do cookie ou do token para de funcionar na hora;
+- no painel (cookie), a sessão sem uso por WEB_IDLE_MINUTES termina, então um navegador fechado
+sem "Sair" não fica logado.
+O app e o terminal (Bearer) só são barrados se a sessão foi encerrada: o app tem a própria trava.
 """
 
 from __future__ import annotations
@@ -26,7 +17,7 @@ from sqlalchemy import text
 from services.auth_service import TOKEN_EXPIRY_HOURS, generate_token
 
 WEB_IDLE_MINUTES = int(os.getenv("SEA_WEB_IDLE_MINUTES", "15"))
-# last_seen_at is written at most once per this many seconds per session.
+# last_seen_at é gravado no máximo uma vez a cada tantos segundos por sessão.
 TOUCH_EVERY_SECONDS = 30
 
 LOGOUT = "LOGOUT"
@@ -35,7 +26,7 @@ REFRESH = "REFRESH"
 
 
 def open_session(db, user: dict, client_ip: str, user_agent: str) -> str:
-    """Issue a token for ``user`` and record its session. Caller commits."""
+    """Quem chama faz o commit."""
     jti = str(uuid.uuid4())
     token = generate_token(user, jti=jti)
     expires_at = datetime.now(UTC) + timedelta(hours=TOKEN_EXPIRY_HOURS)
@@ -52,7 +43,6 @@ def open_session(db, user: dict, client_ip: str, user_agent: str) -> str:
             "exp": expires_at,
         },
     )
-    # Housekeeping: rows past the token expiry are of no use any more.
     db.execute(text("DELETE FROM sea_sessions WHERE expires_at < NOW() - INTERVAL '1 day'"))
     return token
 
@@ -66,11 +56,8 @@ def _valid_uuid(value) -> bool:
 
 
 def check(db, jti, *, web: bool) -> str | None:
-    """Why the session of ``jti`` cannot be used, or None when it can.
-
-    ``web`` = token sent in the panel cookie: the session must exist and
-    not be idle. Bearer tokens without a row (issued before mig 093) keep
-    working until their own expiry. Commits the last-seen update.
+    """Por que a sessão não pode ser usada, ou None se pode. No painel a sessão precisa existir e
+    não estar inativa. Tokens Bearer sem linha (anteriores a este controle) valem até vencer.
     """
     if not jti or not _valid_uuid(jti):
         return "unknown" if web else None
@@ -107,7 +94,7 @@ def check(db, jti, *, web: bool) -> str | None:
 
 
 def end(db, jti, reason: str) -> None:
-    """Mark the session of ``jti`` as ended. Caller commits."""
+    """Quem chama faz o commit."""
     if not jti or not _valid_uuid(jti):
         return
     db.execute(

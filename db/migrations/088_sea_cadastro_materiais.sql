@@ -1,17 +1,9 @@
--- ============================================================
--- 088_sea_cadastro_materiais.sql - SEA: cadastro de materiais,
--- prateleiras e notificações no celular
--- ============================================================
---   * sap_materials passa a ser o cadastro de materiais consultado ao
---     montar uma OT: o código traz a descrição, a unidade e o peso por
---     caixa. É mantido em Sistema > Cadastro de materiais por quem tem
---     a permissão 'material-catalog'.
---   * Prateleiras: todas passam a ser GRANDE, que aceita material de
---     qualquer tamanho (PEQUENO continua restrito a material pequeno).
---   * sea_push_tokens: aparelhos que recebem as notificações do SEA.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 088_sea_cadastro_materiais.sql
+-- - sap_materials vira o cadastro de materiais consultado ao montar uma OT (descrição, unidade e
+-- peso da caixa).
+-- - Todas as prateleiras passam a ser GRANDE (aceitam qualquer tamanho).
+-- - sea_push_tokens: celulares que recebem as notificações.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE sap_materials ADD COLUMN IF NOT EXISTS pack_weight_kg INT
     CHECK (pack_weight_kg IS NULL OR pack_weight_kg > 0);

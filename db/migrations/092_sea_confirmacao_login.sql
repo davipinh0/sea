@@ -1,19 +1,10 @@
--- ============================================================
--- 092_sea_confirmacao_login.sql - SEA: login confirmado no celular
--- ============================================================
--- Com users.web_login_approval ligado e um aparelho cadastrado (app SEA
--- com bloqueio por digital ou PIN/padrão), o login por senha fora desse
--- aparelho (painel web, terminal, outro celular) só libera a sessão
--- depois de confirmado no aparelho. Cada tentativa fica em
--- sea_login_challenges; quem iniciou a tentativa acompanha com um
--- segredo próprio (só o hash fica no banco).
---
--- sea_push_tokens passa a guardar o aparelho mesmo após o "sair" do app
--- (signed_in = FALSE: não recebe os avisos do dia a dia, mas continua
--- podendo confirmar um login).
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- 092_sea_confirmacao_login.sql - login confirmado no celular
+-- Com a confirmação ligada e um celular cadastrado (app com trava), o login com senha em outro
+-- lugar só abre a sessão depois da confirmação no celular. Quem iniciou acompanha com um segredo
+-- próprio (só o hash fica no banco).
+-- O celular continua cadastrado depois de "sair" do app (signed_in = FALSE): não recebe avisos, mas
+-- confirma logins.
+-- Pode rodar mais de uma vez. Espelhada em db/schema.sql.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS web_login_approval BOOLEAN NOT NULL DEFAULT FALSE;
 

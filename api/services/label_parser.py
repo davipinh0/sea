@@ -1,20 +1,8 @@
-"""Interpretation of the receiving label that travels with each material.
-
-Pure text -> structured data: no database, no HTTP. The input is the
-text printed on the label (typed, pasted, or produced by any future
-reader); the output separates it into the receipt header (OT, reserva,
-ordem de serviço, logistics, people) and the material (code,
-description, quantity, unit, lot, expiry).
-
-Rules, straight from the operation:
-  * nothing is guessed: a field that is missing or unreadable stays
-    ``None`` and is listed in ``pending`` for the operator to fill in;
-  * nothing is thrown away silently: text that matches no known field
-    goes to ``unrecognized`` so it can be reviewed;
-  * print information (who printed, when) is not operational data and is
-    dropped;
-  * identifiers are kept as text, so leading zeros survive;
-  * OT, reserva and ordem de serviço are three different identifiers.
+"""Interpreta a etiqueta que acompanha o material: texto -> dados, sem banco nem HTTP.
+Regras: nada é adivinhado (o que falta fica None e vai para ``pending``); nada some calado (texto
+não reconhecido vai para ``unrecognized``); dados de impressão são descartados; identificadores
+ficam como texto, para manter zeros à esquerda; OT, reserva e ordem de serviço são
+identificadores diferentes.
 """
 
 from __future__ import annotations
@@ -50,13 +38,11 @@ MATERIAL_FIELDS = (
     "lot_number",
     "expiry_date",
 )
-# Optional by nature: their absence is not something to chase.
 _NEVER_PENDING = {"barcode", "expiry_date"}
 
 _IGNORE = "_ignore"
 _SERVICE_ORDER = "_service_order"
 
-# Label caption (accents and case already folded) -> field.
 _CAPTIONS: dict[str, str] = {
     "empresa": "origin_company",
     "empresa de origem": "origin_company",
@@ -93,7 +79,6 @@ _CAPTIONS: dict[str, str] = {
     "recebedor": "receiver_name",
     "ordem de servico": _SERVICE_ORDER,
     "ordem": _SERVICE_ORDER,
-    # Print information: not operational data.
     "impresso por": _IGNORE,
     "impresso em": _IGNORE,
     "impressao": _IGNORE,
@@ -106,7 +91,6 @@ _CAPTIONS: dict[str, str] = {
     "anotacao": _IGNORE,
 }
 
-# Section titles of the label: structure, not data.
 _HEADINGS = {
     "dados gerais",
     "material",
@@ -151,8 +135,9 @@ class ParsedLabel:
 
 
 def _fold(text: str) -> str:
-    """Lower-case, accent-free copy of ``text`` with the same length, so
-    match positions on the folded string index the original one."""
+    """Cópia minúscula e sem acento, do mesmo tamanho, para as posições encontradas valerem no texto
+    original.
+    """
     out = []
     for ch in text:
         base = "".join(
@@ -177,8 +162,7 @@ def parse_date(value: str) -> date | None:
 
 
 def parse_quantity(value: str) -> tuple[int | None, str | None, str | None]:
-    """Return (quantity, unit, problem). Brazilian number format: '.' is
-    the thousands separator and ',' the decimal one."""
+    """Formato brasileiro: '.' separa milhar e ',' separa decimal."""
     match = _QUANTITY_RE.match(value.strip())
     if not match:
         return None, None, f"Quantidade não reconhecida: {value!r}."
@@ -202,7 +186,6 @@ def parse_quantity(value: str) -> tuple[int | None, str | None, str | None]:
 
 
 def parse_service_order(value: str) -> tuple[str | None, str | None, str | None]:
-    """Split 'PM12 – 2005113840' into (type, number, problem)."""
     match = _SERVICE_ORDER_RE.match(value.strip())
     if not match:
         return None, value.strip() or None, (
@@ -224,7 +207,7 @@ def parse_label(text: str) -> ParsedLabel:
     lines = [ln.strip() for ln in unicodedata.normalize("NFC", text or "").splitlines()]
     lines = [ln for ln in lines if ln]
 
-    # A bare code (what the barcode reader types) is the OT itself.
+    # Um código solto (o que o leitor de código de barras digita) é a própria OT.
     if len(lines) == 1 and _BARE_CODE_RE.match(lines[0]):
         result.header["ot_code"] = lines[0]
         result.header["barcode"] = lines[0]

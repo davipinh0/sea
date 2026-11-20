@@ -10,11 +10,8 @@ import { apiError, formatQuantity, withdrawalActions } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
 
-// Fila de retirada. Requests of every location the user works in (mig 096):
-// the evaluator approves or denies; someone with "Fazer retirada" accepts
-// an approved request, separates it and marks it ready. Every step asks
-// for the fingerprint or the phone's PIN. The employee confirms receipt at
-// the terminal; the stock is only decremented there.
+// Pedidos de todos os locais do usuário. Cada etapa (avaliar, aceitar, marcar pronta) pede a
+// digital ou o PIN. A baixa no estoque só acontece quando o funcionário confirma no terminal.
 
 const OPEN = 'REQUESTED,APPROVED,PICKING,READY';
 const STATUS = {
@@ -31,7 +28,6 @@ export default function RetiradaScreen({ navigation }) {
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [reason, setReason] = useState('');
-  // 'cancel' or 'deny': both ask for the reason.
   const [mode, setMode] = useState('cancel');
   const [me, setMe] = useState(null);
 
@@ -41,7 +37,7 @@ export default function RetiradaScreen({ navigation }) {
         client.get(`/api/sea/retiradas?status=${OPEN}`), client.get('/api/auth/me'),
       ]);
       setMe(meResp.data);
-      // Oldest request first: it is the next one to separate.
+      // O pedido mais antigo primeiro: é o próximo a separar.
       setQueue([...(resp.data?.withdrawals || [])].reverse());
     } catch (err) {
       setQueue((current) => current || []);
@@ -49,7 +45,6 @@ export default function RetiradaScreen({ navigation }) {
     }
   }, []);
 
-  // Keeps the queue fresh while the screen is open.
   useAutoRefresh(load, { intervalMs: REFRESH_MS, paused: !!cancelling });
 
   async function act(withdrawal, action, body, done) {

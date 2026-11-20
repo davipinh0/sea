@@ -1,5 +1,6 @@
-"""SEA: what a non-administrator needs to work (locations, receiving
-areas, the withdrawal queue of every location) and operator messages."""
+"""O que um usuário comum precisa para trabalhar (locais, áreas de recebimento, fila de retirada de
+todos os locais) e as mensagens para o operador.
+"""
 
 import uuid
 
@@ -57,14 +58,12 @@ class TestLocations:
         self, client, auth_headers, sp12, second_location
     ):
         headers = _user(client, sp12["conn"], "sea.acesso.1", ["receiving"], [WAREHOUSE])
-        # The administration endpoint stays closed to this user...
         assert client.get("/api/admin/warehouses", headers=headers).status_code == 403
-        # ...but the location selector still gets its list.
         mine = client.get("/api/sea/locais", headers=headers).get_json()["warehouses"]
         assert [w["warehouse_id"] for w in mine] == [WAREHOUSE]
         everything = client.get("/api/sea/locais", headers=auth_headers).get_json()["warehouses"]
         assert second_location in [w["warehouse_id"] for w in everything]
-        # A client without a session (the shared one keeps the login cookie).
+        # Cliente sem sessão (o compartilhado guarda o cookie do login).
         assert client.application.test_client().get("/api/sea/locais").status_code == 401
 
     def test_receiving_areas_without_the_addresses_permission(self, client, sp12, second_location):
@@ -72,7 +71,6 @@ class TestLocations:
         resp = client.get(f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers)
         assert resp.status_code == 200
         bins = resp.get_json()["bins"]
-        # Only receiving areas: the shelves created by the fixture are not listed.
         assert STAGING_BIN in [b["bin_id"] for b in bins]
         assert sp12["c0"] not in [b["bin_id"] for b in bins]
         other = client.get(
@@ -101,7 +99,6 @@ class TestWithdrawalQueueAcrossLocations:
         )
         assert row["warehouse_id"] == WAREHOUSE and row["warehouse_code"]
 
-        # A user of another location does not see it, with or without the filter.
         outsider = _user(
             client, stored_ot["conn"], "sea.acesso.4", ["retirada"], [second_location]
         )
@@ -112,7 +109,6 @@ class TestWithdrawalQueueAcrossLocations:
             in (403, 404)
         )
 
-        # The menu counter covers every location the user works in.
         painel = client.get(
             f"/api/sea/painel?warehouse_id={second_location}", headers=auth_headers
         ).get_json()
@@ -122,8 +118,9 @@ class TestWithdrawalQueueAcrossLocations:
 
 class TestOperatorMessages:
     def test_reversal_refusal_is_explained_in_portuguese(self, client, auth_headers, stored_ot):
-        """The whole receipt was stored and part of it reserved: the
-        receipt can no longer be reversed, and the operator is told why."""
+        """O recebimento já foi guardado e parte dele reservada: não pode mais ser estornado, e o
+        operador sabe por quê.
+        """
         conn = stored_ot["conn"]
         _request(client, auth_headers, stored_ot["inventory_id"], 4)
         receipt_id = conn.execute(
@@ -174,7 +171,6 @@ class TestExportCsvGrant:
         me = client.get("/api/auth/me", headers=headers).get_json()
         assert me["allowed_overrides"] == ["export-csv"]
         assert me["allowed_pages"] == ["inventory"]
-        # Administrators hold it implicitly.
         admin = client.get("/api/auth/me", headers=auth_headers).get_json()
         assert "export-csv" in admin["allowed_overrides"]
 
@@ -192,8 +188,9 @@ class TestExportCsvGrant:
 
 
 class TestListsSharedBetweenPages:
-    """A page reads the lists it needs to fill its own forms without the
-    permission of the page that manages them; writing stays closed."""
+    """Uma página lê as listas que preenchem os seus formulários sem a permissão da página que as
+    gerencia; gravar continua fechado.
+    """
 
     def test_addresses_page_reads_zones(self, client, sp12):
         headers = _user(client, sp12["conn"], "sea.acesso.z1", ["bins"], [WAREHOUSE])
@@ -214,7 +211,6 @@ class TestListsSharedBetweenPages:
 
 
 class TestMobileModules:
-    """The app's modules open the same data as the matching page of the panel."""
 
     def _with_functions(self, client, conn, username, functions):
         headers = _user(client, conn, username, [], [WAREHOUSE])
@@ -227,7 +223,6 @@ class TestMobileModules:
         areas = client.get(f"/api/sea/recebimentos/areas?warehouse_id={WAREHOUSE}", headers=headers)
         assert areas.status_code == 200
         assert client.get("/api/sea/recebimentos/consulta?codigo=123", headers=headers).status_code == 200
-        # The withdrawal queue is not part of this module.
         assert client.get("/api/sea/retiradas", headers=headers).status_code == 403
 
     def test_putaway_module_reads_storage_data(self, client, sp12):
@@ -257,8 +252,7 @@ class TestReceiveCounter:
         before_new, before_open = counters()
         po_id = _create_ot(client, auth_headers, "OT-CONT-1", [(sp12["small"], 36)])
         assert counters() == (before_new + 1, before_open + 1)
-        # Half of it arrives: the order is still open, but it no longer
-        # asks for attention on the "Receber" button.
+        # Chegou metade: a ordem continua aberta, mas sai do contador "Receber".
         assert _receive(client, auth_headers, po_id, sp12["small"], 18).status_code == 200
         assert counters() == (before_new, before_open + 1)
         assert _receive(client, auth_headers, po_id, sp12["small"], 18).status_code == 200

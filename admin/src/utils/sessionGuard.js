@@ -1,13 +1,8 @@
-// SEA (mig 093): the panel session belongs to the open tab.
-//
-// * A tab that was not open when the user signed in (new tab, browser
-//   reopened, restored tab) does not inherit the session: unless another
-//   open panel tab vouches for it, the session is ended and the login
-//   screen shows.
-// * "Sair" in one tab signs every panel tab out.
-// * Without mouse/keyboard use for IDLE_LIMIT_MS the session is ended.
-//   While the user is active, a light keep-alive tells the server the
-//   panel is in use (the server ends idle web sessions on its own too).
+// A sessão do painel pertence à aba aberta:
+// - uma aba que não estava aberta no login (nova, restaurada, navegador reaberto) só herda a sessão
+// se outra aba do painel confirmar;
+// - "Sair" numa aba sai de todas;
+// - sem uso por IDLE_LIMIT_MS a sessão termina (o servidor também encerra as inativas).
 
 export const TAB_KEY = 'sea_tab_session';
 export const FLASH_KEY = 'login_flash_message';
@@ -44,8 +39,6 @@ function openChannel() {
   return typeof BroadcastChannel === 'function' ? new BroadcastChannel(CHANNEL) : null;
 }
 
-// Does another open panel tab hold the session? Resolves false when no tab
-// answers within ``timeoutMs`` (or the browser has no BroadcastChannel).
 export function askOtherTabs(timeoutMs = 400) {
   const channel = openChannel();
   if (!channel) return Promise.resolve(false);
@@ -63,8 +56,6 @@ export function askOtherTabs(timeoutMs = 400) {
   });
 }
 
-// Answer other tabs while this one holds the session; ``onLogout`` runs
-// when another tab signs out. Returns the cleanup function.
 export function listenOtherTabs({ onLogout }) {
   const channel = openChannel();
   if (!channel) return () => {};
@@ -82,8 +73,6 @@ export function announceLogout() {
   channel.close();
 }
 
-// Calls ``onIdle`` after ``limitMs`` without user input and ``onKeepAlive``
-// at most once per ``checkMs`` while the user is active. Returns stop().
 export function watchIdle({ onIdle, onKeepAlive, limitMs = IDLE_LIMIT_MS, checkMs = 60000, now = () => Date.now() }) {
   let lastInput = now();
   let lastKeepAlive = lastInput;

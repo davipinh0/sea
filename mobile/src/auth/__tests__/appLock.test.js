@@ -53,7 +53,7 @@ describe('unlockMode', () => {
   });
 
   it("uses the phone's PIN or pattern when there is no fingerprint", () => {
-    // Regression: a phone without fingerprint could not use the app.
+    // Regressão: celular sem digital não conseguia usar o app.
     expect(unlockMode({ isEnrolled: false, securityLevel: 1 })).toBe('device');
   });
 

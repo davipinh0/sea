@@ -1,10 +1,6 @@
-"""SEA: user photo (mig 091).
-
-Only an administrator sets or removes it (Sistema > Usuários). The panel
-sends the picture already reduced (256 px JPEG) as base64; this module
-checks what arrived before it goes to the database: real image bytes of
-an accepted type (by content, not by the name the browser gave) and at
-most ``MAX_PHOTO_BYTES``.
+"""Foto do usuário. Só o administrador coloca ou tira. O painel manda a imagem já reduzida; aqui se
+confere que são bytes de imagem de um tipo aceito (pelo conteúdo, não pelo nome do arquivo) e até
+MAX_PHOTO_BYTES.
 """
 
 from __future__ import annotations
@@ -19,11 +15,10 @@ MAX_PHOTO_BYTES = 1024 * 1024
 
 
 class PhotoError(ValueError):
-    """The upload is not an accepted picture; the message is for the user."""
+    """Imagem não aceita; a mensagem é para o usuário."""
 
 
 def sniff_mime(data: bytes) -> Optional[str]:
-    """Image type from the first bytes, or None when it is not one we accept."""
     if data.startswith(b"\xff\xd8\xff"):
         return "image/jpeg"
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -34,7 +29,6 @@ def sniff_mime(data: bytes) -> Optional[str]:
 
 
 def decode_photo(payload: str) -> tuple[bytes, str]:
-    """Bytes and type of a base64 picture (a ``data:`` URL is accepted)."""
     raw = (payload or "").strip()
     if raw.startswith("data:"):
         _, _, raw = raw.partition(",")
@@ -53,7 +47,7 @@ def decode_photo(payload: str) -> tuple[bytes, str]:
 
 
 def photo_version(updated_at) -> Optional[int]:
-    """Number that changes with each new photo (for the clients' cache)."""
+    """Muda a cada foto nova (para o cache dos clientes)."""
     return int(updated_at.timestamp()) if updated_at else None
 
 
@@ -80,7 +74,6 @@ def remove_photo(db, user_id: int) -> bool:
 
 
 def load_photo(db, user_id: int):
-    """Row with ``photo``, ``photo_mime`` and ``photo_updated_at``, or None."""
     return db.execute(
         text(
             "SELECT photo, photo_mime, photo_updated_at FROM users "

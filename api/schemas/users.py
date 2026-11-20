@@ -5,7 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 VALID_ROLES = ("ADMIN", "USER")
-# Shape check only (one @, a dotted domain, no spaces); empty is allowed.
+# Só confere o formato (um @, domínio com ponto, sem espaços); vazio é permitido.
 EMAIL_PATTERN = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
@@ -19,8 +19,9 @@ class UpdateUserPagePermissionsRequest(BaseModel):
 
 
 class UserPhotoRequest(BaseModel):
-    """SEA: user photo as base64 (or a data: URL). The panel sends it
-    reduced to 256 px; services.user_photo checks type and size."""
+    """Foto em base64 (ou data: URL). O painel manda reduzida; services.user_photo confere tipo e
+    tamanho.
+    """
 
     image: str = Field(..., min_length=1, max_length=1_500_000)
 
@@ -33,11 +34,10 @@ class CreateUserRequest(BaseModel):
     warehouse_ids: List[int] = Field(default_factory=list)
     warehouse_id: Optional[int] = Field(None, gt=0)
     allowed_functions: List[str] = Field(default_factory=list)
-    # SEA: corporate e-mail (login at the terminal and notification
-    # recipient for administrators). Empty string clears it.
+    # E-mail corporativo: login no terminal e destino das notificações dos administradores. Texto
+    # vazio apaga.
     email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
-    # SEA (mig 092): a password login outside the registered phone waits
-    # for confirmation in the app.
+    # Login com senha fora do celular cadastrado espera a confirmação no app.
     web_login_approval: bool = False
 
     @field_validator("role")
@@ -56,8 +56,8 @@ class UpdateUserRequest(BaseModel):
     allowed_functions: Optional[List[str]] = None
     is_active: Optional[bool] = None
     password: Optional[str] = Field(None, min_length=1, max_length=256)
-    # SEA: corporate e-mail (login at the terminal and notification
-    # recipient for administrators). Empty string clears it.
+    # E-mail corporativo: login no terminal e destino das notificações dos administradores. Texto
+    # vazio apaga.
     email: Optional[str] = Field(None, max_length=254, pattern=EMAIL_PATTERN)
     web_login_approval: Optional[bool] = None
 

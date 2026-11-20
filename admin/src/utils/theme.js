@@ -1,6 +1,4 @@
-// Light / dark theme of the panel. The choice is kept per browser; with
-// no choice the panel follows the system. The theme is a data-theme
-// attribute on <html>; the colours are CSS variables (App.css).
+// Tema claro/escuro. A escolha fica no navegador; sem escolha, segue o sistema.
 
 const KEY = 'sea_theme';
 
@@ -13,7 +11,7 @@ export function currentTheme() {
   try {
     saved = window.localStorage.getItem(KEY);
   } catch {
-    // Storage blocked: follow the system.
+    // Armazenamento bloqueado: segue o sistema.
   }
   if (saved === 'dark' || saved === 'light') return saved;
   return systemPrefersDark() ? 'dark' : 'light';
@@ -28,7 +26,7 @@ export function setTheme(theme) {
   try {
     window.localStorage.setItem(KEY, theme);
   } catch {
-    // The choice then lasts only for this visit.
+    // A escolha vale só para esta visita.
   }
   return applyTheme(theme);
 }

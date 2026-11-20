@@ -862,8 +862,7 @@ def unreceive_receipt(receipt_id):
             status_code = 409
         else:
             status_code = 422
-        # SEA: the operator sees the reason in Portuguese; the original
-        # message stays in ``detail`` for diagnosis.
+        # O operador vê o motivo em português; a mensagem original fica em ``detail``.
         return jsonify({
             "error": _UNRECEIVE_MESSAGES.get(exc.kind, "Não foi possível estornar o recebimento."),
             "user_facing": True,

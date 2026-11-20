@@ -143,9 +143,8 @@ def move_inventory(db, item_id, from_bin_id, to_bin_id, warehouse_id, quantity, 
         available = source_inv.quantity_on_hand if source_inv else 0
         raise ValueError(f"Insufficient inventory in source bin. Available: {available}")
 
-    # SEA: stock of an OT lot reserved for a withdrawal stays in its bin
-    # (the withdrawal line points at this inventory row). Only the free
-    # part of an OT lot may move.
+    # Estoque de uma OT reservado para retirada fica no endereço (a linha da retirada aponta para
+    # ele). Só a parte livre se move.
     if lot_number is not None and source_inv.quantity_allocated:
         is_ot_lot = db.execute(
             text(

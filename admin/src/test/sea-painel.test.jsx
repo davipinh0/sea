@@ -1,7 +1,6 @@
-/**
- * SEA (mig 094): "Últimas movimentações" on the Painel. Shown only to who
- * may see the history; "Ocultar" folds it, "Limpar" restarts the list of
- * this user (the history itself keeps everything).
+/*
+ * Últimas movimentações no Painel: só para quem pode ver o histórico; "Ocultar" recolhe e "Limpar"
+ * recomeça a lista do usuário.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

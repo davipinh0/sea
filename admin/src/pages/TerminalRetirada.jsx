@@ -6,48 +6,27 @@ import SeaLogo from '../components/SeaLogo.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
 import { formatQuantity, readError } from '../utils/sea.js';
 
-// Touchscreen withdrawal terminal (kiosk). It opens under the terminal
-// account (mig 098), which stays signed in. Flow:
-//   0. the employee chooses how to identify:
-//      * "Tenho acesso ao SEA": the corporate login (e-mail or user +
-//        password), as their own session;
-//      * "Não tenho acesso ao SEA": only the corporate e-mail; the request
-//        is made by the terminal account in the name of that e-mail.
-//      The terminal always opens on this choice and goes back to it after
-//      each withdrawal.
-//      The terminal session is its own (terminalApi.js): it does not
-//      replace or end a panel session open in the same browser.
-//   1. types the number of the order (PM11 / PM12)
-//   2. picks the materials/quantities available in storage
-//   3. waits while the stock keeper separates the request
-//   4. confirms receipt -> stock is decremented by the API
-// The API enforces every rule (available balance, single decrement,
-// only the requester confirms); this screen only guides the operator.
-//
-// Identification is the login itself. When the company directory is
-// integrated (services/identity_provider.py in the API) this screen
-// stays the same: only where the credentials are checked changes.
+// Terminal de retirada (quiosque), aberto pelo usuário do terminal.
+// O funcionário escolhe como se identificar: com o login do SEA (sessão própria, separada do
+// painel) ou só com o e-mail corporativo, caso em que o pedido sai em nome do usuário do terminal.
+// Depois: informa a ordem, escolhe os materiais, espera a separação e confirma o recebimento. Todas
+// as regras ficam na API; a tela só guia.
 
 const POLL_MS = 3000;
 
-// mig 096: what the employee reads while the request goes on.
 const WAITING_TEXT = {
   REQUESTED: 'Aguardando a avaliação da solicitação…',
   APPROVED: 'Solicitação aprovada. Aguardando alguém do estoque aceitar…',
   PICKING: 'está preparando os seus materiais…',
 };
 const RESET_AFTER_MS = 12000;
-// SEA (mig 093): an employee who walks away before asking for material
-// is signed out, so the next person cannot act in their name.
+// Quem sai sem pedir nada é desconectado, para o próximo não agir em nome dele.
 export const TERMINAL_IDLE_MS = 2 * 60 * 1000;
 const IDLE_STEPS = new Set(['ot', 'materials', 'login', 'email']);
-// A simple shape check; the API checks it again.
 const looksLikeEmail = (value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
-// A material kept in KG with a box weight goes box by box: each press adds
-// the weight of one box (0 > 18 KG > 36 KG). Everything else goes unit by
-// unit (1 = 1 PC, 1 PAR ...). ``qty`` holds the number of presses;
-// ``stockQuantity`` turns it into the quantity of the stock.
+// Material em KG com peso de caixa anda de caixa em caixa (0 > 18 KG > 36 KG); o resto anda de
+// unidade em unidade. ``qty`` guarda o número de toques.
 const stockQuantity = (s, count) => count * (s.pack_weight_kg || 1);
 const maxCount = (s) => Math.floor(s.available / (s.pack_weight_kg || 1));
 
@@ -64,8 +43,7 @@ function QtyPicker({ value, max, onChange, label, unit, step = 1 }) {
 export default function TerminalRetirada() {
   const [employee, setEmployee] = useState(null);
   const [token, setToken] = useState(null);
-  // mig 098: e-mail of who has no access to the SEA (the requests then go
-  // under the terminal account, in the panel session of this browser).
+  // E-mail de quem não tem acesso ao SEA; o pedido vai pela sessão do usuário do terminal.
   const [email, setEmail] = useState('');
   const [byEmail, setByEmail] = useState(false);
   const api = useMemo(() => (byEmail ? panelApi : terminalApi(token)), [byEmail, token]);
@@ -79,9 +57,7 @@ export default function TerminalRetirada() {
   const [withdrawal, setWithdrawal] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  // SEA (mig 092): seconds left for the employee to confirm on the phone.
   const [waitingPhone, setWaitingPhone] = useState(null);
-  // mig 096: who accepted the request (name and photo as a data: URL).
   const [picker, setPicker] = useState(null);
 
   const clearRequest = useCallback(() => {
@@ -89,9 +65,8 @@ export default function TerminalRetirada() {
     setPicker(null);
   }, []);
 
-  // End the session: the next employee always starts at the choice.
-  // The employee's own session also ends on the server (mig 093); the
-  // terminal account stays signed in.
+  // O próximo funcionário sempre começa na escolha. A sessão do funcionário também termina no
+  // servidor; a do terminal continua.
   const signOut = useCallback(() => {
     if (token) terminalLogout(token);
     clearRequest();
@@ -100,7 +75,6 @@ export default function TerminalRetirada() {
     setStep('choose');
   }, [clearRequest, token]);
 
-  // 0 -> 1 without access to the SEA: only the corporate e-mail.
   function continueWithEmail(e) {
     e.preventDefault();
     const clean = email.trim().toLowerCase();
@@ -117,7 +91,6 @@ export default function TerminalRetirada() {
     return watchIdle({ onIdle: signOut, limitMs: TERMINAL_IDLE_MS, checkMs: 5000 });
   }, [step, signOut]);
 
-  // 0 -> 1: corporate login.
   async function signIn(e) {
     e.preventDefault();
     if (!identifier.trim() || !password) return;
@@ -143,8 +116,6 @@ export default function TerminalRetirada() {
     }
   }
 
-  // Session ended on the server (expired): back to the choice. (In the
-  // e-mail mode the panel itself goes to its login page.)
   function expired(res) {
     if (!res || res.status !== 401) return false;
     signOut();
@@ -152,7 +123,6 @@ export default function TerminalRetirada() {
     return true;
   }
 
-  // 1 -> 2: look up the order and its available stock in storage addresses.
   async function lookup(e) {
     e.preventDefault();
     const clean = code.trim();
@@ -169,11 +139,10 @@ export default function TerminalRetirada() {
     setStep('materials');
   }
 
-  // 2 -> 3: request the withdrawal (stock is reserved by the API).
   async function request() {
     const chosen = stock.filter((s) => qty[s.inventory_id] > 0);
     if (chosen.length === 0) { setError('Escolha a quantidade de pelo menos um material.'); return; }
-    // One request covers one delivery in one location (who separates it).
+    // Um pedido cobre uma entrega num só local (quem separa).
     if (new Set(chosen.map((s) => `${s.ot}|${s.warehouse_id}`)).size > 1) {
       setError('Os materiais escolhidos estão em locais ou entregas diferentes. Solicite um grupo de cada vez.');
       return;
@@ -188,7 +157,6 @@ export default function TerminalRetirada() {
     setStep('waiting');
   }
 
-  // 3: follow the request until the stock keeper marks it READY.
   const withdrawalId = withdrawal?.withdrawal_id;
   useEffect(() => {
     if (step !== 'waiting' || !withdrawalId) return undefined;
@@ -214,7 +182,6 @@ export default function TerminalRetirada() {
     return () => { stopped = true; clearInterval(timer); };
   }, [step, withdrawalId, api]);
 
-  // Once someone accepts, their name and photo show until the handover.
   const pickedBy = withdrawal?.picked_by;
   useEffect(() => {
     if (!pickedBy || !withdrawalId) return undefined;
@@ -227,7 +194,6 @@ export default function TerminalRetirada() {
     return () => { stopped = true; };
   }, [pickedBy, withdrawalId, api]);
 
-  // 4: confirm receipt -> single stock decrement.
   async function confirm() {
     setBusy(true); setError('');
     const res = await api.post(`/sea/retiradas/${withdrawal.withdrawal_id}/entregar`, {});
@@ -238,7 +204,6 @@ export default function TerminalRetirada() {
     setStep('done');
   }
 
-  // The request stays on record as cancelled, with who cancelled and why.
   async function cancelRequest() {
     if (withdrawal) {
       setBusy(true);

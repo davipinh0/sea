@@ -7,10 +7,8 @@ import {
   fieldsToPayload, formatDate, formatDateTime, payloadToFields, readError,
 } from '../utils/sea.js';
 
-// Receiving by label: register an OT and its materials from the label
-// text, correct the registered data, and consult one material with its
-// lot, locations and movements. The API interprets and validates; these
-// forms only collect and show.
+// Recebimento pela etiqueta: cadastrar a OT, corrigir os dados e consultar um material. A API
+// interpreta e valida; aqui só se coleta e mostra.
 
 function Pending() {
   return <span className="tag tag-warning" style={{ marginLeft: 6 }}>pendente</span>;
@@ -46,8 +44,7 @@ function FieldGrid({ fields, values, onChange, idPrefix, flagPending, disabled =
 
 const MATERIAL_FORM = OT_MATERIAL_FIELDS.map((f) => (f.key === 'expiry_date' ? { ...f, optional: true } : f));
 
-// A material in KG is kept in kilos and withdrawn by box: once the unit
-// is KG the form asks how many KG a box holds, right after the unit.
+// Material em KG sai por caixa: com a unidade KG, o formulário pede quantos KG tem a caixa.
 const PACK_FIELD = { key: 'pack_weight_kg', label: 'KG por caixa', type: 'number', optional: true };
 const isKg = (values) => (values.uom || '').trim().toUpperCase() === 'KG';
 function materialFields(values) {
@@ -56,8 +53,6 @@ function materialFields(values) {
   return [...MATERIAL_FORM.slice(0, at), PACK_FIELD, ...MATERIAL_FORM.slice(at)];
 }
 
-// New receipt (OT not registered yet) or one more material for an
-// existing OT. ``existingOt`` is the OT detail when adding a material.
 export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSaved }) {
   const [text, setText] = useState('');
   const [ot, setOt] = useState(existingOt?.ot || otCode || '');
@@ -67,9 +62,8 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
   const [fromLabel, setFromLabel] = useState(false);
   const [catalogNote, setCatalogNote] = useState('');
 
-  // The code brings description, unit and box weight from the catalogue
-  // (Sistema > Cadastro de materiais). Only empty fields are filled in:
-  // what the operator typed or the label informed is never replaced.
+  // O código traz descrição, unidade e peso da caixa do cadastro, mas só preenche campos vazios:
+  // nunca troca o que o operador digitou ou a etiqueta trouxe.
   const materialCode = (material.material_code || '').trim();
   useEffect(() => {
     if (!materialCode) return undefined;
@@ -107,7 +101,6 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
       return;
     }
     if (labelOt) setOt(labelOt);
-    // Only values actually read replace what is on the form.
     const read = (fields, parsed, current) => {
       const next = payloadToFields(fields, parsed);
       return Object.fromEntries(fields.map((f) => [f.key, next[f.key] !== '' ? next[f.key] : current[f.key]]));
@@ -222,7 +215,7 @@ export function RegistroOtModal({ warehouseId, otCode, existingOt, onClose, onSa
   );
 }
 
-// Correct the header of a registered OT. Sends only what changed.
+// Envia só o que mudou.
 export function DadosOtModal({ ot, onClose, onSaved }) {
   const initial = payloadToFields(OT_HEADER_FORM, ot);
   const [header, setHeader] = useState(initial);
@@ -262,8 +255,6 @@ export function DadosOtModal({ ot, onClose, onSaved }) {
 
 const MATERIAL_EDIT = MATERIAL_FORM.filter((f) => !['material_code', 'description'].includes(f.key));
 
-// One material of an OT: what was registered, where it is, how much is
-// left and every movement, without going back to the label.
 export function MaterialOtModal({ ot, material, onClose, onChanged }) {
   const editable = ot.status !== 'CLOSED' && ot.status !== 'ARCHIVED';
   const initial = payloadToFields(MATERIAL_EDIT, { ...material, quantity: material.quantity_ordered });

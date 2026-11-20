@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
         markTabSession();
         setUser(data);
       } catch {
-        // Network failure: stay on the login screen.
+        // Falha de rede: fica na tela de login.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -48,23 +48,21 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  // A page restored from the browser's back/forward cache keeps the old
-  // screen in memory: reload so the session is checked again.
+  // Página restaurada do cache do navegador mostra a tela antiga: recarrega para conferir a sessão
+  // de novo.
   useEffect(() => {
     const onShow = (event) => { if (event.persisted) window.location.reload(); };
     window.addEventListener('pageshow', onShow);
     return () => window.removeEventListener('pageshow', onShow);
   }, []);
 
-  // While signed in: answer other tabs, follow their "Sair", and end the
-  // session after IDLE_LIMIT_MS without use.
   useEffect(() => {
     if (!user) return undefined;
     const stopTabs = listenOtherTabs({
       onLogout: () => { clearTabSession(); setUser(null); },
     });
-    // mig 098: the terminal account stays signed in while the terminal
-    // waits for the next employee (the server does the same).
+    // O usuário do terminal não sai por inatividade, porque o terminal fica esperando o próximo
+    // funcionário.
     const stopIdle = isTerminalAccount(user) ? () => {} : watchIdle({
       onIdle: async () => {
         setLoginFlash(IDLE_MESSAGE);
@@ -91,8 +89,6 @@ export function AuthProvider({ children }) {
 
   async function login(username, password) {
     const res = await api.post('/auth/login', { username, password });
-    // SEA (mig 092): the password is right but the login waits for the
-    // confirmation in the app of the user's phone.
     if (res && res.status === 202) {
       return { approval: await res.json() };
     }
@@ -104,16 +100,9 @@ export function AuthProvider({ children }) {
     return finishLogin(await res.json());
   }
 
-  // Session open (cookies set by the API): load the full user.
   async function finishLogin(data) {
-    // Page permissions (mig 061): USERs are allowed into the admin shell.
-    // Per-page permissions decide what they can actually do; the
-    // sidebar hides ungranted pages and the api gate returns 403 for
-    // direct URL hits. Any user with valid credentials proceeds.
-    //
-    // The login response does not carry the page grants; /auth/me does.
-    // Without them a USER would see an almost empty menu until the page
-    // was reloaded.
+    // A resposta do login não traz as permissões; sem /auth/me o menu ficaria quase vazio até
+    // recarregar.
     const me = await api.get('/auth/me');
     const full = me && me.ok ? await me.json() : data.user;
     markTabSession();
@@ -121,14 +110,13 @@ export function AuthProvider({ children }) {
     return full;
   }
 
-  // Ends the session on the server and in every open panel tab.
   async function endSession() {
     clearTabSession();
     announceLogout();
     try {
       await api.post('/auth/logout', {});
     } catch {
-      // Offline: the server still ends the session when it goes idle.
+      // Sem conexão: o servidor encerra a sessão sozinho quando ela fica inativa.
     }
   }
 

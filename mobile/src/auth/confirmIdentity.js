@@ -2,10 +2,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { identityError, withoutLock } from './appLock';
 import { markIdentityConfirmed } from './identityProof';
 
-// SEA: before receiving an OT, choosing where to store a material or
-// processing a withdrawal, the operator confirms with the fingerprint or
-// the phone's PIN/pattern. Returns null when confirmed, otherwise the
-// message to show.
+// Receber uma OT, escolher onde guardar e as etapas da retirada pedem a digital ou o PIN do
+// celular. Retorna null quando confirmou; senão, a mensagem para mostrar.
 export async function confirmIdentity(reason) {
   const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
     promptMessage: reason,

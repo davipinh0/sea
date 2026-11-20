@@ -1,6 +1,5 @@
 # SEA: Sistema de Expedição e Armazenamento
 
-**Apresentação para a Gerência de TI**
 Situação: protótipo em funcionamento, com dados fictícios. Novembro de 2026.
 
 ---
@@ -49,7 +48,7 @@ O protótipo está publicado no Azure e funciona do começo ao fim, mas só com 
   - os locais Expedição, SP12 e SP13;
   - base do SAP e retirada com avaliação;
   - app próprio e terminal de retirada.
-- **Ferramentas:** o desenvolvimento contou com ferramentas de IA para programação. Todo código passa por testes automatizados antes de ser publicado.
+- **Ferramentas:** o painel foi feito em React, servido pelo Nginx; a API foi feita em Python com Flask, tendo o PostgreSQL como banco de dados. Foi usada IA para aplicar correções em algumas linhas e arquivos e para os testes. Nenhuma mudança é publicada sem passar pelos testes automatizados.
 - **Testes automatizados** (todos passando na versão atual):
 
   | Parte | Testes |
@@ -66,24 +65,24 @@ O protótipo está publicado no Azure e funciona do começo ao fim, mas só com 
 ## 4. Arquitetura
 
 ```
- Celular Android (app SEA)        Navegador (painel web)       Terminal de retirada (toque)
-             │                               │                               │
-             └───────────────────────────────┼───────────────────────────────┘
-                                             │ HTTPS (TLS)
-                                 ┌───────────┴───────────┐
+  Celular Android (app SEA)        Navegador (painel web)        Terminal de retirada
+            │                                │                       (tela de toque)
+            └───────────────── HTTPS (TLS) ──┴─────────────────────────────┘
+                                             │
+                                 ┌───────────▼───────────┐
                                  │ Caddy (proxy reverso) │  certificado Let's Encrypt automático
                                  └───────────┬───────────┘
-             ┌───────────────────────────────┴───────────────────────────────┐
-    ┌────────┴────────┐             ┌────────┴────────┐             ┌────────┴────────┐
-    │ Painel (React,  │             │ API (Python /   │             │ Worker Celery   │
-    │ Nginx)          │             │ Flask)          │             │ (e-mail, push)  │
-    └─────────────────┘             └────┬───────┬────┘             └────────┬────────┘
-                                         │       │                           │
-                                ┌────────┴───┐ ┌─┴───────────────────────────┴────┐
-                                │ PostgreSQL │ │ Redis (fila de tarefas)          │
-                                │ 16         │ └──────────────────────────────────┘
+                         ┌───────────────────┼───────────────────┐
+                ┌────────▼────────┐  ┌───────▼────────┐  ┌───────▼────────┐
+                │ Painel (React,  │  │ API (Python /  │  │ Worker Celery  │
+                │ Nginx)          │  │ Flask)         │  │ (e-mail, push) │
+                └─────────────────┘  └───┬────────┬───┘  └───────┬────────┘
+                                         │        │              │
+                                ┌────────▼───┐  ┌─▼──────────────▼─┐
+                                │ PostgreSQL │  │ Redis (fila)     │
+                                │ 16         │  └──────────────────┘
                                 └────────────┘
-          Tudo em contêineres Docker, numa máquina virtual Linux no Azure.
+            Tudo em contêineres Docker, numa máquina virtual Linux no Azure.
 ```
 
 | Camada | Tecnologia | Observação |
@@ -188,45 +187,19 @@ As opções não se excluem. O SmartBee entrega um item no ponto de uso, sem ate
 
 ---
 
-## 8. Custos prováveis e capacidade
+## 8. Custos prováveis
 
-### Piloto e produção
+### Infraestrutura mensal (estimativa, em dólares)
 
-O servidor atual (Azure B2s) foi dimensionado para o protótipo. Para a Ternium, a recomendação é separar duas fases:
-
-| Fase | Escopo | Infraestrutura | Custo estimado |
-|---|---|---|---|
-| **Piloto** | Expedição + SP12/SP13, uma equipe pequena, 2 a 4 semanas | VM Azure B2s atual (2 vCPU, 4 GB) + backup externo | **cerca de US$ 30 a 60/mês** |
-| **Produção** | Operação completa, com crescimento para outros almoxarifados | VM D2s v5 ou D4s v5 (CPU dedicada, sem "burst") + **Azure Database for PostgreSQL** gerenciado (backup automático e alta disponibilidade) + backup externo + monitoramento | **cerca de US$ 200 a 400/mês** |
-
-Preços de tabela aproximados (região East US, Linux, sem impostos nem descontos da empresa). Os valores de produção devem ser confirmados na calculadora do Azure.
-
-### Itens do custo mensal
-
-| Item | Piloto | Produção |
+| Item | Custo estimado | Observação |
 |---|---|---|
-| Servidor da aplicação | B2s: cerca de US$ 30 (US$ 17,50 com reserva de 1 ano) | D2s v5 / D4s v5: cerca de US$ 70 a 140 |
-| Banco de dados | no próprio servidor | PostgreSQL gerenciado: cerca de US$ 100 a 200 |
-| Backup externo (Azure Storage) | cerca de US$ 1 a 5 | cerca de US$ 5 a 20 |
-| Monitoramento e alertas | gratuito (alertas básicos do Azure) | cerca de US$ 10 a 30 |
-| Domínio / build do app / notificações | cerca de US$ 0 a 20 | cerca de US$ 0 a 20 |
-| **Total** | **cerca de US$ 30 a 60** | **cerca de US$ 200 a 400** |
-
-### Capacidade medida
-
-O que pesa no servidor não é o tamanho da empresa, e sim quantos aparelhos usam o SEA ao mesmo tempo. Cada celular ou painel aberto faz cerca de 12 consultas por minuto, e o terminal faz 20 enquanto acompanha um pedido. **200 aparelhos ativos ao mesmo tempo** dão cerca de **40 consultas por segundo**.
-
-Teste de carga feito na API, com as consultas que o app e o painel fazem e a CPU limitada a 1 núcleo:
-
-| Clientes simultâneos | Consultas atendidas por segundo | Tempo de resposta (mediana) | Erros |
-|---|---|---|---|
-| 10 | cerca de 440 | 8 ms | 0 |
-| 30 | cerca de 440 | 88 ms | 0 |
-| 80 | cerca de 440 | 194 ms | 0 |
-
-O resultado é otimista: o banco do teste estava quase vazio e o processador era mais rápido que o da VM. Mesmo com uma margem de 4 a 5 vezes, o piloto fica com folga. Antes da produção, o teste deve ser repetido num ambiente de homologação com volume de dados real.
-
-**Corrigido para o piloto:** a API limitava a 300 requisições por minuto **por IP**. Na rede da empresa todos os celulares saem pelo mesmo IP, então cerca de 25 aparelhos ativos bloqueariam a operação inteira. O limite agora conta **por usuário**.
+| Máquina virtual Azure B2s (Linux) | cerca de **US$ 30/mês** sob demanda, cerca de US$ 17,50/mês com reserva de 1 ano | preço de tabela East US; impostos e descontos da empresa não incluídos |
+| Disco de 64 GB + IP público + tráfego | poucos dólares por mês | conforme a calculadora do Azure |
+| Backup externo (Azure Storage) | cerca de US$ 1 a 5/mês | banco atual com cerca de 0,3 MB por backup |
+| Domínio próprio | cerca de US$ 10 a 20/ano | ou um subdomínio da empresa, sem custo |
+| Build do app (Expo EAS) | US$ 0 no plano gratuito | planos pagos a partir de cerca de US$ 19/mês para builds mais rápidos |
+| Notificações (Expo / FCM) | US$ 0 | |
+| **Total da infraestrutura** | **cerca de US$ 35 a 60/mês** | |
 
 ### Investimento inicial (hardware)
 - **Terminal:** um PC com tela de toque por ponto de retirada. Pode ser um computador que já existe, com monitor touch.
@@ -246,7 +219,7 @@ A título de comparação, uma única máquina de dispensação automática ou u
 
 ### Positivos
 - **Feito para o processo da Expedição:** OT, PM11/PM12, SP12/SP13, aprovação da retirada.
-- **Custo baixo:** sem licença; infraestrutura de cerca de US$ 30 a 60/mês no piloto e US$ 200 a 400/mês em produção.
+- **Custo baixo:** sem licença e com infraestrutura de algumas dezenas de dólares por mês.
 - **Rastreabilidade completa:** log à prova de alteração, com quem fez, quando, em qual ordem e se confirmou a identidade.
 - **Segurança acima do comum** para um sistema interno: dois fatores pelo celular, sessões encerráveis, confirmação por digital/PIN, criptografia em trânsito e nas credenciais.
 - **Hardware simples:** celular comum e navegador; não exige coletor dedicado.
@@ -257,10 +230,7 @@ A título de comparação, uma única máquina de dispensação automática ou u
 - **Uma pessoa só:** o conhecimento está concentrado no desenvolvedor. Precisa de documentação de passagem e de mais um responsável.
 - **Ainda é protótipo:** dados fictícios, sem piloto com usuários reais.
 - **Integrações por fazer:** SAP (hoje por planilha), login e e-mail corporativos.
-- **Um único servidor:** se a máquina cair, o sistema para. O backup ainda fica nela, sem cópia externa. Para a produção: banco gerenciado com alta disponibilidade e backup externo (seção 8).
-- **Servidor do piloto é "burstable":** a B2s só garante cerca de 40% da CPU de forma contínua. Serve para o piloto; a produção precisa de CPU dedicada (D2s/D4s v5).
-- **Volume de dados:** algumas listas (ordens) são calculadas sobre todas as OTs. Com anos de dados reais, precisam de paginação e de arquivamento das OTs antigas.
-- **Consultas periódicas:** o app e o painel consultam o servidor de tempos em tempos (8 a 15 segundos), em vez de receber avisos instantâneos. Isso atende centenas de aparelhos; para milhares, o ideal é migrar para atualização instantânea (WebSocket).
+- **Um único servidor:** se a máquina cair, o sistema para. O backup ainda fica nela, sem cópia externa.
 - **Só Android:** iOS foi deixado de lado; exigiria conta Apple Developer.
 - **Distribuição do app:** o app é instalado à mão (APK). Em escala, precisa da loja gerenciada da empresa ou de um gerenciador de celulares (MDM).
 - **Quantidades inteiras:** quantidade fracionada (KG quebrado, por exemplo) ainda não é aceita.
@@ -285,7 +255,7 @@ A título de comparação, uma única máquina de dispensação automática ou u
 
 ## 11. O que é preciso para ir para produção
 
-1. **Hospedagem na conta Azure da empresa**, com domínio próprio, gerida pela TI, no porte de produção da seção 8 (CPU dedicada e banco gerenciado).
+1. **Hospedagem na conta Azure da empresa**, com domínio próprio, gerida pela TI.
 2. **Backup externo diário** (Azure Storage) e teste de restauração.
 3. **Monitoramento** com alerta de indisponibilidade.
 4. **Dados reais:** endereços do SP12/SP13, cadastro de materiais e usuários; limpeza dos dados fictícios.

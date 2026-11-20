@@ -16,8 +16,7 @@ const RESULT_TYPE_LABEL = {
   po: 'Ordem',
 };
 
-// Search results open the SEA tab that owns the entity. Sales orders and
-// customers are not part of SEA, so those result types are dropped.
+// Pedidos de venda e clientes não fazem parte do SEA, então esses resultados são descartados.
 const SEA_RESULT_TYPES = new Set(['item', 'bin', 'po']);
 
 function resultRoute(r) {

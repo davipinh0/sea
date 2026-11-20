@@ -2204,39 +2204,20 @@ INSERT INTO channel_recompute_state (only_row, last_cursor)
 VALUES (TRUE, 0)
 ON CONFLICT (only_row) DO NOTHING;
 
--- ============================================================
--- 082_sea.sql - SEA (Sistema de Expedição e Armazenamento)
--- ============================================================
--- Adapts the SEA schema for the SEA prototype:
---   * Ordem de Transferência (OT) = purchase_orders row with an
---     order_type of PM11 or PM12. Received stock carries the OT number
---     as inventory.lot_number, which links every unit back to its OT.
---   * SP12 storage rules: configurable bin capacity, size class
---     (e.g. A3 for small parts) and material compatibility groups.
---     All new limits default to NULL = "not configured / no limit";
---     the prototype never invents numeric capacities.
---   * Employee badge (RFID/NFC HID, simulated) on users.
---   * Withdrawals (retiradas) requested at the touchscreen terminal.
---     Requested quantities are reserved in inventory.quantity_allocated
---     and only leave quantity_on_hand when the employee confirms the
---     handover with their badge.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 082: base do SEA (OT, regras de armazenagem, retiradas).
 
--- OT type (PM11 / PM12). NULL for non-SEA purchase orders.
+-- Tipo da OT (PM11/PM12). NULL para pedidos que não são do SEA.
 ALTER TABLE purchase_orders
     ADD COLUMN IF NOT EXISTS order_type VARCHAR(4)
     CHECK (order_type IS NULL OR order_type IN ('PM11', 'PM12'));
 CREATE INDEX IF NOT EXISTS ix_purchase_orders_order_type
     ON purchase_orders(order_type) WHERE order_type IS NOT NULL;
 
--- Employee badge identifier (simulated RFID/NFC HID reader).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS badge_uid VARCHAR(64);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_badge_uid
     ON users(badge_uid) WHERE badge_uid IS NOT NULL;
 
--- SP12 storage rules. NULL = not configured (no limit / any class).
+-- Regras de armazenagem. NULL = sem regra.
 ALTER TABLE bins
     ADD COLUMN IF NOT EXISTS capacity_units INT
     CHECK (capacity_units IS NULL OR capacity_units > 0);
@@ -2246,11 +2227,9 @@ ALTER TABLE bins
 ALTER TABLE items
     ADD COLUMN IF NOT EXISTS size_class VARCHAR(20)
     CHECK (size_class IS NULL OR size_class IN ('PEQUENO', 'GRANDE'));
--- Materials sharing the same compat_group may share an address.
--- NULL = only shares an address with the same material.
+-- Materiais do mesmo compat_group podem dividir um endereço. NULL = só com o mesmo material.
 ALTER TABLE items ADD COLUMN IF NOT EXISTS compat_group VARCHAR(50);
 
--- Withdrawals (retiradas) requested at the terminal.
 CREATE TABLE IF NOT EXISTS withdrawals (
     withdrawal_id        SERIAL PRIMARY KEY,
     warehouse_id         INT NOT NULL REFERENCES warehouses(warehouse_id),
@@ -2285,32 +2264,8 @@ CREATE TABLE IF NOT EXISTS withdrawal_lines (
 );
 CREATE INDEX IF NOT EXISTS ix_withdrawal_lines_withdrawal ON withdrawal_lines(withdrawal_id);
 
--- ============================================================
--- 083_sea_etiqueta.sql - SEA: dados da etiqueta de recebimento
--- ============================================================
--- Stores the data printed on the label that travels with each material
--- (OT, reserva, material, lote, solicitante, recebedor, ordem de serviço).
---
--- Mapping onto the existing SEA tables (no parallel model):
---   * Recebimento / OT  = purchase_orders
---       codigo_ot            -> po_number          (existing)
---       codigo_barras        -> po_barcode         (existing)
---       empresa_origem       -> vendor_name        (existing)
---       data_necessaria      -> expected_date      (existing)
---       tipo_ordem_servico   -> order_type         (mig 082, PM11 / PM12)
---       numero_ordem_servico -> service_order_number
---       the remaining label fields are the columns added below.
---   * Material recebido = purchase_order_lines (one row per material of
---     the OT) + items (the material master, shared between OTs).
---     The supplier lot lives on the OT line, separate from the material
---     code. inventory.lot_number keeps carrying the OT number (mig 082),
---     which is what ties stock, address and withdrawals back to the OT.
---
--- Every new column is nullable: a field that was not identified on the
--- label stays NULL = "pendente de preenchimento", never guessed.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 083: dados da etiqueta de recebimento. Coluna nova aceita NULL: o que não foi identificado
+-- fica pendente.
 
 ALTER TABLE purchase_orders
     ADD COLUMN IF NOT EXISTS reservation_number   VARCHAR(40),
@@ -2321,13 +2276,11 @@ ALTER TABLE purchase_orders
     ADD COLUMN IF NOT EXISTS requester_name       VARCHAR(120),
     ADD COLUMN IF NOT EXISTS receiver_name        VARCHAR(120),
     ADD COLUMN IF NOT EXISTS service_order_number VARCHAR(40),
-    -- Where the OT data came from: typed in, read from a label, or (future)
-    -- fetched from the corporate system.
+    -- Origem dos dados da OT: digitados, lidos da etiqueta ou (no futuro) vindos do sistema
+    -- corporativo.
     ADD COLUMN IF NOT EXISTS data_source          VARCHAR(20)
         CHECK (data_source IS NULL OR data_source IN ('MANUAL', 'ETIQUETA', 'INTEGRACAO')),
-    -- Label content that was not recognized, or that disagreed with what
-    -- was already registered: kept for the operator to review, never
-    -- discarded and never written over existing data.
+    -- Texto da etiqueta não reconhecido ou que divergia do cadastrado, guardado para revisão.
     ADD COLUMN IF NOT EXISTS review_notes         TEXT;
 
 CREATE INDEX IF NOT EXISTS ix_purchase_orders_reservation
@@ -2339,21 +2292,9 @@ ALTER TABLE purchase_order_lines
     ADD COLUMN IF NOT EXISTS uom         VARCHAR(10),
     ADD COLUMN IF NOT EXISTS created_at  TIMESTAMPTZ DEFAULT NOW();
 
--- Unit of measure of the material master (KG, UN, M ...).
 ALTER TABLE items ADD COLUMN IF NOT EXISTS uom VARCHAR(10);
 
--- ============================================================
--- 084_sea_notificacoes.sql - SEA: e-mail dos usuários e notificações
--- ============================================================
---   * users.email: e-mail corporativo do usuário. Serve para (a) entrar
---     no terminal de retirada com o e-mail e (b) receber as notificações
---     por e-mail (somente administradores ativos com e-mail cadastrado).
---   * sea_notifications: uma linha por evento operacional (retirada
---     solicitada, recebimento, armazenagem concluída). O painel lê esta
---     tabela para avisar o operador; email_status registra o envio.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 084: e-mail dos usuários e notificações.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(254);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email
@@ -2369,9 +2310,7 @@ CREATE TABLE IF NOT EXISTS sea_notifications (
     ot              VARCHAR(50),
     created_by      VARCHAR(100),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- PENDENTE: aguardando envio. ENVIADO. SEM_DESTINATARIO: nenhum
-    -- administrador com e-mail. NAO_CONFIGURADO: servidor SMTP não
-    -- configurado. FALHA: o envio falhou (email_error guarda o motivo).
+    -- PENDENTE, ENVIADO, SEM_DESTINATARIO, NAO_CONFIGURADO ou FALHA (motivo em email_error).
     email_status    VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
         CHECK (email_status IN ('PENDENTE', 'ENVIADO', 'SEM_DESTINATARIO',
                                 'NAO_CONFIGURADO', 'FALHA')),
@@ -2381,30 +2320,7 @@ CREATE TABLE IF NOT EXISTS sea_notifications (
 CREATE INDEX IF NOT EXISTS ix_sea_notifications_wh
     ON sea_notifications (warehouse_id, notification_id DESC);
 
--- ============================================================
--- 085_sea_base_sap.sql - SEA: base de dados vinda do SAP
--- ============================================================
--- Espelho, dentro do SEA, dos três conjuntos de dados que vêm do SAP:
---   * sap_orders             ordens (PM11 / PM12)
---   * sap_materials          materiais
---   * sap_reservations       OTs / reservas abertas (cabeçalho)
---   * sap_reservation_items  materiais de cada OT: de qual ordem,
---                            quantidade e unidade
---
--- O recebimento lê o código de barras da OT e procura nesta base
--- (services/sap_base.py). O que é encontrado passa pelo mesmo cadastro
--- de uma etiqueta (purchase_orders / purchase_order_lines / items), de
--- modo que recebimento, armazenagem e retirada não mudam.
---
--- A base é só espelho: o SEA nunca escreve nela a partir da operação.
--- Ela é carregada por importação (Sistema > Importação) e, no futuro,
--- pela integração com o SAP.
---
--- Uma OT traz materiais de várias ordens, então a ordem passa a ser
--- guardada também em cada material da OT (purchase_order_lines).
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 085: base de dados vinda do SAP.
 
 CREATE TABLE IF NOT EXISTS sap_orders (
     order_number VARCHAR(40) PRIMARY KEY,
@@ -2438,7 +2354,6 @@ CREATE TABLE IF NOT EXISTS sap_reservation_items (
     material_code VARCHAR(50) NOT NULL REFERENCES sap_materials(material_code),
     quantity      INT NOT NULL CHECK (quantity > 0),
     uom           VARCHAR(10),
-    -- O SEA mantém um registro por material em cada OT.
     UNIQUE (ot_number, material_code)
 );
 CREATE INDEX IF NOT EXISTS ix_sap_reservation_items_order
@@ -2449,49 +2364,16 @@ ALTER TABLE purchase_order_lines
     ADD COLUMN IF NOT EXISTS service_order_type   VARCHAR(4)
         CHECK (service_order_type IS NULL OR service_order_type IN ('PM11', 'PM12'));
 
--- ============================================================
--- 086_sea_notificacoes_limpar.sql - SEA: limpar notificações
--- ============================================================
--- Cada usuário pode limpar a sua lista de notificações do painel. O que
--- foi limpo deixa de aparecer para ele; os registros (e o histórico de
--- envio de e-mail) continuam em sea_notifications.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 086: limpar a lista de notificações.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_cleared_id INT NOT NULL DEFAULT 0;
 
--- ============================================================
--- 087_sea_peso_por_caixa.sql - SEA: material em KG retirado por caixa
--- ============================================================
--- Um material cuja unidade é KG (ex.: arame de soldagem) fica no estoque
--- em quilos, mas é retirado por caixa. items.pack_weight_kg guarda o peso
--- de uma caixa: 150 KG com caixas de 15 KG = 10 caixas; retirar 1 caixa
--- baixa 15 KG. NULL = o material não é controlado por caixa.
---
--- Vale só para materiais com unidade KG. Para PC, PAR etc. a retirada de
--- 1 continua sendo 1 unidade.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 087: material em KG retirado por caixa.
 
 ALTER TABLE items ADD COLUMN IF NOT EXISTS pack_weight_kg INT
     CHECK (pack_weight_kg IS NULL OR pack_weight_kg > 0);
 
--- ============================================================
--- 088_sea_cadastro_materiais.sql - SEA: cadastro de materiais,
--- prateleiras e notificações no celular
--- ============================================================
---   * sap_materials passa a ser o cadastro de materiais consultado ao
---     montar uma OT: o código traz a descrição, a unidade e o peso por
---     caixa. É mantido em Sistema > Cadastro de materiais por quem tem
---     a permissão 'material-catalog'.
---   * Prateleiras: todas passam a ser GRANDE, que aceita material de
---     qualquer tamanho (PEQUENO continua restrito a material pequeno).
---   * sea_push_tokens: aparelhos que recebem as notificações do SEA.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 088: cadastro de materiais, prateleiras e celulares que recebem notificações.
 
 ALTER TABLE sap_materials ADD COLUMN IF NOT EXISTS pack_weight_kg INT
     CHECK (pack_weight_kg IS NULL OR pack_weight_kg > 0);
@@ -2507,29 +2389,12 @@ CREATE TABLE IF NOT EXISTS sea_push_tokens (
 );
 CREATE INDEX IF NOT EXISTS ix_sea_push_tokens_user ON sea_push_tokens(user_id);
 
--- ============================================================
--- 089_sea_prateleiras_livres.sql - SEA: prateleiras sem limites
--- ============================================================
--- As prateleiras passam a aceitar qualquer material, de qualquer ordem,
--- em qualquer quantidade. A API deixou de aplicar classe de tamanho,
--- capacidade e compatibilidade; aqui os valores antigos são removidos
--- para que nenhuma tela mostre um limite que não vale mais.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 089: prateleiras sem limite.
 
 UPDATE bins SET size_class = NULL, capacity_units = NULL
 WHERE size_class IS NOT NULL OR capacity_units IS NOT NULL;
 
--- ============================================================
--- 091_sea_foto_usuario.sql - SEA: foto do usuário
--- ============================================================
--- Só o administrador coloca ou remove a foto (Sistema > Usuários). A
--- imagem já chega reduzida pelo painel (256 px, JPEG); o limite de 1 MB
--- protege o banco de um envio fora do painel.
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 091: foto do usuário.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo BYTEA;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_mime VARCHAR(20);
@@ -2546,22 +2411,7 @@ BEGIN
     END IF;
 END $$;
 
--- ============================================================
--- 092_sea_confirmacao_login.sql - SEA: login confirmado no celular
--- ============================================================
--- Com users.web_login_approval ligado e um aparelho cadastrado (app SEA
--- com bloqueio por digital ou PIN/padrão), o login por senha fora desse
--- aparelho (painel web, terminal, outro celular) só libera a sessão
--- depois de confirmado no aparelho. Cada tentativa fica em
--- sea_login_challenges; quem iniciou a tentativa acompanha com um
--- segredo próprio (só o hash fica no banco).
---
--- sea_push_tokens passa a guardar o aparelho mesmo após o "sair" do app
--- (signed_in = FALSE: não recebe os avisos do dia a dia, mas continua
--- podendo confirmar um login).
---
--- Idempotent: safe to run more than once. Mirrored in db/schema.sql.
--- ============================================================
+-- mig 092: login confirmado no celular.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS web_login_approval BOOLEAN NOT NULL DEFAULT FALSE;
 
@@ -2625,7 +2475,7 @@ ALTER TABLE sea_notifications ADD CONSTRAINT sea_notifications_kind_check
 
 ALTER TABLE sap_reservation_items ADD COLUMN IF NOT EXISTS lot_number VARCHAR(50);
 
--- mig 098: terminal de retirada, notificações da retirada.
+-- mig 098: terminal de retirada e notificações da retirada.
 ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS requester_email VARCHAR(254);
 ALTER TABLE sea_notifications ADD COLUMN IF NOT EXISTS withdrawal_id INT;
 CREATE INDEX IF NOT EXISTS ix_sea_notifications_withdrawal
@@ -2634,3 +2484,25 @@ ALTER TABLE sea_notifications DROP CONSTRAINT IF EXISTS sea_notifications_kind_c
 ALTER TABLE sea_notifications ADD CONSTRAINT sea_notifications_kind_check
     CHECK (kind IN ('RETIRADA_SOLICITADA', 'RETIRADA_APROVADA', 'RETIRADA_CANCELADA',
                     'RECEBIMENTO', 'ARMAZENAGEM_CONCLUIDA'));
+
+-- mig 099: excluir usuário que já tem histórico.
+ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS delivered_to_name VARCHAR(200);
+ALTER TABLE withdrawals DROP CONSTRAINT IF EXISTS withdrawals_delivered_to_user_id_fkey;
+ALTER TABLE withdrawals ADD CONSTRAINT withdrawals_delivered_to_user_id_fkey
+    FOREIGN KEY (delivered_to_user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+ALTER TABLE webhook_subscriptions_tombstones
+    DROP CONSTRAINT IF EXISTS webhook_subscriptions_tombstones_deleted_by_fkey;
+ALTER TABLE webhook_subscriptions_tombstones ADD CONSTRAINT webhook_subscriptions_tombstones_deleted_by_fkey
+    FOREIGN KEY (deleted_by) REFERENCES users(user_id) ON DELETE SET NULL;
+ALTER TABLE webhook_subscriptions_tombstones
+    DROP CONSTRAINT IF EXISTS webhook_subscriptions_tombstones_acknowledged_by_fkey;
+ALTER TABLE webhook_subscriptions_tombstones ADD CONSTRAINT webhook_subscriptions_tombstones_acknowledged_by_fkey
+    FOREIGN KEY (acknowledged_by) REFERENCES users(user_id) ON DELETE SET NULL;
+
+-- Novo processo liberado pelo celular: exclusão de usuário.
+ALTER TABLE sea_login_challenges DROP CONSTRAINT IF EXISTS sea_login_challenges_purpose_check;
+ALTER TABLE sea_login_challenges ADD CONSTRAINT sea_login_challenges_purpose_check
+    CHECK (purpose IS NULL OR purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario'));
+ALTER TABLE sea_step_up DROP CONSTRAINT IF EXISTS sea_step_up_purpose_check;
+ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
+    CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario'));

@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field, field_validator
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=150)
     password: str = Field(..., min_length=1, max_length=256)
-    # SEA: the app sends the push token of the phone; a registered phone
-    # of the user does not need to confirm its own login (mig 092).
+    # O app manda o token de push do celular: o celular cadastrado não precisa confirmar o próprio
+    # login.
     device_token: Optional[str] = Field(None, max_length=200)
 
     @field_validator("username")
@@ -24,7 +24,6 @@ class ChangePasswordRequest(BaseModel):
 
 
 class LoginApprovalPollRequest(BaseModel):
-    """SEA: whoever started a login that must be confirmed on the phone."""
 
     challenge_id: str = Field(..., min_length=1, max_length=64)
     poll_token: str = Field(..., min_length=1, max_length=128)

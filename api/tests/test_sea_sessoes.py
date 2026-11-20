@@ -1,8 +1,6 @@
-"""SEA: sessions tracked by the server (mig 093).
-
-Regression: the web panel stayed signed in after the browser was closed
-(8 h persistent cookie) and "Sair" only deleted the cookie -- a copy of
-the token kept working.
+"""Sessões controladas pelo servidor.
+Regressão: o painel continuava logado depois de fechar o navegador e "Sair" só apagava o cookie;
+uma cópia do token continuava funcionando.
 """
 
 from services.auth_service import decode_token, generate_token
@@ -70,7 +68,6 @@ class TestLogout:
         assert client.get("/api/auth/me").status_code == 200
 
         assert client.post("/api/auth/logout", json={}, headers=_csrf(client)).status_code == 200
-        # A copy of the token (as cookie or as header) no longer works.
         client.set_cookie("sea_auth", token, domain="localhost")
         assert client.get("/api/auth/me").status_code == 401
         client.delete_cookie("sea_auth", domain="localhost")
@@ -96,7 +93,7 @@ class TestIdle:
         resp = client.get("/api/auth/me")
         assert resp.status_code == 401
         assert "inatividade" in resp.get_json()["error"]
-        # Ended for good: the same token sent as a header does not revive it.
+        # Encerrada de vez: o mesmo token no cabeçalho não ressuscita a sessão.
         client.delete_cookie("sea_auth", domain="localhost")
         assert (
             client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code

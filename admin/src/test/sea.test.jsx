@@ -1,7 +1,6 @@
-/**
- * SEA UI: terminal withdrawal flow, OT receiving, permission-filtered
- * navigation, user-facing error display and the PO status-filter
- * regression ('All' must stay an internal value, never sent as status).
+/*
+ * Telas do SEA: terminal de retirada, recebimento, menu por permissão e mensagens de erro.
+ * Regressão: o filtro 'All' das ordens nunca pode ser enviado como status.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -24,8 +23,8 @@ let warehouseList = [];
 let currentWarehouse = { warehouse_id: 7, warehouse_code: 'Expedição' };
 vi.mock('../warehouse.jsx', () => ({ useWarehouse: () => ({ warehouseId: 7, warehouses: warehouseList, warehouse: currentWarehouse }) }));
 vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
-// The terminal has its own session (terminalApi.js); its requests are
-// routed to the same mocks, tagged with the token they were made with.
+// O terminal tem sessão própria; as chamadas dele passam pelos mesmos mocks, marcadas com o token
+// usado.
 const terminalLogin = vi.fn();
 const terminalLogout = vi.fn();
 const terminalTokens = [];
@@ -57,8 +56,7 @@ const STOCK = [
   { inventory_id: 11, sku: 'MAT-1', item_name: 'Parafuso', bin_code: 'A3', stored: true, available: 5 },
   { inventory_id: 12, sku: 'MAT-2', item_name: 'Porca', bin_code: 'SP12-RECEB', stored: false, available: 9 },
 ];
-// What the terminal gets for an order: only what is stored and available
-// (the API leaves the receiving area out), each row with its OT.
+// Para uma ordem, o terminal só recebe o que está guardado e disponível, cada linha com a sua OT.
 const ORDER = {
   order_number: '2000000011', order_type: 'PM11',
   stock: [{ inventory_id: 11, ot: 'OT-1', sku: 'MAT-1', item_name: 'Parafuso', bin_code: 'A3', warehouse_id: 7, warehouse_code: 'SP12', available: 5 }],
@@ -74,7 +72,6 @@ beforeEach(() => {
   currentUser = { username: 'terminal', full_name: 'Terminal SP12', role: 'USER', allowed_pages: ['retirada'] };
 });
 
-// The terminal always opens on the choice of how to identify (mig 098).
 async function terminalSignIn() {
   render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
   expect(screen.queryByLabelText('Ordem')).toBeNull();
@@ -101,13 +98,12 @@ describe('Terminal de retirada', () => {
     });
 
     await terminalSignIn();
-    // Third argument: the wait for the confirmation on the phone (mig 092).
     expect(terminalLogin).toHaveBeenCalledWith('retirada@sea.example', 'Sea@2026', expect.objectContaining({ onWaiting: expect.any(Function) }));
     expect(screen.getByText(/Identificado: Usuário de Retirada/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Ordem'), { target: { value: '2000000011' } });
     fireEvent.click(screen.getByText('Consultar ordem'));
 
-    // The employee is asked for the order only: no OT, no barcode.
+    // O funcionário só informa a ordem: sem OT, sem código de barras.
     await screen.findByText('Parafuso');
     expect(screen.getByText(/2000000011 · materiais disponíveis/)).toBeInTheDocument();
     expect(screen.queryByText(/código de barras/i)).toBeNull();
@@ -124,13 +120,11 @@ describe('Terminal de retirada', () => {
     expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/3/entregar', {});
     expect(screen.queryByText(/crachá/i)).toBeNull();
 
-    // Every request used the terminal's own token, never the panel session.
+    // Todas as chamadas usaram o token do terminal, nunca a sessão do painel.
     expect(new Set(terminalTokens)).toEqual(new Set(['tok-terminal']));
 
-    // Ending the session returns to the choice of how to identify.
     fireEvent.click(screen.getByText('Encerrar sessão'));
     await screen.findByText('Tenho acesso ao SEA');
-    // ...and ends the session on the server too (mig 093).
     expect(terminalLogout).toHaveBeenCalledWith('tok-terminal');
   }, 15000);
 
@@ -160,7 +154,7 @@ describe('Terminal de retirada', () => {
     expect(apiPost).toHaveBeenCalledWith('/sea/retiradas', {
       ot: 'OT-1', lines: [{ inventory_id: 11, quantity: 1 }], requester_email: 'fulano@empresa.example',
     });
-    // The requests went under the terminal account (panel session), not an employee token.
+    // Os pedidos saíram pela sessão do usuário do terminal, não com o token de um funcionário.
     expect(terminalTokens).toEqual([]);
   });
 
@@ -267,14 +261,13 @@ describe('Material em KG retirado por caixa', () => {
     await screen.findByText('Arame de soldagem');
     expect(screen.getByText(/disponível: 2 cx \(36 KG\)/)).toBeInTheDocument();
 
-    // The picker goes by the weight of the box: 0 > 18 KG > 36 KG.
     const wire = () => screen.getByRole('group', { name: 'ARAME' }).querySelector('output').textContent;
     const plus = screen.getByLabelText('Aumentar ARAME');
     expect(wire()).toBe('0 KG');
     fireEvent.click(plus);
     expect(wire()).toBe('18 KG');
     expect(screen.getByText(/Retirando 1 cx \(18 KG\); ficam 18 KG\./)).toBeInTheDocument();
-    // Only whole boxes: 36 KG holds two.
+    // Só caixas inteiras: 36 KG dá duas.
     fireEvent.click(plus);
     expect(wire()).toBe('36 KG');
     expect(plus).toBeDisabled();
@@ -339,14 +332,11 @@ describe('Armazenagem entre locais', () => {
     expect(await screen.findByText('Expedição · EXPEDICAO')).toBeInTheDocument();
     const select = screen.getByLabelText('Endereço de destino de MAT-1');
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
-    // Shelves are free: no size restriction next to the address.
     expect(options).toEqual(['Escolha…', 'A0', 'A3', 'SOLDA']);
-    // The material is named by its order; the OT is a reference column.
     expect(screen.getByText('2000000011')).toBeInTheDocument();
     expect(screen.getByText('100000001')).toBeInTheDocument();
     expect(screen.queryByText(/Regras:/)).toBeNull();
     expect(Array.from(select.querySelectorAll('optgroup')).map((g) => g.label)).toEqual(['SP12 - Setor SP12', 'Solda - Contêiner de Solda']);
-    // The suggested shelf of the other location comes pre-selected.
     await waitFor(() => expect(select).toHaveValue('21'));
     expect(screen.getByText('SP12 · A0')).toBeInTheDocument();
 
@@ -417,7 +407,6 @@ describe('Notificações clicáveis', () => {
     fireEvent.click(await screen.findByLabelText('Notificações'));
     fireEvent.click(await screen.findByRole('button', { name: /Aviso de teste/ }));
     expect(screen.getByTestId('where').textContent).toBe(target);
-    // The list closes once the notification is opened.
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -457,7 +446,7 @@ describe('Recebimento de OT', () => {
     fireEvent.change(screen.getByPlaceholderText(/Leia ou digite o número da OT/), { target: { value: 'OT-9' } });
     fireEvent.click(screen.getByText('Consultar'));
     await screen.findByText('Parafuso');
-    // Operator typed a partial quantity, but "integral" must ignore it.
+    // O operador digitou uma quantidade parcial, mas o "integral" tem de ignorá-la.
     fireEvent.change(screen.getByLabelText('Quantidade a receber de MAT-1'), { target: { value: '2' } });
     fireEvent.click(screen.getByText('Receber ordem integral'));
     await waitFor(() => expect(apiPost).toHaveBeenCalled());
@@ -520,7 +509,6 @@ describe('Recebimento por etiqueta', () => {
     expect(screen.getByText('2000000012')).toBeInTheDocument();
     expect(screen.getByText('Arame de solda')).toBeInTheDocument();
     expect(screen.getByText('PAR')).toBeInTheDocument();
-    // The receiver is the logged-in user; there is nothing to type.
     expect(screen.queryByText('Iniciar recebimento pela etiqueta')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Registrar entrega'));
@@ -569,7 +557,7 @@ describe('Recebimento por etiqueta', () => {
     fireEvent.click(screen.getByText('Interpretar etiqueta'));
     await waitFor(() => expect(screen.getByLabelText('Lote')).toHaveValue('0000245045'));
     expect(screen.getByLabelText('Reserva')).toHaveValue('0285365145 /02');
-    // Not read from the label: left empty and flagged, never guessed.
+    // O que não foi lido da etiqueta fica vazio e marcado, nunca adivinhado.
     expect(screen.getByLabelText(/Local de descarga/)).toHaveValue('');
     expect(screen.getByText('Centro de custo 4411')).toBeInTheDocument();
 
@@ -579,7 +567,6 @@ describe('Recebimento por etiqueta', () => {
     expect(body.warehouse_id).toBe(7);
     expect(body.source).toBe('ETIQUETA');
     expect(body.header).toMatchObject({ ot_code: '1003329915', reservation_number: '0285365145 /02', service_order_type: 'PM12', unload_location: null });
-    // The label is in KG: the box weight is asked and, left blank, sent as pending.
     expect(body.materials).toEqual([{ material_code: '74165325', description: 'ARAME', quantity: 54, uom: 'KG', pack_weight_kg: null, lot_number: '0000245045', expiry_date: null }]);
     expect(body.unrecognized).toEqual(['Centro de custo 4411']);
   });
@@ -668,7 +655,7 @@ describe('Exclusão de materiais e ordens', () => {
     apiDelete.mockImplementation(() => fail(409, { error: 'O material MAT-1 tem registros de expedição de pedidos.', user_facing: true }));
     render(<MemoryRouter><Items /></MemoryRouter>);
     fireEvent.click(await screen.findByLabelText('Excluir'));
-    // The row button and the confirmation button share the name; confirm is last.
+    // O botão da linha e o de confirmação têm o mesmo nome; o de confirmar é o último.
     fireEvent.click(screen.getAllByRole('button', { name: 'Excluir' }).at(-1));
     await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/sea/materiais/21'));
     expect(await screen.findByRole('alert')).toHaveTextContent('tem registros de expedição');
@@ -710,7 +697,6 @@ describe('OTs: status filter regression', () => {
     const listCalls = apiGet.mock.calls.map(([p]) => p).filter((p) => p.startsWith('/admin/purchase-orders'));
     expect(listCalls.length).toBeGreaterThan(0);
     for (const p of listCalls) expect(p).not.toMatch(/status=/);
-    // The option is labelled in Portuguese but keeps the internal value.
     const option = screen.getByRole('option', { name: 'Todos' });
     expect(option.value).toBe('All');
   });

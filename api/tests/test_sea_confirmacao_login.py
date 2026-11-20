@@ -1,4 +1,4 @@
-"""SEA: password login confirmed on the registered phone (mig 092)."""
+"""Login com senha confirmado no celular cadastrado."""
 
 from sqlalchemy import text
 
@@ -36,7 +36,7 @@ def _login(client, username, device_token=None):
 
 
 def _phone(client, username):
-    """Session of the registered phone (its own login needs no confirmation)."""
+    """Sessão do celular cadastrado (o login dele não precisa de confirmação)."""
     resp = _login(client, username, PHONE)
     assert resp.status_code == 200, resp.get_json()
     return {"Authorization": f"Bearer {resp.get_json()['token']}"}
@@ -99,10 +99,10 @@ class TestConfirmation:
         assert done.status_code == 200
         body = done.get_json()
         assert body["user"]["user_id"] == uid and body["token"]
-        assert done.headers.getlist("Set-Cookie")  # the panel gets its cookies too
+        assert done.headers.getlist("Set-Cookie")
         me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
         assert me.status_code == 200
-        # One approval, one session.
+        # Uma aprovação, uma sessão.
         assert _poll(client, challenge).status_code == 410
         actions = _db_transaction.execute(text(
             "SELECT action_type FROM audit_log WHERE entity_id = :u AND action_type LIKE 'LOGIN_%' ORDER BY log_id"),
@@ -116,7 +116,7 @@ class TestConfirmation:
         assert _decide(client, phone, challenge["challenge_id"], False).get_json()["status"] == "DENIED"
         resp = _poll(client, challenge)
         assert resp.status_code == 403 and "negado" in resp.get_json()["error"]
-        # Decided once: the phone cannot change its mind.
+        # Decidido uma vez, o celular não muda de ideia.
         assert _decide(client, phone, challenge["challenge_id"], True).status_code == 404
 
     def test_the_challenge_id_alone_does_not_open_the_session(self, client, _db_transaction):
@@ -144,7 +144,6 @@ class TestConfirmation:
         phone = _phone(client, "sea.conf.dono")
         refused = _decide(client, phone, challenge["challenge_id"], True, device=OTHER)
         assert refused.status_code == 403
-        # Another user's session cannot decide it either.
         _setup(client, conn, "sea.conf.intruso", trusted=False)
         intruder = {"Authorization": "Bearer " + _login(client, "sea.conf.intruso").get_json()["token"]}
         assert _decide(client, intruder, challenge["challenge_id"], True).status_code == 403
@@ -184,10 +183,10 @@ class TestDevices:
 
         devices = client.get(f"/api/admin/users/{uid}/aparelhos", headers=auth_headers).get_json()["devices"]
         assert len(devices) == 1 and devices[0]["secure_lock"] is True
-        assert "telefone" not in str(devices)  # the token itself is not shown
+        assert "telefone" not in str(devices)
         assert _login(client, "sea.conf.adm").status_code == 202
 
-        # Phone lost: removing the phones lets the user log in with the password again.
+        # Celular perdido: removendo os celulares, o usuário volta a entrar só com a senha.
         assert client.delete(f"/api/admin/users/{uid}/aparelhos", headers=auth_headers).get_json()["removed"] == 1
         assert _login(client, "sea.conf.adm").status_code == 200
 
@@ -221,8 +220,9 @@ class TestPush:
 
 
 class TestLockedAppUnlockingWithThePassword:
-    """Regression: "Desbloquear com a senha" on the registered phone sent no
-    device token, got 202 and logged the app out (deadlock with the web)."""
+    """Regressão: "Desbloquear com a senha" no celular cadastrado não mandava o token do aparelho,
+    recebia 202 e o app saía.
+    """
 
     def _unlock(self, client, username, headers):
         return client.post("/api/auth/login", json={"username": username, "password": "Senha123"},

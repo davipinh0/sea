@@ -5,10 +5,7 @@ import Modal from '../components/Modal.jsx';
 import { readError } from '../utils/sea.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
-// Sistema > Cadastro de materiais: the materials consulted when an OT is
-// put together. Typing the code of a material brings its description,
-// unit and box weight from here. Only who holds the "Cadastro de
-// materiais" permission (or an administrator) reaches this page.
+// Materiais consultados ao montar uma OT: o código traz descrição, unidade e peso da caixa daqui.
 
 const UNITS = ['PC', 'KG', 'PAR'];
 const EMPTY = { material_code: '', description: '', uom: '', pack_weight_kg: '' };
@@ -19,7 +16,7 @@ export default function CadastroMateriais() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [message, setMessage] = useState(null);
-  const [form, setForm] = useState(null);      // { ...fields, editing: code | null }
+  const [form, setForm] = useState(null);
   const [formError, setFormError] = useState('');
   const [removing, setRemoving] = useState(null);
   const [busy, setBusy] = useState(false);

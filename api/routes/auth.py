@@ -143,8 +143,7 @@ def login(validated):
             "error": f"Muitas tentativas de login com falha nesta conta. Tente novamente em {minutes}m {seconds}s",
         }), 429
 
-    # SEA: the login also accepts the corporate e-mail; the identity
-    # provider maps it to the SEA username (None = unknown e-mail).
+    # O login também aceita o e-mail corporativo, convertido no usuário do SEA.
     login_name = get_identity_provider().resolve_username(g.db, validated.username)
     user = authenticate_user(g.db, login_name, validated.password) if login_name else None
 
@@ -165,8 +164,7 @@ def login(validated):
     _reset_attempts(g.db, user_key)
     _reset_attempts(g.db, lock_key)
 
-    # SEA (mig 092): the password is right, but the session waits for the
-    # user to confirm on the registered phone.
+    # A senha está certa, mas a sessão espera a confirmação no celular cadastrado.
     if (login_approval.approval_required(g.db, user["user_id"], validated.device_token)
             and not _holds_open_session(user["user_id"])):
         return _start_login_approval(user, device_token_sent=bool(validated.device_token))
@@ -182,17 +180,14 @@ def login(validated):
 
 
 def _open_session(user):
-    """Token for ``user`` with its session recorded (mig 093). Caller commits."""
+    """Quem chama faz o commit."""
     return web_sessions.open_session(
         g.db, user, request.remote_addr or "", request.headers.get("User-Agent", ""))
 
 
 def _holds_open_session(user_id) -> bool:
-    """The caller already has an open session of this user (Bearer header).
-
-    The locked app re-checking the password sends its own session along:
-    asking the phone to confirm itself would only lock the user out
-    (regression of mig 092 on the app's "Desbloquear com a senha").
+    """Quem chama já tem uma sessão aberta deste usuário. O app travado conferindo a senha manda a
+    própria sessão; pedir ao celular para confirmar a si mesmo travaria o usuário para fora.
     """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -226,11 +221,8 @@ def _start_login_approval(user, device_token_sent=False):
 @validate_body(LoginApprovalPollRequest)
 @with_db
 def login_approval_status(validated):
-    """SEA: whoever started a login waiting for the phone asks how it is.
-
-    PENDING -> 202, DENIED -> 403, EXPIRED -> 410, unknown -> 404. Once
-    APPROVED the session is opened here (token in the body and cookies,
-    like /login) and the challenge cannot be used again.
+    """Quem iniciou um login esperando o celular consulta aqui: pendente 202, negado 403, vencido
+    410, desconhecido 404. Aprovado, a sessão abre aqui e o pedido não pode ser usado de novo.
     """
     state = login_approval.poll(g.db, validated.challenge_id, validated.poll_token)
     if state is None:
@@ -289,7 +281,7 @@ def logout():
         if payload is not None:
             web_sessions.end(g.db, payload.get("jti"), web_sessions.LOGOUT)
             g.db.commit()
-        # The app may also keep the login cookies (same token): drop them.
+        # O app pode ter guardado os cookies do login (mesmo token): remove.
         if request.cookies.get(AUTH_COOKIE_NAME) == bearer:
             clear_auth_cookies(response)
         return response
@@ -370,7 +362,6 @@ def me():
         "allowed_overrides": allowed_overrides,
         "require_packing": require_packing,
         "must_change_password": bool(row.must_change_password),
-        # SEA: photo set by an administrator (None = no photo).
         "photo_version": int(row.photo_updated_at.timestamp()) if row.photo_updated_at else None,
     })
 
@@ -396,7 +387,7 @@ def refresh():
         "warehouse_id": row.warehouse_id,
         "warehouse_ids": list(row.warehouse_ids) if row.warehouse_ids else [],
     }
-    # SEA (mig 093): the old session ends; the new token opens its own.
+    # A sessão antiga termina; o token novo abre a sua.
     web_sessions.end(g.db, g.current_user.get("jti"), web_sessions.REFRESH)
     token = _open_session(user_dict)
     g.db.commit()

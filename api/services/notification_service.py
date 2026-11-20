@@ -1,27 +1,10 @@
-"""SEA operational notifications (panel + e-mail).
-
-Three events are announced, each with its own e-mail:
-
-    RETIRADA_SOLICITADA    a withdrawal was requested at the terminal
-    RECEBIMENTO            materials of an order were received
-    ARMAZENAGEM_CONCLUIDA  every received unit of an order left the
-                           receiving area
-
-``create`` writes one ``sea_notifications`` row inside the caller's
-transaction, so a rolled-back operation leaves no notification. The
-panel polls that table. After the commit the route calls ``dispatch``,
-which hands the e-mail to the Celery worker; the request never waits
-for the mail server.
-
-Recipients are the active administrators with an e-mail on their user.
-The mail server comes from the environment (nothing is assumed):
-
-    SEA_SMTP_HOST      required to send; unset = e-mails are not sent
-    SEA_SMTP_PORT      default 587
-    SEA_SMTP_USER      optional (no login when unset)
-    SEA_SMTP_PASSWORD  optional
-    SEA_SMTP_FROM      sender address (default: SEA_SMTP_USER)
-    SEA_SMTP_SECURITY  starttls (default) | ssl | none
+"""Notificações do SEA (painel, e-mail e celular).
+``create`` grava a notificação dentro da transação de quem chama: se a operação for desfeita, a
+notificação também é. Depois do commit, ``dispatch`` entrega o e-mail ao worker; a requisição
+nunca espera o servidor de e-mail.
+Destinatários do e-mail: administradores ativos com e-mail. Servidor de e-mail pelo ambiente:
+SEA_SMTP_HOST (sem ele, não envia), SEA_SMTP_PORT (587), SEA_SMTP_USER, SEA_SMTP_PASSWORD,
+SEA_SMTP_FROM e SEA_SMTP_SECURITY (starttls, ssl ou none).
 """
 
 from __future__ import annotations
@@ -39,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 KIND_WITHDRAWAL_REQUESTED = "RETIRADA_SOLICITADA"
 KIND_WITHDRAWAL_APPROVED = "RETIRADA_APROVADA"
-# mig 098: the requester cancelled a withdrawal someone had accepted; only
-# who accepted it is told.
+# Quem pediu cancelou uma retirada já aceita: só quem aceitou é avisado.
 KIND_WITHDRAWAL_CANCELLED = "RETIRADA_CANCELADA"
 KIND_RECEIPT = "RECEBIMENTO"
 KIND_STORAGE_DONE = "ARMAZENAGEM_CONCLUIDA"
@@ -53,8 +35,8 @@ SUBJECTS = {
     KIND_STORAGE_DONE: "SEA - Conclusão de Armazenamento",
 }
 
-# mig 096: who is told of each withdrawal step (besides administrators).
-# Other kinds go to every user of the location.
+# Quem é avisado em cada etapa da retirada (além dos administradores). Os demais tipos vão para
+# todos do local.
 AUDIENCE = {
     KIND_WITHDRAWAL_REQUESTED: "retirada-avaliar",
     KIND_WITHDRAWAL_APPROVED: "retirada-fazer",
@@ -83,7 +65,6 @@ class SmtpConfig:
 
 
 def smtp_config() -> Optional[SmtpConfig]:
-    """Mail server settings, or None when e-mail is not configured."""
     host = (os.environ.get("SEA_SMTP_HOST") or "").strip()
     if not host:
         return None
@@ -107,7 +88,6 @@ def smtp_config() -> Optional[SmtpConfig]:
 def create(db, *, kind: str, warehouse_id: int, title: str, message: str,
            ot: Optional[str] = None, username: Optional[str] = None,
            withdrawal_id: Optional[int] = None) -> int:
-    """Record a notification in the caller's transaction."""
     if kind not in SUBJECTS:
         raise ValueError(f"unknown notification kind: {kind}")
     status = EMAIL_PENDING if smtp_config() else EMAIL_NOT_CONFIGURED
@@ -131,11 +111,8 @@ def create(db, *, kind: str, warehouse_id: int, title: str, message: str,
 
 
 def dispatch(db) -> None:
-    """Queue the e-mails of the notifications created on ``db``.
-
-    Call after the commit. A broker outage must not fail an operation
-    that is already committed: the notification stays PENDENTE (visible
-    in the panel) and the failure is logged.
+    """Chamar depois do commit. Fila fora do ar não pode derrubar uma operação já gravada: a
+    notificação fica PENDENTE e o erro vai para o log.
     """
     pending = db.info.pop(_SESSION_KEY, [])
     pushes = db.info.pop(_PUSH_KEY, [])
@@ -159,12 +136,10 @@ def dispatch(db) -> None:
                              notification_id)
 
 
-# ------------------------------------------------------------ Celular
-#
-# Notifications on the phone while the app is closed go through the Expo
-# push service (which hands them to Google). That sends the title and the
-# text of the notification to an outside service, so it is off unless
-# SEA_PUSH=expo is set. With the app open, the app itself polls the API.
+# --- Celular
+# Com o app fechado, os avisos passam pelo push do Expo (que entrega ao Google), o que manda título
+# e texto para um serviço de fora. Por isso só ficam ligados com SEA_PUSH=expo. Com o app aberto, o
+# próprio app consulta a API.
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
@@ -174,9 +149,9 @@ def push_enabled() -> bool:
 
 
 def push_tokens(db, warehouse_id: int, page_key: str | None = None) -> list[str]:
-    """Devices of the active users who work in the location of the event
-    (administrators work in all of them). With ``page_key`` only users
-    granted that page (and administrators)."""
+    """Celulares dos usuários ativos do local (administradores estão em todos). Com ``page_key``, só
+    de quem tem essa permissão.
+    """
     rows = db.execute(
         text(
             """
@@ -195,7 +170,6 @@ def push_tokens(db, warehouse_id: int, page_key: str | None = None) -> list[str]
 
 
 def user_push_tokens(db, username: str) -> list[str]:
-    """Devices where ``username`` is signed in."""
     rows = db.execute(
         text(
             """
@@ -218,7 +192,6 @@ def _expo_send(messages: list[dict]) -> None:
 
 
 def send_push(db, notification_id: int, sender=_expo_send) -> int:
-    """Send one notification to the phones. Returns how many devices."""
     row = db.execute(
         text(
             """
@@ -233,7 +206,7 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
     if row is None or not push_enabled():
         return 0
     if row.picked_by:
-        # mig 098: once someone accepted the withdrawal, only they follow it.
+        # Depois do aceite, só quem aceitou acompanha a retirada.
         tokens = (user_push_tokens(db, row.picked_by)
                   if row.kind == KIND_WITHDRAWAL_CANCELLED else [])
     else:
@@ -251,11 +224,8 @@ def send_push(db, notification_id: int, sender=_expo_send) -> int:
 def send_login_approval_push(db, user_id: int, challenge_id: str, client: str,
                              sender=_expo_send, title: str | None = None,
                              body: str | None = None) -> int:
-    """Push to the user's registered phones: a login waits for confirmation.
-
-    Sent even to a phone whose user left the app (signed_in = FALSE): the
-    user logs in again in the app and then confirms. A push failure does
-    not stop the login: the app also finds the pending login by itself.
+    """Vai até para um celular cujo usuário saiu do app: ele entra de novo e confirma. Falha no push
+    não impede o login; o app também encontra o pedido sozinho.
     """
     if not push_enabled():
         return 0
@@ -306,10 +276,8 @@ def _smtp_send(config: SmtpConfig, message: EmailMessage) -> None:
 
 def send_email(db, notification_id: int,
                mailer: Callable[[SmtpConfig, EmailMessage], None] = _smtp_send) -> str:
-    """Send the e-mail of one notification and record the outcome.
-
-    Returns the resulting ``email_status``. Only a PENDENTE notification
-    is sent, so a retried task never mails twice.
+    """Só uma notificação PENDENTE é enviada, então uma tarefa repetida nunca manda o e-mail duas
+    vezes.
     """
     row = db.execute(
         text(

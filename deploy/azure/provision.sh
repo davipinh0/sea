@@ -1,7 +1,7 @@
 #!/bin/sh
-# Cria no Azure a VM do SEA (rodar no computador, com o Azure CLI logado).
+# Cria a VM do SEA no Azure (no computador, com o Azure CLI logado).
 #   sh deploy/azure/provision.sh <rótulo-dns>
-# O rótulo forma o endereço: <rótulo>.centralus.cloudapp.azure.com
+# O endereço fica <rótulo>.centralus.cloudapp.azure.com.
 set -eu
 LABEL=${1:?informe o rótulo DNS, ex.: sea-expedicao}
 AZ=${AZ:-az}
@@ -22,7 +22,6 @@ MYIP=$(curl -fsS https://api.ipify.org)
   --custom-data "$HERE/cloud-init.yml" --nsg-rule NONE -o none
 
 NSG="${VM}NSG"
-# Painel e app: HTTPS (e HTTP só para o certificado e o redirecionamento).
 "$AZ" network nsg rule create -g "$RG" --nsg-name "$NSG" -n web --priority 100 \
   --access Allow --protocol Tcp --direction Inbound --destination-port-ranges 80 443 -o none
 # Acesso administrativo só a partir deste computador.

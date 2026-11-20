@@ -354,10 +354,9 @@ def confirm_putaway(validated):
     if not ok:
         return denied
 
-    # SEA: an order received in one location (Expedição) is stored in
-    # another (SP12, SP13). Only stock of an SEA order may
-    # change location here, and the user needs access to both. The move is
-    # recorded in the destination, where the material ends up.
+    # A ordem recebida num local (Expedição) é guardada em outro (SP12, SP13). Só estoque de OT do
+    # SEA muda de local aqui, e o usuário precisa ter acesso aos dois. O movimento fica registrado
+    # no destino.
     warehouse_id = to_bin.warehouse_id
     if to_bin.warehouse_id != from_bin.warehouse_id:
         if ot_for_lot(g.db, lot_number) is None:
@@ -368,8 +367,7 @@ def confirm_putaway(validated):
         if not ok:
             return denied
 
-    # SEA: storage rules (size class, capacity, compatibility). No-op for
-    # stock that is not an SEA OT.
+    # Regras de armazenagem; não faz nada para estoque que não é de OT do SEA.
     try:
         check_putaway(g.db, item_id=item_id, to_bin_id=to_bin_id,
                       quantity=quantity, lot_number=lot_number)
@@ -426,7 +424,7 @@ def confirm_putaway(validated):
         },
     )
 
-    # SEA: announce when the order has nothing left in the receiving area.
+    # Avisa quando a ordem não tem mais nada na área de recebimento.
     notify_storage_done(g.db, warehouse_id=warehouse_id, lot_number=lot_number,
                         username=username)
 

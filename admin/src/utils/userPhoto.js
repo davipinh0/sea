@@ -1,4 +1,3 @@
-// SEA: user photo helpers (Sistema > Usuários, top bar).
 
 export function initialsOf(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -8,8 +7,7 @@ export function initialsOf(name) {
   return (first + last).toUpperCase();
 }
 
-// The panel is authenticated by cookie, so a plain <img> can load it;
-// ``version`` (photo_version from the API) makes a new photo a new URL.
+// ``version`` faz uma foto nova ter uma URL nova.
 export function photoUrl(userId, version) {
   return userId && version ? `/api/admin/users/${userId}/foto?v=${version}` : null;
 }
@@ -25,9 +23,8 @@ function readDataUrl(file) {
   });
 }
 
-// Regression: a blob: URL is refused by the panel's CSP (img-src 'self'
-// data:), so the photo never loaded and was never sent. A data: URL is
-// allowed.
+// Uma URL blob: é bloqueada pela CSP do painel e a foto não carregava nem era enviada; data: é
+// permitido.
 async function readImage(file) {
   const url = await readDataUrl(file);
   return new Promise((resolve, reject) => {
@@ -38,7 +35,6 @@ async function readImage(file) {
   });
 }
 
-// Centre square of the picture, reduced to 256 x 256, as a JPEG data URL.
 export async function squareJpeg(file) {
   const img = await readImage(file);
   const side = Math.min(img.naturalWidth, img.naturalHeight);

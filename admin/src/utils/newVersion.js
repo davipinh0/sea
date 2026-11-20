@@ -1,10 +1,5 @@
-// Reload the panel when a newer build has been published.
-//
-// The panel is a single-page app: a tab left open keeps running the
-// JavaScript it loaded, even after the server was updated, so the operator
-// would keep seeing old screens. On navigation, the page asks the server
-// for the current entry file name (it changes on every build) and reloads
-// once when it differs from the one this tab is running.
+// Uma aba deixada aberta continua rodando o JavaScript antigo depois de uma atualização. Ao
+// navegar, a página compara o arquivo de entrada atual com o dela e recarrega uma vez se mudou.
 
 const ENTRY = /assets\/index-[\w-]+\.js/;
 const MIN_INTERVAL_MS = 30000;
@@ -18,7 +13,6 @@ function runningEntry() {
 
 export async function reloadIfNewVersion() {
   const current = runningEntry();
-  // No hashed entry (dev server, tests): nothing to compare.
   if (!current) return;
   const now = Date.now();
   if (now - lastCheck < MIN_INTERVAL_MS) return;

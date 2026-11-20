@@ -1,7 +1,4 @@
-/**
- * SEA: material catalogue (Sistema), OT put together in the SAP tab and
- * screens that refresh on their own.
- */
+/* Cadastro de materiais, OT montada na aba SAP e telas que se atualizam sozinhas. */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';

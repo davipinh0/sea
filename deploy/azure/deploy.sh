@@ -1,5 +1,5 @@
 #!/bin/sh
-# Envia a versão atual (último commit) para a VM e sobe o sistema.
+# Envia o último commit para a VM e sobe o sistema.
 #   sh deploy/azure/deploy.sh <dominio> [arquivo.dump]
 set -eu
 DOMAIN=${1:?informe o domínio}

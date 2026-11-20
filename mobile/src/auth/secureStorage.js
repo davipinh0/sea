@@ -24,8 +24,7 @@ export const AUTH_STORAGE_KEYS = [
   'login_timestamp',
 ];
 
-// The browser build exists only to check the app on a computer; the
-// device keystore is not there, so it keeps the session in AsyncStorage.
+// A versão para navegador não tem o cofre do aparelho, então guarda a sessão no AsyncStorage.
 const ON_WEB = Platform.OS === 'web';
 
 export async function getAuthItem(key) {

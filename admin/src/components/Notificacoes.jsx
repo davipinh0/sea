@@ -5,10 +5,8 @@ import { useAuth } from '../auth.jsx';
 import { useWarehouse } from '../warehouse.jsx';
 import { formatDateTime } from '../utils/sea.js';
 
-// Panel notifications: withdrawal requested, materials received and
-// storage concluded. The API records them (sea_notifications); this bell
-// polls for new ones, plays a short sound and shows them until read.
-// The e-mail to the administrators is sent by the API, not from here.
+// Sino de notificações: busca as novas de tempos em tempos, toca um som curto e mostra até serem
+// lidas. O e-mail para os administradores sai da API, não daqui.
 
 const POLL_MS = 10000;
 const TOAST_MS = 8000;
@@ -21,7 +19,6 @@ const KIND_LABEL = {
   ARMAZENAGEM_CONCLUIDA: 'Armazenamento concluído',
 };
 
-// Where each notification leads: the screen where the operator acts on it.
 const KIND_TARGET = {
   RETIRADA_SOLICITADA: '/retirada',
   RETIRADA_APROVADA: '/retirada',
@@ -38,8 +35,8 @@ const EMAIL_LABEL = {
   NAO_CONFIGURADO: 'e-mail não configurado',
 };
 
-// Two short tones. Browsers only allow sound after the user has
-// interacted with the page; before that the notification is silent.
+// O navegador só libera som depois que o usuário interage com a página; antes disso o aviso é só
+// visual.
 function playNotificationSound() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return;
@@ -59,12 +56,11 @@ function playNotificationSound() {
     });
     setTimeout(() => ctx.close(), 800);
   } catch {
-    // Audio blocked by the browser: the visual notification still shows.
+    // Som bloqueado pelo navegador: o aviso visual continua.
   }
 }
 
-// Highest notification id the user has opened, kept per user in this
-// browser. null = never used here (nothing is announced as missed).
+// Maior id de notificação já aberto pelo usuário neste navegador. null = nunca usado aqui.
 function readSeen(username) {
   try {
     const raw = window.localStorage.getItem(`sea_notif_seen_${username}`);
@@ -78,7 +74,7 @@ function writeSeen(username, id) {
   try {
     window.localStorage.setItem(`sea_notif_seen_${username}`, String(id));
   } catch {
-    // Storage blocked: notifications still work for the open session.
+    // Armazenamento bloqueado: as notificações funcionam só nesta sessão.
   }
 }
 
@@ -107,8 +103,7 @@ export default function Notificacoes() {
       if (first) {
         lastId.current = list[0]?.notification_id ?? 0;
         setItems(list);
-        // What this user already saw is history. Anything newer arrived
-        // while the panel was closed or reloading: announce it now.
+        // O que chegou enquanto o painel estava fechado é anunciado agora.
         const seen = readSeen(username);
         if (seen === null) { writeSeen(username, lastId.current); return; }
         const missed = list.filter((n) => n.notification_id > seen);
@@ -151,7 +146,6 @@ export default function Notificacoes() {
     if (lastId.current !== null) writeSeen(username, lastId.current);
   }
 
-  // Open the screen the notification is about, at the location it happened.
   function go(n) {
     setOpen(false);
     setToast(null);
@@ -163,7 +157,7 @@ export default function Notificacoes() {
     navigate(KIND_TARGET[n.kind] || '/');
   }
 
-  // Empty the list for this user (the records stay on the server).
+  // Limpa só a lista deste usuário; os registros continuam no servidor.
   async function clearAll() {
     const res = await api.post('/sea/notificacoes/limpar', {});
     if (!res?.ok) return;

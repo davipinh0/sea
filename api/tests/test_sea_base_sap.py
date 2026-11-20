@@ -1,5 +1,4 @@
-"""SEA: the SAP base (orders, materials, open OTs / reservations) and
-receiving an OT found in it."""
+"""Base do SAP e recebimento de uma OT encontrada nela."""
 
 import pytest
 from sqlalchemy import text
@@ -55,8 +54,8 @@ class TestImport:
         assert ot["requester_name"] == "Solicitante Teste"
         assert [(m["service_order_number"], m["material_code"], m["quantity"], m["uom"])
                 for m in ot["materials"]] == [
-            ("2000000911", "00790001", 54, "KG"),   # unit of the material
-            ("2000000912", "00790002", 10, "PC"),   # unit informed on the OT
+            ("2000000911", "00790001", 54, "KG"),
+            ("2000000912", "00790002", 10, "PC"),
         ]
 
     def test_importing_again_updates_instead_of_duplicating(self, client, auth_headers, base):
@@ -64,22 +63,22 @@ class TestImport:
         assert _import(client, auth_headers, "reservas", again).get_json()["imported"] == 1
         data = _lookup(client, auth_headers)["integration"]["data"]
         assert data["materials"][0]["quantity"] == 60
-        # A blank header cell keeps what the base already had.
+        # Célula vazia no cabeçalho mantém o que a base já tinha.
         assert data["header"]["requester_name"] == "Solicitante Teste"
         assert len(data["materials"]) == 2
 
     def test_bad_rows_are_reported_and_the_rest_is_imported(self, client, auth_headers, base):
         rows = [
             {"ot_number": "1000000902", "order_number": "9999", "material_code": "00790001",
-             "quantity": 1},                                       # unknown order
+             "quantity": 1},
             {"ot_number": "1000000902", "order_number": "2000000911",
-             "material_code": "nope", "quantity": 1},              # unknown material
+             "material_code": "nope", "quantity": 1},
             {"ot_number": "1000000902", "order_number": "2000000911",
-             "material_code": "00790001", "quantity": "1,5"},      # not a whole number
+             "material_code": "00790001", "quantity": "1,5"},
             {"ot_number": "1000000901", "order_number": "2000000912",
-             "material_code": "00790001", "quantity": 1},          # material under another order
+             "material_code": "00790001", "quantity": 1},
             {"ot_number": "=1+1", "order_number": "2000000911",
-             "material_code": "00790001", "quantity": 1},          # spreadsheet formula
+             "material_code": "00790001", "quantity": 1},
             {"ot_number": "1000000902", "order_number": "2000000911",
              "material_code": "00790001", "quantity": 3},
         ]
@@ -130,24 +129,21 @@ class TestReceivingFromTheBase:
         ot = detail["ot"]
         assert ot["data_source"] == "INTEGRACAO"
         assert ot["requester_name"] == "Solicitante Teste"
-        # The receiver is whoever registered the delivery.
         receiver = _db_transaction.execute(
             text("SELECT COALESCE(NULLIF(full_name, ''), username) FROM users "
                  "WHERE username = 'admin'")
         ).scalar()
         assert ot["receiver_name"] == receiver
-        # Each material keeps the order it belongs to.
         assert [(m["service_order_type"], m["service_order_number"], m["sku"],
                  m["quantity_ordered"], m["uom"]) for m in detail["materials"]] == [
             ("PM11", "2000000911", "00790001", 54, "KG"),
             ("PM12", "2000000912", "00790002", 10, "PC"),
         ]
-        # The materials were created in the master with the SAP description.
         assert _db_transaction.execute(
             text("SELECT item_name FROM items WHERE sku = '00790002'")
         ).scalar() == "Luva de proteção"
 
-        # From here on it is an ordinary OT: it can be received.
+        # Daqui em diante é uma OT comum: pode ser recebida.
         item_id = detail["materials"][0]["item_id"]
         received = client.post(
             "/api/receiving/receive", headers=auth_headers,
@@ -168,7 +164,6 @@ class TestReceivingFromTheBase:
         ).scalar() == 1
 
     def test_receiver_sent_by_the_client_is_ignored(self, client, auth_headers, _db_transaction):
-        """Label registration: the receiver is the logged-in user as well."""
         resp = client.post(
             "/api/sea/recebimentos", headers=auth_headers,
             json={"warehouse_id": WAREHOUSE,
@@ -182,7 +177,6 @@ class TestReceivingFromTheBase:
             text("SELECT receiver_name FROM purchase_orders WHERE po_number = '1000000903'")
         ).scalar()
         assert stored and stored != "OUTRA PESSOA"
-        # ...and it cannot be rewritten by a correction.
         po_id = resp.get_json()["po_id"]
         changed = client.put(f"/api/sea/ots/{po_id}/dados", headers=auth_headers,
                              json={"receiver_name": "OUTRA PESSOA"})
@@ -190,12 +184,11 @@ class TestReceivingFromTheBase:
 
 
 class TestMaterialBatch:
-    """mig 097: the batch (lote) of each material comes with the OT."""
 
     def test_the_batch_goes_from_the_base_to_the_order(self, client, auth_headers):
         rows = [
             {**RESERVATIONS[0], "lot_number": "L2026-0457"},
-            {**RESERVATIONS[1], "lote": "L2026-0458"},  # Portuguese header
+            {**RESERVATIONS[1], "lote": "L2026-0458"},
         ]
         for kind, records in (("ordens", ORDERS), ("materiais", MATERIALS), ("reservas", rows)):
             assert _import(client, auth_headers, kind, records).get_json()["errors"] == []

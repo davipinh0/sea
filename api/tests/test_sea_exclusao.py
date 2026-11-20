@@ -1,4 +1,4 @@
-"""SEA: deleting an order or a material with everything that belongs to it."""
+"""Apagar uma ordem ou um material com tudo o que pertence a ele."""
 
 from sqlalchemy import text
 
@@ -36,7 +36,7 @@ class TestDeleteOrder:
         assert _count(conn, "SELECT COUNT(*) FROM item_receipts WHERE po_id = :p", p=po_id) == 0
         assert _count(conn, "SELECT COUNT(*) FROM withdrawals WHERE po_id = :p", p=po_id) == 0
         assert _count(conn, "SELECT COUNT(*) FROM bin_transfers WHERE lot_number = 'OT-W-1'") == 0
-        # The material stays in the master, and the deletion is on record.
+        # O material continua no cadastro, e a exclusão fica registrada.
         assert _count(conn, "SELECT COUNT(*) FROM items WHERE item_id = :i", i=item_id) == 1
         assert _count(
             conn, "SELECT details->>'ot' FROM audit_log WHERE action_type = 'OT_DELETED' "
@@ -71,7 +71,7 @@ class TestDeleteMaterial:
     def test_material_in_stock_and_in_an_order_is_deleted_everywhere(
         self, client, auth_headers, stored_ot
     ):
-        """The case that used to be refused without any message."""
+        """O caso que antes era recusado sem mensagem."""
         conn = stored_ot["conn"]
         item_id = stored_ot["small"]
         assert _request(client, auth_headers, stored_ot["inventory_id"], 2).status_code == 201
@@ -80,7 +80,6 @@ class TestDeleteMaterial:
         assert resp.status_code == 200, resp.get_json()
         body = resp.get_json()
         assert body["stock_units_removed"] == 10
-        # OT-W-1 had only this material: the order goes too.
         assert "OT-W-1" in body["orders_removed"]
         assert _count(conn, "SELECT COUNT(*) FROM items WHERE item_id = :i", i=item_id) == 0
         assert _count(conn, "SELECT COUNT(*) FROM inventory WHERE item_id = :i", i=item_id) == 0
@@ -97,7 +96,6 @@ class TestDeleteMaterial:
         assert resp.status_code == 200, resp.get_json()
         assert resp.get_json()["orders_removed"] == []
         assert _count(conn, "SELECT COUNT(*) FROM purchase_order_lines WHERE po_id = :p", p=po_id) == 1
-        # The pending material is gone, so the order is fully received.
         assert _count(conn, "SELECT status FROM purchase_orders WHERE po_id = :p", p=po_id) == "RECEIVED"
         assert _count(conn, "SELECT SUM(quantity_on_hand) FROM inventory "
                             "WHERE lot_number = 'OT-DEL-3'") == 5
@@ -107,7 +105,7 @@ class TestDeleteMaterial:
     ):
         item_id = _count(_db_transaction, "SELECT item_id FROM sales_order_lines LIMIT 1")
         if item_id is None:
-            return  # the test seed has no sales order
+            return
         resp = client.delete(f"/api/sea/materiais/{item_id}", headers=auth_headers)
         assert resp.status_code == 409
         assert resp.get_json()["user_facing"] is True

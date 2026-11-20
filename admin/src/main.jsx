@@ -7,7 +7,7 @@ import App from './App.jsx'
 import './App.css'
 import { applyTheme } from './utils/theme.js'
 
-// Before the first paint, so the panel never flashes the other theme.
+// Antes da primeira pintura, para o painel não piscar com o outro tema.
 applyTheme()
 
 createRoot(document.getElementById('root')).render(

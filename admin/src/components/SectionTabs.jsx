@@ -2,11 +2,7 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { canSee } from '../utils/permissions.js';
 
-// Tab strip for a top-level SEA section (Estoque, Expedição). Sub-pages
-// render as <Outlet /> children so each keeps its own header and state.
-// Each tab is gated by an existing page_key: ADMIN sees every tab, a
-// USER only the tabs whose key is in allowed_pages. Backend endpoints
-// keep their own per-key permission checks.
+// Abas de uma seção (Estoque, Expedição). Cada aba depende de uma permissão; a API confere de novo.
 export default function SectionTabs({ basePath, tabs, emptyMessage }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -24,8 +20,7 @@ export default function SectionTabs({ basePath, tabs, emptyMessage }) {
     return <Navigate to={visibleTabs[0].to} replace />;
   }
 
-  // A tab opened by URL without the permission goes back to the section
-  // (which opens the first allowed tab or explains there is none).
+  // Aba aberta pela URL sem permissão volta para a seção.
   const current = tabs.find((t) => location.pathname.startsWith(`${basePath}/${t.to}`));
   if (current && !canSee(user, current.pageKey)) return <Navigate to={basePath} replace />;
 

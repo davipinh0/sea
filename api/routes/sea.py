@@ -1,7 +1,5 @@
-"""SEA endpoints: Painel, Estoque SP12, OTs, materials, put-away suggestion,
-notifications and the withdrawal (Retirada) terminal. Business rules live in
-services/sea_service.py; this module only handles HTTP, permissions and
-warehouse scoping.
+"""Rotas do SEA. As regras de negócio ficam em services/sea_service.py; aqui só HTTP, permissões e
+locais do usuário.
 """
 
 import base64
@@ -47,14 +45,15 @@ sea_bp = Blueprint("sea", __name__)
 STAGING = list(sea.STAGING_TYPES)
 
 
-# A mobile module granted to the user opens the same data as the page of
-# the panel that does the same work.
+# Um módulo de celular liberado dá acesso aos mesmos dados da página do painel que faz o mesmo
+# trabalho.
 FUNCTION_PAGES = {"receive": "receiving", "putaway": "putaway"}
 
 
 def require_any_page(*page_keys):
-    """ADMIN passes; other users need at least one of ``page_keys`` (or the
-    mobile module that corresponds to one of them)."""
+    """Administrador passa; os demais precisam de uma das ``page_keys`` (ou do módulo de celular
+    equivalente).
+    """
 
     def decorator(f):
         @wraps(f)
@@ -73,8 +72,9 @@ def require_any_page(*page_keys):
 
 
 def _user_error(message, status, **extra):
-    """Error written for the operator. ``user_facing`` lets the admin UI show
-    the text instead of its generic fallback (V-021 hides unflagged errors)."""
+    """Erro escrito para o operador. ``user_facing`` faz o painel mostrar o texto em vez da mensagem
+    genérica.
+    """
     return jsonify({"error": message, "user_facing": True, **extra}), status
 
 
@@ -83,7 +83,6 @@ def _sea_error(exc):
 
 
 def _warehouse_arg():
-    """Required ?warehouse_id=, validated against the user's warehouses."""
     warehouse_id = request.args.get("warehouse_id", type=int)
     if not warehouse_id:
         return None, _user_error("warehouse_id é obrigatório", 400)
@@ -98,21 +97,20 @@ def _iso(value):
 
 
 def _user_warehouse_ids():
-    """Locations the user may use: None = all (ADMIN)."""
     if g.current_user.get("role") == "ADMIN":
         return None
     return list(g.current_user.get("warehouse_ids") or [])
 
 
-# ------------------------------------------------------------- Locais
+# --- Locais
 
 @sea_bp.route("/locais")
 @require_auth
 @with_db
 def locais():
-    """Locations the logged-in user can work in. Every panel user needs
-    this list (location selector); /api/admin/warehouses is restricted to
-    users who administer warehouses."""
+    """Todo usuário do painel precisa desta lista (seletor de local); /api/admin/warehouses é só
+    para quem administra locais.
+    """
     scope_clause, scope_params = warehouse_scope_clause("warehouse_id")
     rows = g.db.execute(
         text(
@@ -133,10 +131,10 @@ def locais():
     })
 
 
-# ------------------------------------------------------------- Painel
+# --- Painel
 
-# Audit details shown on the Painel (visible to every warehouse user):
-# only these display fields, never badge UIDs or other raw payload.
+# Detalhes do log mostrados no Painel (qualquer usuário do local vê): só estes campos, nunca dados
+# internos.
 _PAINEL_DETAIL_KEYS = ("ot", "po_number", "sku", "quantity", "to_bin_code", "employee_name",
                        "lot_number", "reason", "autenticacao", "requester_email")
 
@@ -210,8 +208,8 @@ def painel():
     ).fetchall()
     w_counts = {r.status: r.n for r in withdrawals}
 
-    # SEA (mig 094): the movements are shown only to who may see the
-    # history, from the moment the user last cleared the list.
+    # As movimentações só aparecem para quem pode ver o histórico, a partir da última vez que o
+    # usuário limpou a lista.
     history = _can_see_history()
     cleared_at = g.db.execute(
         text("SELECT movements_cleared_at FROM users WHERE user_id = :u"),
@@ -243,9 +241,8 @@ def painel():
         "pending_withdrawals_all": int(pending_everywhere),
         "ots": ot_counts,
         "open_ots": open_ots,
-        # Orders with nothing received yet: what the "Receber" counters
-        # show. An order received in part leaves the counter (it is still
-        # listed as waiting for the rest).
+        # Ordens sem nada recebido: é o que o contador "Receber" mostra. Ordem recebida em parte sai
+        # do contador.
         "unreceived_ots": sum(t.get("OPEN", 0) for t in ot_counts.values()),
         "pending_withdrawals": pending_withdrawals,
         "withdrawals": w_counts,
@@ -254,7 +251,6 @@ def painel():
         "staging_ots": int(stock.staging_ots),
         "occupied_bins": int(stock.occupied_bins),
         "storage_bins": int(storage_bins),
-        # None = this user may not see the movements (no "Histórico").
         "recent": [_movement(r) for r in recent] if history else None,
         "recent_cleared_at": _iso(cleared_at) if history else None,
     })
@@ -264,12 +260,10 @@ def _movement(r, orders=None):
     return {"log_id": r.log_id, "action_type": r.action_type, "entity_type": r.entity_type,
             "entity_id": r.entity_id, "user": r.user_id,
             "details": _public_details(r.details), "created_at": _iso(r.created_at),
-            # The order(s) of the operation, e.g. ["PM12 - 2002349234"].
             "orders": (orders or {}).get(r.log_id, [])}
 
 
 def _can_see_history():
-    """Administrators and users granted "Histórico" (page audit-log)."""
     pages = g.current_user.get("allowed_pages")
     return pages is None or "audit-log" in pages
 
@@ -279,8 +273,9 @@ def _can_see_history():
 @require_admin_or_page_permission("audit-log")
 @with_db
 def limpar_movimentacoes():
-    """The Painel of this user lists only what happens from now on. The
-    history itself (audit_log) keeps every row."""
+    """O Painel deste usuário passa a listar só o que acontecer daqui em diante; o histórico
+    continua completo.
+    """
     g.db.execute(text("UPDATE users SET movements_cleared_at = NOW() WHERE user_id = :u"),
                  {"u": g.current_user["user_id"]})
     g.db.commit()
@@ -303,8 +298,9 @@ def restaurar_movimentacoes():
 @require_admin_or_page_permission("audit-log")
 @with_db
 def historico():
-    """Movements of one location, newest first (app: Histórico). Paged with
-    ?before=<log_id>; the full log stays in GET /api/admin/audit-log."""
+    """Movimentações de um local, das mais novas para as mais antigas, paginadas com
+    ?before=<log_id>.
+    """
     warehouse_id, err = _warehouse_arg()
     if err:
         return err
@@ -326,7 +322,7 @@ def historico():
                     "next_before": rows[-1].log_id if len(rows) == limit else None})
 
 
-# ------------------------------------------------------- Estoque SP12
+# --- Estoque
 
 @sea_bp.route("/estoque")
 @require_auth
@@ -396,16 +392,16 @@ def estoque():
     })
 
 
-# ---------------------------------------------------------- Materiais
+# --- Materiais
 
 @sea_bp.route("/materiais")
 @require_auth
 @require_admin_or_page_permission("items")
 @with_db
 def list_materiais():
-    """Materials as the stock keeper sees them: one row per material of
-    each order in this warehouse, plus the materials of the master that
-    are in no order here (order columns null)."""
+    """Uma linha por material de cada ordem do local, mais os materiais do cadastro que não estão em
+    nenhuma ordem daqui.
+    """
     warehouse_id, err = _warehouse_arg()
     if err:
         return err
@@ -461,10 +457,9 @@ def list_materiais():
              "weight_lbs": float(r.weight_lbs) if r.weight_lbs is not None else None,
              "default_bin_id": r.default_bin_id, "is_active": r.is_active,
              "uom": r.line_uom or r.item_uom, "item_uom": r.item_uom,
-             # Box weight of the material (applies when its unit is KG).
              "pack_weight_kg": r.pack_weight_kg,
              "quantity": r.quantity_ordered,
-             # The PM order when the label informed it; otherwise the OT number.
+             # A ordem PM informada na etiqueta; sem ela, o número da OT.
              "order": r.service_order_number or r.po_number,
              "ot": r.po_number, "order_type": r.order_type}
             for r in rows
@@ -474,13 +469,12 @@ def list_materiais():
     })
 
 
-# ------------------------------------------------------- Notificações
+# --- Notificações
 
 @sea_bp.route("/notificacoes/limpar", methods=["POST"])
 @require_auth
 @with_db
 def limpar_notificacoes():
-    """Clear the user's own notification list. The records stay."""
     cleared = g.db.execute(
         text(
             """
@@ -501,11 +495,10 @@ def limpar_notificacoes():
 @require_auth
 @with_db
 def list_notificacoes():
-    """Latest notifications of the warehouses the user can see. ``after``
-    returns only the ones newer than a known id (panel polling)."""
+    """``after`` traz só as mais novas que um id conhecido (consulta periódica do painel)."""
     scope_clause, scope_params = warehouse_scope_clause("n.warehouse_id")
     after = request.args.get("after", type=int)
-    # mig 096: withdrawal steps go to who acts on them (and administrators).
+    # Cada etapa da retirada vai para quem age nela (e para os administradores).
     pages = g.current_user.get("allowed_pages")
     hidden = [kind for kind, page in notifications.AUDIENCE.items()
               if pages is not None and page not in pages]
@@ -545,7 +538,7 @@ def list_notificacoes():
     })
 
 
-# ---------------------------------------------------------------- OTs
+# --- OTs
 
 OT_PAGE_KEYS = ("inventory", "purchase-orders", "receiving", "putaway", "retirada")
 
@@ -668,7 +661,6 @@ def get_ot(code):
             "origin": ot.vendor_name, "expected_date": _iso(ot.expected_date),
             "created_at": _iso(ot.created_at), "received_at": _iso(ot.received_at),
             "created_by": ot.created_by,
-            # Label data (mig 083). None = pending.
             "barcode": ot.po_barcode,
             "origin_company": ot.vendor_name,
             "label_date": _iso(ot.label_date),
@@ -690,7 +682,6 @@ def get_ot(code):
              "quantity_received": r.quantity_received, "status": r.status}
             for r in lines
         ],
-        # One record per material, with lot, locations and movements.
         "materials": sea.ot_materials(g.db, ot),
         "movements": sea.ot_movements(g.db, ot),
         "receipts": [
@@ -709,7 +700,6 @@ def get_ot(code):
 @require_any_page(*OT_PAGE_KEYS)
 @with_db
 def list_ordens():
-    """The orders (PM11 / PM12) of a location, one row per order and OT."""
     warehouse_id, err = _warehouse_arg()
     if err:
         return err
@@ -727,10 +717,9 @@ def list_ordens():
 @require_any_page(*OT_PAGE_KEYS, "terminal-retirada")
 @with_db
 def get_ordem(number):
-    """Withdrawal terminal: the materials of a PM order available now,
-    wherever they are stored. The employee who withdraws does not work in
-    a location: the request goes to the stock keeper of the location that
-    holds the material."""
+    """Terminal: materiais da ordem disponíveis agora, onde quer que estejam guardados. O pedido vai
+    para o almoxarife do local onde está o material.
+    """
     number = number.strip()
     found = sea.order_stock(g.db, number) if number else None
     if found is None:
@@ -738,17 +727,14 @@ def get_ordem(number):
     return jsonify(found)
 
 
-# ------------------------------------- Recebimento por etiqueta da OT
+# --- Recebimento
 
 RECEIVING_PAGE_KEYS = ("receiving", "purchase-orders")
-# mig 096: request at the terminal / evaluate / accept and separate.
 WITHDRAWAL_PAGES = ("retirada", "retirada-avaliar", "retirada-fazer")
-# mig 098: the account of the withdrawal terminal.
 TERMINAL_PAGE = "terminal-retirada"
 
 
 def _is_terminal_account():
-    """The terminal account: holds the terminal page and is no admin."""
     pages = g.current_user.get("allowed_pages")
     return (g.current_user.get("role") != "ADMIN" and pages is not None
             and TERMINAL_PAGE in pages)
@@ -759,8 +745,7 @@ def _is_terminal_account():
 @require_any_page(*RECEIVING_PAGE_KEYS)
 @with_db
 def areas_de_recebimento():
-    """Receiving areas of a location, for the receiving screen. Whoever
-    receives needs this list without the permission to manage addresses."""
+    """Quem recebe precisa desta lista sem ter a permissão de gerenciar endereços."""
     warehouse_id, err = _warehouse_arg()
     if err:
         return err
@@ -785,11 +770,8 @@ def areas_de_recebimento():
 @require_any_page(*RECEIVING_PAGE_KEYS)
 @with_db
 def consultar_recebimento():
-    """Step 2 of receiving: is this OT already registered?
-
-    When it is not, the OT source (services.ot_source; by default the
-    SAP base kept in the SEA) is asked. ``integration.data`` is the OT
-    with its materials, or null when the code is not in the base.
+    """A OT já está cadastrada? Se não, consulta a fonte de OTs (por padrão, a base do SAP dentro do
+    SEA). ``integration.data`` traz a OT com os materiais, ou null se não estiver na base.
     """
     code = (request.args.get("codigo") or "").strip()
     if not code or len(code) > 100:
@@ -813,8 +795,9 @@ def consultar_recebimento():
 @validate_body(InterpretLabelRequest)
 @with_db
 def interpretar_etiqueta(validated):
-    """Turn label text into structured fields. Writes nothing: the
-    operator reviews and confirms through POST /recebimentos."""
+    """Transforma o texto da etiqueta em campos. Não grava nada: o operador revisa e confirma em
+    POST /recebimentos.
+    """
     parsed = parse_label(validated.text).to_dict()
     existing = None
     code = parsed["header"]["ot_code"]
@@ -841,7 +824,6 @@ def interpretar_etiqueta(validated):
 @validate_body(RegisterOtRequest)
 @with_db
 def registrar_recebimento(validated):
-    """Create the OT (when new) and register each material on it."""
     ok, denied = check_warehouse_access(validated.warehouse_id)
     if not ok:
         return denied
@@ -870,8 +852,7 @@ def registrar_recebimento(validated):
 @validate_body(RegisterFromBaseRequest)
 @with_db
 def registrar_recebimento_da_base(validated):
-    """Register the delivery of an OT found in the SAP base. The data is
-    read from the base here, never taken from the request."""
+    """Os dados vêm da base, nunca da requisição."""
     ok, denied = check_warehouse_access(validated.warehouse_id)
     if not ok:
         return denied
@@ -897,14 +878,13 @@ def registrar_recebimento_da_base(validated):
     return jsonify({"message": "Entrega da OT registrada", **result}), 201
 
 
-# ------------------------------------------------------------ Base SAP
+# --- Base do SAP
 
 @sea_bp.route("/sap/base")
 @require_auth
 @require_any_page(*RECEIVING_PAGE_KEYS, "imports")
 @with_db
 def base_sap():
-    """What the SAP base holds: totals and the OTs with their materials."""
     q = (request.args.get("q") or "").strip()[:100]
     return jsonify({
         "summary": sap_base.summary(g.db),
@@ -913,7 +893,6 @@ def base_sap():
 
 
 CATALOG_PAGE = "material-catalog"
-# Who reads the catalogue: who maintains it and who puts OTs together.
 CATALOG_READ_KEYS = (CATALOG_PAGE, *RECEIVING_PAGE_KEYS)
 
 
@@ -943,7 +922,6 @@ def listar_catalogo():
 @require_any_page(*CATALOG_READ_KEYS)
 @with_db
 def consultar_catalogo(code):
-    """What a material code brings (description, unit, box weight)."""
     found = sap_base.find_material(g.db, code.strip())
     if found is None:
         return _user_error(f"Material {code} não encontrado no cadastro.", 404)
@@ -985,7 +963,6 @@ def excluir_material_catalogo(code):
 @validate_body(CreateBaseOtRequest)
 @with_db
 def criar_ot_na_base(validated):
-    """Put an OT together in the SAP base (materials from the catalogue)."""
     return _catalog_change(sap_base.create_reservation, validated.model_dump(mode="json"),
                            message="OT criada na base do SAP", status=201)
 
@@ -995,8 +972,9 @@ def criar_ot_na_base(validated):
 @validate_body(RegisterPushTokenRequest)
 @with_db
 def registrar_push(validated):
-    """This device receives the SEA notifications of the logged-in user and,
-    with the app lock on, confirms the user's logins (mig 092)."""
+    """Este celular recebe as notificações do usuário e, com a trava do app ligada, confirma os
+    logins dele.
+    """
     g.db.execute(
         text(
             """
@@ -1020,9 +998,9 @@ def registrar_push(validated):
 @validate_body(RegisterPushTokenRequest)
 @with_db
 def remover_push(validated):
-    """Called on logout: the device stops receiving the notifications of
-    the day, but stays registered to confirm the user's logins (mig 092):
-    the user logs in again in the app and confirms."""
+    """Chamado ao sair: o celular para de receber notificações, mas continua confirmando os logins
+    do usuário.
+    """
     g.db.execute(
         text("UPDATE sea_push_tokens SET signed_in = FALSE, updated_at = NOW() "
              "WHERE token = :t AND user_id = :u"),
@@ -1036,7 +1014,6 @@ def remover_push(validated):
 @require_auth
 @with_db
 def logins_pendentes():
-    """Logins of this user waiting to be confirmed on the phone."""
     pending = login_approval.pending_for_user(g.db, g.current_user["user_id"])
     for item in pending:
         item["client"] = login_approval.describe_client(item.pop("user_agent"))
@@ -1048,7 +1025,6 @@ def logins_pendentes():
 @validate_body(LoginDecisionRequest)
 @with_db
 def decidir_login(challenge_id, validated):
-    """The registered phone confirms or denies a login of its user."""
     user_id = g.current_user["user_id"]
     if validated.device_token not in login_approval.trusted_tokens(g.db, user_id):
         return jsonify({"error": "Este celular não está cadastrado para confirmar logins. "
@@ -1059,7 +1035,6 @@ def decidir_login(challenge_id, validated):
         return jsonify({"error": "Tentativa de login não encontrada.", "user_facing": True}), 404
     if status == login_approval.EXPIRED:
         return jsonify({"error": "O tempo para confirmar acabou.", "user_facing": True}), 410
-    # mig 095: a process of the web panel is released for the session that asked.
     purpose = step_up.on_decision(g.db, challenge_id)
     if purpose:
         action = "PROCESS_APPROVED" if validated.approve else "PROCESS_DENIED"
@@ -1082,7 +1057,6 @@ def _step_up_purpose(purpose):
 @require_auth
 @with_db
 def confirmacao_estado(purpose):
-    """mig 095: is this panel session released in ``purpose``?"""
     bad = _step_up_purpose(purpose)
     if bad:
         return bad
@@ -1099,7 +1073,6 @@ def confirmacao_estado(purpose):
 @require_auth
 @with_db
 def confirmacao_pedir(purpose):
-    """Send the request to release ``purpose`` to the user's phone."""
     bad = _step_up_purpose(purpose)
     if bad:
         return bad
@@ -1130,8 +1103,7 @@ def confirmacao_pedir(purpose):
 @require_auth
 @with_db
 def confirmacao_acompanhar(purpose, challenge_id):
-    """The panel follows its request: 202 pending, 200 released, 403
-    denied, 410 expired."""
+    """O painel acompanha o pedido: 202 pendente, 200 liberado, 403 negado, 410 vencido."""
     bad = _step_up_purpose(purpose)
     if bad:
         return bad
@@ -1178,7 +1150,6 @@ def importar_base_sap(kind):
 @require_role("ADMIN")
 @with_db
 def excluir_ot(po_id):
-    """Delete an order with everything that belongs to it (administrator)."""
     try:
         result = sea.delete_ot(g.db, po_id, g.current_user["username"])
     except sea.SeaError as exc:
@@ -1193,7 +1164,6 @@ def excluir_ot(po_id):
 @require_role("ADMIN")
 @with_db
 def excluir_material(item_id):
-    """Delete a material everywhere it appears (administrator)."""
     try:
         result = sea.delete_material(g.db, item_id, g.current_user["username"])
     except sea.SeaError as exc:
@@ -1244,7 +1214,7 @@ def remover_material(po_id, po_line_id):
                       message="Material removido da OT")
 
 
-# ------------------------------------------------- Armazenagem (SP12)
+# --- Armazenagem
 
 @sea_bp.route("/armazenagem/sugestao/<int:inventory_id>")
 @require_auth
@@ -1274,7 +1244,6 @@ TRANSFER_PAGE_KEYS = ("items", "inventory", "putaway")
 @require_any_page(*TRANSFER_PAGE_KEYS)
 @with_db
 def estoque_do_material(item_id):
-    """Where a material is, address by address."""
     return jsonify({"stock": sea.item_stock(g.db, item_id, _user_warehouse_ids())})
 
 
@@ -1284,8 +1253,6 @@ def estoque_do_material(item_id):
 @validate_body(TransferStockRequest)
 @with_db
 def transferir_estoque(validated):
-    """Move stored material between addresses, in the same location or to
-    another one."""
     try:
         result = sea.transfer_stock(
             g.db, inventory_id=validated.inventory_id, to_bin_id=validated.to_bin_id,
@@ -1304,8 +1271,6 @@ def transferir_estoque(validated):
 @require_any_page("putaway", "receiving")
 @with_db
 def pendentes_de_armazenagem():
-    """What waits for storage in every location of the user, with the
-    order of each material."""
     return jsonify({"pending_items": sea.pending_storage(g.db, _user_warehouse_ids())})
 
 
@@ -1314,9 +1279,9 @@ def pendentes_de_armazenagem():
 @require_any_page("putaway", "receiving", *TRANSFER_PAGE_KEYS)
 @with_db
 def destinos():
-    """Storage addresses of every location the user can use, for the
-    put-away destination list (an order received in the Expedição is
-    stored in the SP12 or in the SP13)."""
+    """Endereços de todos os locais do usuário: a ordem recebida na Expedição é guardada no SP12 ou
+    no SP13.
+    """
     scope_clause, scope_params = warehouse_scope_clause("b.warehouse_id")
     rows = g.db.execute(
         text(
@@ -1348,8 +1313,9 @@ def destinos():
 @require_any_page("putaway", "receiving")
 @with_db
 def sugestao_por_material():
-    """Same suggestion keyed by (item_id, staging bin_id, lot) for the
-    mobile app, whose put-away queue does not carry inventory_id."""
+    """Mesma sugestão, pela chave (item, área, lote), porque a fila de armazenagem do app não traz
+    inventory_id.
+    """
     item_id = request.args.get("item_id", type=int)
     bin_id = request.args.get("bin_id", type=int)
     lot = request.args.get("lot") or None
@@ -1376,7 +1342,7 @@ def sugestao_por_material():
         return _sea_error(exc)
 
 
-# ---------------------------------------------------------- Retiradas
+# --- Retiradas
 
 def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=None, limit=200,
                  scoped=False):
@@ -1402,7 +1368,7 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
         text(
             f"""
             SELECT w.*, p.po_number, p.order_type, p.service_order_number,
-                   u.full_name AS delivered_to_name,
+                   COALESCE(w.delivered_to_name, u.full_name) AS delivered_to_name,
                    r.full_name AS requested_by_name, r.email AS requested_by_email,
                    pk.user_id AS picked_by_user_id, pk.full_name AS picked_by_name,
                    pk.photo_updated_at AS picked_by_photo_at,
@@ -1458,10 +1424,8 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             "status": r.status, "requested_by": r.requested_by,
             "requested_by_name": r.requested_by_name, "requested_by_email": r.requested_by_email,
             "requested_at": _iso(r.requested_at), "requester_note": r.requester_note,
-            # mig 098: asked at the terminal by someone without access to the SEA.
             "requester_email": r.requester_email,
             "picked_by": r.picked_by, "picking_started_at": _iso(r.picking_started_at),
-            # mig 096: who accepted it (the terminal shows the name and photo).
             "picked_by_user_id": r.picked_by_user_id, "picked_by_name": r.picked_by_name,
             "picked_by_has_photo": r.picked_by_photo_at is not None,
             "evaluated_by": r.evaluated_by, "evaluated_at": _iso(r.evaluated_at),
@@ -1471,7 +1435,6 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
             "confirmed_by": r.confirmed_by, "cancelled_by": r.cancelled_by,
             "cancelled_at": _iso(r.cancelled_at), "cancel_reason": r.cancel_reason,
             "lines": lines.get(r.withdrawal_id, []),
-            # The order(s) of the materials requested, e.g. ["PM12 2002349234"].
             "orders": sorted({
                 " ".join(x for x in (ln["order_type"], ln["order_number"]) if x)
                 for ln in lines.get(r.withdrawal_id, []) if ln["order_number"]
@@ -1486,9 +1449,9 @@ def _withdrawals(*, warehouse_id=None, status=None, po_id=None, withdrawal_id=No
 @require_any_page(*WITHDRAWAL_PAGES)
 @with_db
 def list_retiradas():
-    """Withdrawals of one location (?warehouse_id=) or, without it, of
-    every location the user works in: the stock keeper sees a request
-    whatever location is selected in the top bar."""
+    """Sem ?warehouse_id, traz todos os locais do usuário: o almoxarife vê o pedido qualquer que
+    seja o local selecionado.
+    """
     warehouse_id = request.args.get("warehouse_id", type=int)
     if warehouse_id:
         ok, denied = check_warehouse_access(warehouse_id)
@@ -1506,8 +1469,6 @@ def list_retiradas():
 @require_any_page(*WITHDRAWAL_PAGES, TERMINAL_PAGE)
 @with_db
 def get_retirada(withdrawal_id):
-    """One withdrawal, whatever its status (the terminal follows its own
-    request with this)."""
     scope_clause, scope_params = _withdrawal_scope(withdrawal_id)
     wh = g.db.execute(
         text(f"SELECT w.warehouse_id FROM withdrawals w WHERE w.withdrawal_id = :id {scope_clause}"),
@@ -1523,10 +1484,8 @@ def get_retirada(withdrawal_id):
 @require_any_page(*WITHDRAWAL_PAGES, TERMINAL_PAGE)
 @with_db
 def responsavel_retirada(withdrawal_id):
-    """Who accepted the request, with the photo as a data: URL (mig 096).
-
-    The terminal has no panel cookie, so it cannot load the photo URL of
-    the panel; and the page CSP allows data: images, not blob:.
+    """Quem aceitou, com a foto como data: URL. O terminal não tem o cookie do painel, e a CSP só
+    aceita imagens data:.
     """
     scope_clause, scope_params = _withdrawal_scope(withdrawal_id)
     row = g.db.execute(
@@ -1555,8 +1514,7 @@ def responsavel_retirada(withdrawal_id):
 @validate_body(CreateWithdrawalRequest)
 @with_db
 def create_retirada(validated):
-    # mig 098: the e-mail identifies who has no access to the SEA, and only
-    # the terminal account asks in their name.
+    # Só o usuário do terminal pede em nome de outra pessoa, identificada pelo e-mail.
     email = validated.requester_email
     if _is_terminal_account():
         if not email:
@@ -1564,8 +1522,7 @@ def create_retirada(validated):
     elif email and g.current_user.get("role") != "ADMIN":
         return _user_error(
             "Somente o terminal de retirada pede material em nome de outra pessoa.", 403)
-    # Not limited to the requester's locations (see get_ordem): the
-    # withdrawal belongs to the location where the material is stored.
+    # Não fica limitado aos locais de quem pede: a retirada pertence ao local onde o material está.
     ot = sea.find_ot(g.db, validated.ot.strip())
     if ot is None:
         return _user_error(f"OT {validated.ot} não encontrada", 404)
@@ -1587,8 +1544,9 @@ def create_retirada(validated):
 
 
 def _withdrawal_scope(withdrawal_id):
-    """Who may act on a withdrawal: its requester, wherever the material
-    is, and otherwise the users of the location that holds it."""
+    """Quem pode agir numa retirada: quem pediu, onde quer que esteja o material; os demais, só no
+    local do material.
+    """
     requested_by = g.db.execute(
         text("SELECT requested_by FROM withdrawals WHERE withdrawal_id = :id"),
         {"id": withdrawal_id},
@@ -1596,14 +1554,13 @@ def _withdrawal_scope(withdrawal_id):
     if requested_by is not None and requested_by == g.current_user["username"]:
         return "", None
     if _is_terminal_account():
-        # The terminal follows only what was asked at it.
         return "AND FALSE", {}
     return warehouse_scope_clause("w.warehouse_id")
 
 
 def _transition(withdrawal_id, fn, *args, message, own=False, **kwargs):
-    # ``own``: steps the requester takes on their own request (confirm,
-    # cancel). Separating is always the work of the location's users.
+    # ``own``: etapas que quem pediu faz no próprio pedido (confirmar, cancelar). Separar é sempre
+    # trabalho do local.
     scope = _withdrawal_scope(withdrawal_id) if own else warehouse_scope_clause("w.warehouse_id")
     try:
         result = fn(g.db, withdrawal_id, *args, scope=scope, **kwargs)
@@ -1626,7 +1583,6 @@ def _transition(withdrawal_id, fn, *args, message, own=False, **kwargs):
 @validate_body(EvaluateWithdrawalRequest)
 @with_db
 def avaliar(withdrawal_id, validated):
-    """mig 096: the evaluator approves or denies a request."""
     resp, _ = _transition(
         withdrawal_id, sea.evaluate, g.current_user["username"], validated.approve,
         validated.note,
@@ -1641,7 +1597,6 @@ def avaliar(withdrawal_id, validated):
 @require_admin_or_page_permission("retirada-fazer")
 @with_db
 def separar(withdrawal_id):
-    """Accept an approved request and prepare it (mig 096)."""
     resp, _ = _transition(withdrawal_id, sea.start_picking, g.current_user["username"],
                           message="Retirada aceita: prepare o material")
     return resp
@@ -1663,7 +1618,6 @@ def pronta(withdrawal_id):
 @require_any_page("retirada", TERMINAL_PAGE)
 @with_db
 def entregar(withdrawal_id):
-    """The logged-in employee confirms they received what they requested."""
     resp, _ = _transition(withdrawal_id, sea.deliver, g.current_user["user_id"],
                           message="Entrega confirmada e baixa realizada", own=True)
     return resp

@@ -1,0 +1,2769 @@
+{
+ "info": {
+  "name": "SEA - API (QA)",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+  "description": "Testes de contrato, segurança e fluxo do SEA. Só ambiente local, usuários de qa/seed_qa.py."
+ },
+ "item": [
+  {
+   "name": "1. Saúde e cabeçalhos de segurança",
+   "item": [
+    {
+     "name": "Health",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/health",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "health"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('responde rápido (< 1 s)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Cabeçalhos de segurança",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": []
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('CSP presente', () => pm.expect(pm.response.headers.get('Content-Security-Policy')).to.include(\"default-src 'self'\"));",
+         "pm.test('não pode ser embutido (X-Frame-Options)', () => pm.expect(pm.response.headers.get('X-Frame-Options')).to.eql('DENY'));",
+         "pm.test('nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));",
+         "pm.test('index.html não fica em cache', () => pm.expect(String(pm.response.headers.get('Cache-Control'))).to.match(/no-cache|no-store/));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "2. Autenticação e sessão",
+   "item": [
+    {
+     "name": "Sem token",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/me",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "me"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 401', () => pm.response.to.have.status(401));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Senha errada: mensagem genérica",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.admin\", \"password\": \"errada\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 401', () => pm.response.to.have.status(401));",
+         "pm.test('não diz se o usuário existe', () => pm.expect(pm.response.text()).to.not.match(/não existe|not found|usuário inválido/i));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Usuário inexistente: mesma resposta",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.ninguem\", \"password\": \"x\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 401', () => pm.response.to.have.status(401));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Corpo inválido",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{nao e json"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('recusa sem erro 500', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.admin",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.admin\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_admin', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Quem sou eu (com token)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/me",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "me"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('é o qa.admin', () => pm.expect(pm.response.json().username).to.eql('qa.admin'));",
+         "pm.test('não devolve o hash da senha', () => pm.expect(pm.response.text()).to.not.include('password_hash'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Token adulterado",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_fake}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/me",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "me"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "prerequest",
+       "script": {
+        "exec": [
+         "pm.collectionVariables.set('t_fake', pm.collectionVariables.get('t_admin').slice(0, -4) + 'AAAA');"
+        ]
+       }
+      },
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 401', () => pm.response.to.have.status(401));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.semperm",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.semperm\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_tmp', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Sair encerra a sessão",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_tmp}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/logout",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "logout"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Token depois de sair não vale",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_tmp}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/me",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "me"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 401', () => pm.response.to.have.status(401));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "3. Permissões (autorização)",
+   "item": [
+    {
+     "name": "Login qa.semperm",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.semperm\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_semperm', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.solic",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.solic\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_solic', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.avaliador",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.avaliador\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_avaliador', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.almox",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.almox\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_almox', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.terminal",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.terminal\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_terminal', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.oper",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.oper\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_oper', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login qa.gestor",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/auth/login",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "auth",
+        "login"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"username\": \"qa.gestor\", \"password\": \"{{qa_password}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json();",
+         "pm.test('traz o token', () => pm.expect(b.token).to.be.a('string'));",
+         "pm.collectionVariables.set('t_gestor', b.token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Sem permissão: fila de retirada",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_semperm}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Sem permissão: usuários",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_semperm}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/admin/users",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "admin",
+        "users"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Solicitante não lista usuários",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/admin/users",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "admin",
+        "users"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Solicitante não importa base do SAP",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/sap/importar/ordens",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "sap",
+        "importar",
+        "ordens"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"records\": [{\"order_number\": \"1\", \"order_type\": \"PM11\"}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal não lista a fila",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_terminal}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal não abre usuários",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_terminal}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/admin/users",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "admin",
+        "users"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Gestor não troca a própria permissão para admin",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_gestor}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/admin/users/{{qa_gestor_id}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "admin",
+        "users",
+        "{{qa_gestor_id}}"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"role\": \"ADMIN\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "prerequest",
+       "script": {
+        "exec": [
+         "const me = pm.collectionVariables.get('qa_gestor_id');",
+         "if (!me) { pm.sendRequest({url: pm.environment.get('base_url') + '/api/auth/me', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('t_gestor')}}, (e, r) => pm.collectionVariables.set('qa_gestor_id', r.json().user_id)); }"
+        ]
+       }
+      },
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('não vira administrador', () => pm.expect(pm.response.code).to.be.oneOf([400, 403]));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Usuário do terminal não ganha outras permissões",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/admin/users/{{qa_terminal_id}}/permissions",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "admin",
+        "users",
+        "{{qa_terminal_id}}",
+        "permissions"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"page_keys\": [\"terminal-retirada\", \"users\"]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "prerequest",
+       "script": {
+        "exec": [
+         "pm.sendRequest({url: pm.environment.get('base_url') + '/api/auth/me', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('t_terminal')}}, (e, r) => pm.collectionVariables.set('qa_terminal_id', r.json().user_id));"
+        ]
+       }
+      },
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "4. Validação de entrada",
+   "item": [
+    {
+     "name": "Ordem com injeção de SQL",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/ordens/1'%20OR%20'1'='1",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "ordens",
+        "1'%20OR%20'1'='1"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('não quebra (404, nunca 500)', () => pm.expect(pm.response.code).to.eql(404));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Retirada com quantidade negativa",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"X\", \"lines\": [{\"inventory_id\": 1, \"quantity\": -5}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Retirada sem linhas",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"X\", \"lines\": []}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal: e-mail inválido",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_terminal}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"X\", \"lines\": [{\"inventory_id\": 1, \"quantity\": 1}], \"requester_email\": \"sem-arroba\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal: sem e-mail",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_terminal}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"X\", \"lines\": [{\"inventory_id\": 1, \"quantity\": 1}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Base do SAP: fórmula de planilha recusada",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/sap/importar/materiais",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "sap",
+        "importar",
+        "materiais"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"records\": [{\"material_code\": \"QA-FORMULA\", \"description\": \"=HYPERLINK(\\\"http://x\\\")\", \"uom\": \"PC\"}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('a linha com fórmula é rejeitada', () => pm.expect(pm.response.json().errors.length).to.be.above(0));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Texto enorme no motivo",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/999999/cancelar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "999999",
+        "cancelar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"reason\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('recusa sem erro 500', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "5. Fluxo completo: OT → recebimento → armazenagem → retirada",
+   "item": [
+    {
+     "name": "Base: ordem",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/sap/importar/ordens",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "sap",
+        "importar",
+        "ordens"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"records\": [{\"order_number\": \"{{ordem}}\", \"order_type\": \"PM12\"}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "prerequest",
+       "script": {
+        "exec": [
+         "const n = String(Date.now()).slice(-9);",
+         "pm.collectionVariables.set('ot', '7' + n);",
+         "pm.collectionVariables.set('ordem', '8' + n);",
+         "pm.collectionVariables.set('material', 'QA' + n);"
+        ]
+       }
+      },
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('sem erros', () => pm.expect(pm.response.json().errors).to.eql([]));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Base: material (KG, caixa de 18)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/sap/importar/materiais",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "sap",
+        "importar",
+        "materiais"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"records\": [{\"material_code\": \"{{material}}\", \"description\": \"Arame QA (fictício)\", \"uom\": \"KG\", \"pack_weight_kg\": 18}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('sem erros', () => pm.expect(pm.response.json().errors).to.eql([]));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Base: OT com 54 KG",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/sap/importar/reservas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "sap",
+        "importar",
+        "reservas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"records\": [{\"ot_number\": \"{{ot}}\", \"order_number\": \"{{ordem}}\", \"material_code\": \"{{material}}\", \"quantity\": 54, \"lot_number\": \"LQA-1\", \"requester_name\": \"Solicitante QA\"}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('sem erros', () => pm.expect(pm.response.json().errors).to.eql([]));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Consulta: OT na base do SAP",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/recebimentos/consulta?codigo={{ot}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "recebimentos",
+        "consulta"
+       ],
+       "query": [
+        {
+         "key": "codigo",
+         "value": "{{ot}}"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const m = pm.response.json().integration.data.materials[0];",
+         "pm.test('traz lote e peso da caixa', () => { pm.expect(m.lot_number).to.eql('LQA-1'); pm.expect(m.pack_weight_kg).to.eql(18); });"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Registrar a entrega (Expedição)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/recebimentos/base",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "recebimentos",
+        "base"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"warehouse_id\": {{expedicao_id}}, \"ot_code\": \"{{ot}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 201', () => pm.response.to.have.status(201));",
+         "pm.collectionVariables.set('po_id', pm.response.json().po_id);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Registrar de novo é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/recebimentos/base",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "recebimentos",
+        "base"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"warehouse_id\": {{expedicao_id}}, \"ot_code\": \"{{ot}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 409', () => pm.response.to.have.status(409));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Área de recebimento",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/recebimentos/areas?warehouse_id={{expedicao_id}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "recebimentos",
+        "areas"
+       ],
+       "query": [
+        {
+         "key": "warehouse_id",
+         "value": "{{expedicao_id}}"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.collectionVariables.set('area_id', pm.response.json().bins[0].bin_id);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Linhas da OT",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/receiving/po/{{ot}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "receiving",
+        "po",
+        "{{ot}}"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const l = pm.response.json().lines[0];",
+         "pm.collectionVariables.set('item_id', l.item_id);",
+         "pm.test('54 a receber', () => pm.expect(l.quantity_remaining).to.eql(54));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Receber 36 (parcial)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/receiving/receive",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "receiving",
+        "receive"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"po_id\": {{po_id}}, \"items\": [{\"item_id\": {{item_id}}, \"quantity\": 36, \"bin_id\": {{area_id}}}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "OT em recebimento parcial",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/ordens?warehouse_id={{expedicao_id}}&q={{ot}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "ordens"
+       ],
+       "query": [
+        {
+         "key": "warehouse_id",
+         "value": "{{expedicao_id}}"
+        },
+        {
+         "key": "q",
+         "value": "{{ot}}"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const o = pm.response.json().orders[0];",
+         "pm.test('status parcial', () => pm.expect(o.status).to.eql('PARTIAL'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Receber mais que o previsto é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/receiving/receive",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "receiving",
+        "receive"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"po_id\": {{po_id}}, \"items\": [{\"item_id\": {{item_id}}, \"quantity\": 999, \"bin_id\": {{area_id}}}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('recusado', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Pendente de armazenagem",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/armazenagem/pendentes",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "armazenagem",
+        "pendentes"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const p = pm.response.json().pending_items.find(x => x.lot_number === pm.collectionVariables.get('ot'));",
+         "pm.test('o material espera armazenagem', () => pm.expect(p).to.be.an('object'));",
+         "pm.collectionVariables.set('from_bin', p.bin_id);",
+         "pm.test('peso da caixa chegou ao estoque', () => pm.expect(p.pack_weight_kg).to.eql(18));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Destinos",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/armazenagem/destinos",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "armazenagem",
+        "destinos"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const b = pm.response.json().bins.find(x => x.warehouse_code === 'SP12');",
+         "pm.collectionVariables.set('to_bin', b.bin_id);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Armazenar 36 no SP12",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_oper}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/putaway/confirm",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "putaway",
+        "confirm"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"item_id\": {{item_id}}, \"from_bin_id\": {{from_bin}}, \"to_bin_id\": {{to_bin}}, \"quantity\": 36, \"lot_number\": \"{{ot}}\"}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal: estoque da ordem",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/ordens/{{ordem}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "ordens",
+        "{{ordem}}"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const s = pm.response.json().stock[0];",
+         "pm.collectionVariables.set('inv_id', s.inventory_id);",
+         "pm.test('36 disponíveis, caixa de 18', () => { pm.expect(s.available).to.eql(36); pm.expect(s.pack_weight_kg).to.eql(18); });"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Pedir 10 KG (não é caixa inteira)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"{{ot}}\", \"lines\": [{\"inventory_id\": {{inv_id}}, \"quantity\": 10}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Pedir 1 caixa (18 KG)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"ot\": \"{{ot}}\", \"lines\": [{\"inventory_id\": {{inv_id}}, \"quantity\": 18}]}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 201', () => pm.response.to.have.status(201));",
+         "pm.collectionVariables.set('wid', pm.response.json().withdrawal.withdrawal_id);",
+         "pm.test('aguarda avaliação', () => pm.expect(pm.response.json().withdrawal.status).to.eql('REQUESTED'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Almoxarife não avalia",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_almox}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/avaliar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "avaliar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"approve\": true}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Separar antes de aprovar é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_almox}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/separar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "separar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 409', () => pm.response.to.have.status(409));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Negar sem motivo é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_avaliador}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/avaliar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "avaliar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"approve\": false}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 400', () => pm.response.to.have.status(400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Avaliador aprova",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_avaliador}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/avaliar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "avaliar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"approve\": true}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Avaliar de novo é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_avaliador}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/avaliar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "avaliar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{\"approve\": true}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 409', () => pm.response.to.have.status(409));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Almoxarife aceita",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_almox}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/separar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "separar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Terminal vê quem aceitou",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/responsavel",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "responsavel"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('tem nome', () => pm.expect(pm.response.json().name).to.include('QA'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Outro usuário não marca pronta",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/pronta",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "pronta"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 403', () => pm.response.to.have.status(403));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Entregar antes de pronta é recusado",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/entregar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "entregar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 409', () => pm.response.to.have.status(409));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Almoxarife marca pronta",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_almox}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/pronta",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "pronta"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Outra pessoa não recebe a entrega",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/entregar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "entregar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('recusado', () => pm.expect(pm.response.code).to.be.oneOf([403, 404]));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Solicitante confirma o recebimento",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/entregar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "entregar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('entregue', () => pm.expect(pm.response.json().withdrawal.status).to.eql('DELIVERED'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Confirmar de novo não baixa duas vezes",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/retiradas/{{wid}}/entregar",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "retiradas",
+        "{{wid}}",
+        "entregar"
+       ]
+      },
+      "body": {
+       "mode": "raw",
+       "raw": "{}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 409', () => pm.response.to.have.status(409));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Estoque depois da baixa",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_solic}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/ordens/{{ordem}}",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "ordens",
+        "{{ordem}}"
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "pm.test('sobraram 18 KG', () => pm.expect(pm.response.json().stock[0].available).to.eql(18));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Histórico mostra a ordem, não a OT",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{t_admin}}"
+       }
+      ],
+      "url": {
+       "raw": "{{base_url}}/api/sea/historico?warehouse_id={{sp12_id}}&limit=50",
+       "host": [
+        "{{base_url}}"
+       ],
+       "path": [
+        "api",
+        "sea",
+        "historico"
+       ],
+       "query": [
+        {
+         "key": "warehouse_id",
+         "value": "{{sp12_id}}"
+        },
+        {
+         "key": "limit",
+         "value": "50"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "pm.test('status 200', () => pm.response.to.have.status(200));",
+         "const m = pm.response.json().movements.find(x => x.action_type === 'WITHDRAWAL_DELIVERED' && x.entity_id == pm.collectionVariables.get('wid'));",
+         "pm.test('a entrega tem a ordem', () => pm.expect(m.orders[0]).to.eql('PM12 - ' + pm.collectionVariables.get('ordem')));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "variable": []
+}

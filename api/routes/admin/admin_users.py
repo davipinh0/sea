@@ -93,6 +93,20 @@ def _email_taken(email, exclude_user_id=None):
     return row is not None
 
 
+def _manager_refusal(target_role=None, target_id=None, new_role=None, own_permissions=False):
+    """Quem só tem a permissão "Usuários" gerencia usuários comuns. Administrador (criar, promover,
+    alterar, trocar a senha, excluir) e as próprias permissões ficam só com administradores.
+    Retorna a resposta de recusa, ou None."""
+    if g.current_user.get("role") == "ADMIN":
+        return None
+    if new_role == "ADMIN" or target_role == "ADMIN":
+        return jsonify({"error": "Só um administrador pode criar, promover ou alterar um administrador.",
+                        "user_facing": True}), 403
+    if own_permissions and target_id == g.current_user["user_id"]:
+        return jsonify({"error": "Você não pode mudar as próprias permissões.", "user_facing": True}), 403
+    return None
+
+
 @admin_bp.route("/users", methods=["POST"])
 @require_auth
 @require_admin_or_page_permission("users")
@@ -100,6 +114,9 @@ def _email_taken(email, exclude_user_id=None):
 @with_db
 def create_user(validated):
     data = validated.model_dump()
+    refused = _manager_refusal(new_role=data.get("role"))
+    if refused:
+        return refused
 
     pw_error = validate_password(data["password"])
     if pw_error:
@@ -155,6 +172,11 @@ def update_user(user_id, validated):
     ).fetchone()
     if not existing:
         return jsonify({"error": "Usuário não encontrado"}), 404
+    refused = _manager_refusal(target_role=existing.role, new_role=data.get("role"))
+    if refused:
+        return refused
+    if "role" in data and data["role"] != existing.role and g.current_user.get("role") != "ADMIN":
+        return jsonify({"error": "Só um administrador muda o papel de um usuário.", "user_facing": True}), 403
 
     # Prevent admin from deactivating themselves or downgrading their own role
     is_self = g.current_user["user_id"] == user_id
@@ -258,6 +280,10 @@ def delete_user(user_id):
 
     if g.current_user["user_id"] == user_id:
         return jsonify({"error": "Você não pode excluir a si mesmo"}), 400
+    target_role = g.db.execute(text("SELECT role FROM users WHERE user_id = :u"), {"u": user_id}).scalar()
+    refused = _manager_refusal(target_role=target_role)
+    if refused:
+        return refused
 
     # Prevent deleting the last active admin.
     # V-031: same row-locking pattern as update_user so two concurrent
@@ -316,6 +342,10 @@ def remove_user_devices(user_id):
     """Celular perdido ou trocado: os celulares do usuário param de confirmar logins até ele entrar
     de novo no app.
     """
+    target_role = g.db.execute(text("SELECT role FROM users WHERE user_id = :u"), {"u": user_id}).scalar()
+    refused = _manager_refusal(target_role=target_role)
+    if refused:
+        return refused
     removed = g.db.execute(
         text("DELETE FROM sea_push_tokens WHERE user_id = :u RETURNING token"), {"u": user_id}
     ).fetchall()
@@ -449,6 +479,9 @@ def replace_user_permissions(user_id, validated):
     if not user:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
+    refused = _manager_refusal(target_role=user.role, target_id=user_id, own_permissions=True)
+    if refused:
+        return refused
     requested = list(dict.fromkeys(validated.page_keys))  # de-dup, preserve order
     # Override grants (mig 062) ride on the same junction
     # table so the multi-select can write them in one PUT. The full

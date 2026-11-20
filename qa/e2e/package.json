@@ -1,0 +1,11 @@
+{
+  "name": "sea-e2e",
+  "private": true,
+  "description": "Testes ponta a ponta do painel do SEA (Playwright). Só ambiente local.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}

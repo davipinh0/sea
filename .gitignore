@@ -57,3 +57,9 @@ proxy/certs/*.pem
 .env.backup*
 *.env.backup*
 .coverage
+
+# QA
+qa/e2e/node_modules/
+qa/e2e/package-lock.json
+qa/e2e/relatorio/
+qa/e2e/test-results/

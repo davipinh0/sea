@@ -37,8 +37,27 @@ docker run --rm --network sea_default --ipc=host -e BASE_URL=http://admin:8080 \
 ```
 
 Relatório em `qa/e2e/relatorio/index.html`. Cobre: login e sessão, menu por permissão, usuário do
-terminal, liberação pelo celular, tema escuro, terminal com e-mail corporativo e exclusão de usuário
-com confirmação no celular.
+terminal, liberação pelo celular, tema escuro, terminal com e-mail corporativo, exclusão de usuário
+com confirmação no celular, XSS guardado (texto com HTML nunca roda) e acessibilidade com axe
+(regras WCAG A/AA, erros graves e críticos) no login, Painel, Usuários, Retirada e terminal.
 
 Antes de rodar depois de mudar o painel: `docker compose build admin && docker compose up -d admin`
 (o contêiner serve o build, não o código).
+
+## 4. Concorrência
+
+```sh
+docker compose exec -T api python - < qa/concorrencia.py
+```
+
+Dispara requisições em paralelo contra a API local, com conexões reais: 30 pedidos disputando 10
+unidades, 10 confirmações de entrega ao mesmo tempo, dois almoxarifes aceitando a mesma retirada e
+armazenagens simultâneas do mesmo material. Confere que nunca se reserva além do saldo, nunca se
+baixa duas vezes e o estoque nunca fica negativo.
+
+## 5. Outras verificações feitas no QA
+
+- Dependências: `pip-audit -r api/requirements.txt` e `npm audit --omit=dev` (painel e app).
+- Banco novo: `db/schema.sql` + migrações 082–099 duas vezes seguidas + `db/seed-sea.sql`.
+- Backup: `pg_dump -Fc` restaurado num banco novo, contagens conferidas e
+  `SELECT verify_audit_log_chain();` (NULL = corrente do log íntegra).

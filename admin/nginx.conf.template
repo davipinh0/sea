@@ -60,6 +60,12 @@ server {
         return 404;
     }
 
+    # Arquivos e pastas ocultos (.env, .git ...) nunca existem aqui: 404 em vez da página do
+    # painel, para não parecerem expostos.
+    location ~ /\.(?!well-known/) {
+        return 404;
+    }
+
     # Proxy API traffic to the Flask container. URL + Host filled at
     # container start by envsubst (see comments at top).
     location /api/ {
@@ -73,6 +79,12 @@ server {
         # Kept above the gunicorn --timeout (180s, see api/Dockerfile) so
         # nginx never severs a backend still finishing a large write
         # (e.g. a 300+ line cycle-count approval).
+        # A API já manda estes cabeçalhos; o servidor acima também. Fica só uma cópia.
+        proxy_hide_header X-Content-Type-Options;
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header Referrer-Policy;
+        proxy_hide_header Permissions-Policy;
+        proxy_hide_header Content-Security-Policy;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
 

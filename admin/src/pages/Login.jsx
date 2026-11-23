@@ -122,8 +122,9 @@ export default function Login() {
         {error && <div className="login-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Usuário</label>
+            <label htmlFor="login-username">Usuário</label>
             <input
+              id="login-username" autoComplete="username"
               className="form-input"
               type="text"
               value={username}
@@ -132,8 +133,9 @@ export default function Login() {
             />
           </div>
           <div className="form-group">
-            <label>Senha</label>
+            <label htmlFor="login-password">Senha</label>
             <input
+              id="login-password" autoComplete="current-password"
               className="form-input"
               type="password"
               value={password}

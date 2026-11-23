@@ -134,10 +134,14 @@ const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 export default function Users() {
   const { user: currentUser, refreshUser } = useAuth();
   const isAdmin = currentUser?.role === 'ADMIN';
+  // Quem não é administrador gerencia só usuários comuns e não mexe nas próprias permissões (a
+  // API também recusa).
+  const canManage = (u) => isAdmin || u?.role !== 'ADMIN';
   const [users, setUsers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
+  const ownPermissionsLocked = !isAdmin && editId === currentUser?.user_id;
   const [form, setForm] = useState({});
   const [error, setError] = useState('');
   const [problems, setProblems] = useState({});
@@ -238,7 +242,7 @@ export default function Users() {
     // include it on the create path where CreateUserRequest expects it.
     const body = {
       full_name: (form.full_name || '').trim(),
-      role: form.role,
+      role: isAdmin ? form.role : 'USER',
       warehouse_ids: form.warehouse_ids || [],
       allowed_functions: form.allowed_functions || [],
       // Texto vazio apaga o e-mail na edição; no cadastro, em branco não é enviado.
@@ -267,7 +271,7 @@ export default function Users() {
     // create response when we just minted a new row.
     const userPayload = await res.json().catch(() => null);
     const savedUserId = editId || userPayload?.user_id;
-    if (savedUserId) {
+    if (savedUserId && !ownPermissionsLocked) {
       const permRes = await api.put(
         `/admin/users/${savedUserId}/permissions`,
         { page_keys: pagePermissions },
@@ -398,12 +402,14 @@ export default function Users() {
     { key: 'role', label: 'Função' },
     { key: 'warehouse_ids', label: 'Locais', render: (r) => warehouseCodes(r.warehouse_ids) },
     { key: 'actions', label: '', render: (r) => (
+      canManage(r) ? (
       <div style={{ display: 'flex', gap: 4 }}>
         <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
         {r.user_id !== currentUser?.user_id && (
           <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); deleteUser(r.user_id); }} aria-label="Excluir" title="Excluir">&#128465;</button>
         )}
       </div>
+      ) : <span className="settings-note" title="Só um administrador altera outro administrador">Administrador</span>
     )},
   ];
 
@@ -470,12 +476,14 @@ export default function Users() {
             userId={editId} enabled={form.web_login_approval}
             onToggle={(value) => setForm({ ...form, web_login_approval: value })}
           />
-          <div className="form-group">
-            <label>Função</label>
-            <select className="form-select" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+          {isAdmin && (
+            <div className="form-group">
+              <label htmlFor="user-role">Função</label>
+              <select id="user-role" className="form-select" value={form.role || ''} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <label>Locais *</label>
@@ -572,7 +580,11 @@ export default function Users() {
                 </button>
               </span>
             </div>
-            {form.role === 'ADMIN' ? (
+            {ownPermissionsLocked ? (
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 0' }}>
+                As suas próprias permissões só podem ser mudadas por um administrador.
+              </p>
+            ) : form.role === 'ADMIN' ? (
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 0' }}>
                 A função ADMIN ignora as permissões de página - acesso total a todas as páginas do painel web.
               </p>

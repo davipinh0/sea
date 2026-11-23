@@ -1529,4 +1529,4 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 /* Terminal: como o funcionário se identifica */
 .terminal-choice { display: flex; flex-wrap: wrap; gap: 16px; }
 .terminal-choice .terminal-btn { flex: 1 1 260px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 20px; }
-.terminal-choice-sub { font-size: 15px; font-weight: 500; opacity: .85; }
+.terminal-choice-sub { font-size: 15px; font-weight: 600; }

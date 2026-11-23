@@ -8,7 +8,8 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth.jsx';
 import {
-  IDLE_MESSAGE, TAB_KEY, askOtherTabs, hasTabSession, listenOtherTabs, markTabSession, watchIdle,
+  DUPLICATE_MESSAGE, IDLE_MESSAGE, TAB_KEY, askOtherTabs, hasTabSession, isDuplicateTab, listenOtherTabs,
+  markTabSession, tabId, watchIdle,
 } from '../utils/sessionGuard.js';
 
 const ME = { user_id: 1, username: 'admin', full_name: 'Admin', role: 'ADMIN', allowed_pages: [] };
@@ -78,7 +79,38 @@ describe('opening the panel', () => {
     renderPanel();
     await waitFor(() => expect(screen.getByText('logado:admin')).toBeInTheDocument());
     expect(calledLogout(fetchSpy)).toBe(false);
-    expect(sessionStorage.getItem(TAB_KEY)).toBe('1');
+    expect(sessionStorage.getItem(TAB_KEY)).toMatch(/.{8,}/);
+    other.close();
+  });
+
+  // Regressão: "Duplicar" no navegador copia o sessionStorage, e a cópia abria na mesma tela.
+  it('a tab duplicated by the browser is blocked without ending the original session', async () => {
+    markTabSession();
+    const copiedId = tabId();
+    const original = new BroadcastChannel('sea-auth');
+    original.onmessage = (event) => {
+      if (event.data?.type === 'owner' && event.data.id === copiedId) original.postMessage({ type: 'owned', id: copiedId });
+      if (event.data?.type === 'who') original.postMessage({ type: 'alive' });
+    };
+    const fetchSpy = stubFetch(200);
+    renderPanel();
+    await waitFor(() => expect(screen.getByText('deslogado')).toBeInTheDocument());
+    expect(calledLogout(fetchSpy)).toBe(false);
+    expect(hasTabSession()).toBe(false);
+    expect(sessionStorage.getItem('login_flash_message')).toBe(DUPLICATE_MESSAGE);
+    original.close();
+  });
+
+  it('a reload is not mistaken for a copy when no other tab uses the same id', async () => {
+    markTabSession();
+    const other = new BroadcastChannel('sea-auth');
+    other.onmessage = (event) => {
+      if (event.data?.type === 'owner') other.postMessage({ type: 'owned', id: 'outra-aba' });
+    };
+    const fetchSpy = stubFetch(200);
+    renderPanel();
+    await waitFor(() => expect(screen.getByText('logado:admin')).toBeInTheDocument());
+    expect(calledLogout(fetchSpy)).toBe(false);
     other.close();
   });
 
@@ -111,6 +143,21 @@ describe('askOtherTabs / listenOtherTabs', () => {
     markTabSession();
     expect(await askOtherTabs(300)).toBe(true);
     stop();
+  });
+
+  it('the tab holding an id says so, and each tab gets its own id', async () => {
+    expect(await isDuplicateTab(50)).toBe(false);
+    markTabSession();
+    const first = tabId();
+    markTabSession();
+    expect(tabId()).toBe(first);
+    expect(await isDuplicateTab(100)).toBe(false);
+    const stop = listenOtherTabs({ onLogout: () => {} });
+    expect(await isDuplicateTab(300)).toBe(true);
+    stop();
+    sessionStorage.clear();
+    markTabSession();
+    expect(tabId()).not.toBe(first);
   });
 });
 

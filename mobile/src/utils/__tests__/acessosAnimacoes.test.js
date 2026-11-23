@@ -85,4 +85,19 @@ describe('Animações de sucesso', () => {
     }
     expect(read('../../navigation/AppNavigator.js')).toMatch(/animation: 'slide_from_right'/);
   });
+
+  // Regressão: a animação do recebimento só aparecia depois de recarregar a OT (duas consultas).
+  it('celebrates as soon as the server confirms, before reloading', () => {
+    const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
+    for (const [file, reload] of [['ReceberScreen', 'await load(code, true)'], ['ArmazenarScreen', 'await load()'], ['RetiradaScreen', 'await load()']]) {
+      const src = read(`../../screens/${file}.js`);
+      const celebrate = src.indexOf('setCelebrate(celebration(');
+      expect(celebrate, file).toBeGreaterThan(-1);
+      expect(src.indexOf(reload, celebrate - 400), file).toBeGreaterThan(celebrate);
+    }
+    // A animação não espera a consulta de "reduzir movimento" para começar.
+    for (const file of ['SuccessAnimation', 'FadeIn']) {
+      expect(read(`../../components/${file}.js`), file).not.toMatch(/isReduceMotionEnabled\(\)\s*\.catch/);
+    }
+  });
 });

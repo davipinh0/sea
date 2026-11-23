@@ -806,11 +806,30 @@ a {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(31, 35, 40, 0.4);
+  background: rgba(31, 35, 40, 0.45);
+  /* Fundo desfocado: a janela aberta é o que importa até concluir ou cancelar. */
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: modal-fade 0.15s ease-out;
+}
+
+.modal:focus { outline: none; }
+.modal:focus-visible { outline: 2px solid var(--accent, #F26522); outline-offset: 2px; }
+
+/* Clique fora da janela: ela balança para mostrar que precisa ser concluída ou cancelada. */
+.modal-nudge { animation: modal-nudge 0.35s ease-in-out; }
+@keyframes modal-nudge {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+@keyframes modal-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .modal-nudge { animation: none; }
+  .modal-nudge { box-shadow: 0 0 0 3px var(--accent, #F26522); }
 }
 
 .modal {

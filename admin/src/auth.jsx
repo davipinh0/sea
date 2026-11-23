@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from './api.js';
 import { friendlyError } from './utils/friendlyError.js';
 import {
-  IDLE_MESSAGE, announceLogout, askOtherTabs, clearTabSession, hasTabSession,
-  listenOtherTabs, markTabSession, setLoginFlash, watchIdle,
+  DUPLICATE_MESSAGE, IDLE_MESSAGE, announceLogout, askOtherTabs, clearTabSession, hasTabSession,
+  isDuplicateTab, listenOtherTabs, markTabSession, setLoginFlash, watchIdle,
 } from './utils/sessionGuard.js';
 import { isTerminalAccount } from './utils/permissions.js';
 
@@ -25,14 +25,21 @@ export function AuthProvider({ children }) {
     //
     // SEA (mig 093): the session belongs to the tab that signed in. A new
     // tab, a reopened browser or a restored tab only keeps it when another
-    // open panel tab vouches for it; otherwise it is ended here.
+    // open panel tab vouches for it; otherwise it is ended here. A tab duplicated by the browser
+    // goes to the login without ending the original tab's session.
     let cancelled = false;
     (async () => {
       try {
         const res = await api.get('/auth/me');
         if (cancelled || !res || !res.ok) return;
         const data = await res.json();
-        if (!hasTabSession() && !(await askOtherTabs())) {
+        if (hasTabSession()) {
+          if (await isDuplicateTab()) {
+            clearTabSession();
+            setLoginFlash(DUPLICATE_MESSAGE);
+            return;
+          }
+        } else if (!(await askOtherTabs())) {
           await api.post('/auth/logout', {});
           return;
         }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/styles';
 import { TIMING, totalDuration } from '../utils/celebrate';
+import reduceMotion from './reduceMotion';
 
 // Comemoração curta quando a operação dá certo. Some sozinha ou com um toque; com "reduzir
 // movimento" ligado no celular aparece sem animar.
@@ -31,13 +32,10 @@ export default function SuccessAnimation({ event, onDone }) {
     };
     AccessibilityInfo.announceForAccessibility?.(`${event.title} ${event.detail}`);
 
-    AccessibilityInfo.isReduceMotionEnabled().catch(() => false).then((reduce) => {
-      if (cancelled) return;
-      if (reduce) {
-        [backdrop, circle, icon, check, text].forEach((v) => v.setValue(1));
-        timer = setTimeout(finish, totalDuration(true));
-        return;
-      }
+    if (reduceMotion()) {
+      [backdrop, circle, icon, check, text].forEach((v) => v.setValue(1));
+      timer = setTimeout(finish, totalDuration(true));
+    } else {
       const spring = (value, delay = 0) => Animated.spring(value, {
         toValue: 1, friction: 5, tension: 90, delay, useNativeDriver: true,
       });
@@ -56,7 +54,7 @@ export default function SuccessAnimation({ event, onDone }) {
         timing(backdrop, 0, TIMING.exit),
       ]);
       animation.start(({ finished }) => { if (finished) finish(); });
-    });
+    }
 
     return () => {
       cancelled = true;

@@ -119,9 +119,10 @@ export default function ReceberScreen({ navigation, route }) {
         return `${formatQuantity(x.quantity, m.uom, m.pack_weight_kg)} de ${x.line.sku}`;
       }).join('; ');
       const code = ot.po_number;
-      await load(code, true);
+      // Comemora assim que o servidor confirma; a OT recarrega por trás da animação.
       setMessage({ type: 'ok', text: `Recebimento registrado: ${done}. Material disponível para armazenagem.` });
       setCelebrate(celebration('receber', `OT ${code}: ${done}`));
+      await load(code, true);
     } catch (err) {
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível registrar o recebimento.') });
       setBusy(false);

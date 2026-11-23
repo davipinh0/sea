@@ -471,7 +471,7 @@ class TestPickConfirmedEmission:
                 "/api/picking/confirm",
                 json={
                     "pick_task_id": data["pick_task_id"],
-                    "scanned_barcode": data["upc"],
+                    "scanned_barcode": data["sku"],
                     "quantity_picked": data["quantity_to_pick"],
                 },
                 headers=auth_headers,
@@ -565,7 +565,7 @@ def _advance_so_through_picking(client, auth_headers, so_number="SO-2026-001"):
             "/api/picking/confirm",
             json={
                 "pick_task_id": data["pick_task_id"],
-                "scanned_barcode": data["upc"],
+                "scanned_barcode": data["sku"],
                 "quantity_picked": data["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -587,7 +587,7 @@ def _verify_pack_all(client, auth_headers, so_id, so_number="SO-2026-001"):
                 "/api/packing/verify",
                 json={
                     "so_id": so_id,
-                    "scanned_barcode": line["upc"],
+                    "scanned_barcode": line["sku"],
                     "quantity": remaining,
                 },
                 headers=auth_headers,

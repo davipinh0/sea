@@ -8,6 +8,7 @@ O app e o terminal (Bearer) só são barrados se a sessão foi encerrada: o app 
 
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -15,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import text
 
 from services.auth_service import TOKEN_EXPIRY_HOURS, generate_token
+from services.login_approval import describe_client
 
 WEB_IDLE_MINUTES = int(os.getenv("SEA_WEB_IDLE_MINUTES", "15"))
 # last_seen_at é gravado no máximo uma vez a cada tantos segundos por sessão.
@@ -91,6 +93,62 @@ def check(db, jti, *, web: bool) -> str | None:
         )
         db.commit()
     return None
+
+
+def public_id(jti) -> str:
+    """Identifica a sessão na tela sem expor o ``jti`` que vai dentro do token."""
+    return hashlib.sha256(str(jti).encode()).hexdigest()[:16]
+
+
+def active_for_user(db, user_id: int, current_jti) -> list[dict]:
+    """Onde o usuário está conectado agora ("Gerenciar Acessos"). No navegador, uma sessão parada há
+    mais de WEB_IDLE_MINUTES já não abre mais nada e fica de fora; a atual aparece sempre.
+    """
+    rows = db.execute(
+        text("""
+            SELECT jti, client_ip, user_agent, created_at, last_seen_at,
+                   last_seen_at < NOW() - make_interval(mins => :idle) AS idle
+            FROM sea_sessions
+            WHERE user_id = :uid AND ended_at IS NULL AND expires_at > NOW()
+            ORDER BY last_seen_at DESC
+        """),
+        {"uid": user_id, "idle": WEB_IDLE_MINUTES},
+    ).fetchall()
+    current = str(current_jti or "")
+    sessions = []
+    for r in rows:
+        device = describe_client(r.user_agent)
+        app = device.startswith("App SEA")
+        this = str(r.jti) == current
+        if r.idle and not app and not this:
+            continue
+        sessions.append({
+            "id": public_id(r.jti), "device": device, "kind": "App" if app else "Navegador",
+            "ip": r.client_ip or None, "started_at": r.created_at.isoformat(),
+            "last_seen_at": r.last_seen_at.isoformat(), "current": this,
+        })
+    return sessions
+
+
+def end_for_user(db, user_id: int, session_ids, current_jti) -> list[str]:
+    """Encerra as sessões do próprio usuário pelos ids da tela; nunca a atual (essa sai por "Sair").
+    Devolve os aparelhos desconectados. Quem chama faz o commit.
+    """
+    wanted = set(session_ids)
+    rows = db.execute(
+        text("""
+            SELECT jti, user_agent FROM sea_sessions
+            WHERE user_id = :uid AND ended_at IS NULL AND expires_at > NOW()
+        """),
+        {"uid": user_id},
+    ).fetchall()
+    ended = []
+    for r in rows:
+        if str(r.jti) == str(current_jti or "") or public_id(r.jti) not in wanted:
+            continue
+        end(db, r.jti, LOGOUT)
+        ended.append(describe_client(r.user_agent))
+    return ended
 
 
 def end(db, jti, reason: str) -> None:

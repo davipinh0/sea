@@ -857,7 +857,7 @@ def test_confirm_wave_pick_updates_all_so_lines(client, auth_headers):
         "/api/picking/confirm",
         json={
             "pick_task_id": task["pick_task_id"],
-            "scanned_barcode": "100000000001",
+            "scanned_barcode": "TST-001",
             "quantity_picked": 6,
         },
         headers=auth_headers,
@@ -921,7 +921,7 @@ def test_wave_pick_to_pack_flow(client, auth_headers):
             "/api/picking/confirm",
             json={
                 "pick_task_id": next_data["pick_task_id"],
-                "scanned_barcode": next_data["upc"],
+                "scanned_barcode": next_data["sku"],
                 "quantity_picked": next_data["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -982,7 +982,7 @@ def test_wave_pick_with_shorts_to_pack(client, auth_headers):
             "/api/picking/confirm",
             json={
                 "pick_task_id": nx["pick_task_id"],
-                "scanned_barcode": nx["upc"],
+                "scanned_barcode": nx["sku"],
                 "quantity_picked": nx["quantity_to_pick"],
             },
             headers=auth_headers,

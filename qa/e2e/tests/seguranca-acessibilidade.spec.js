@@ -45,6 +45,7 @@ test.describe('Acessibilidade (axe, regras WCAG A/AA)', () => {
     ['usuários', 'qa.admin', '/users'],
     ['retirada', 'qa.admin', '/retirada'],
     ['terminal', 'qa.terminal', '/retirada/terminal'],
+    ['gerenciar acessos', 'qa.solic', '/acessos'],
   ]) {
     test(name, async ({ page }) => {
       await uiLogin(page, user);

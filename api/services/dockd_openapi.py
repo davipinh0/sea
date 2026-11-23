@@ -94,13 +94,12 @@ _GET_ORDER_ITEM_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
     "required": [
-        "external_id", "sku", "display_name", "upc", "qty", "qty_ordered",
+        "external_id", "sku", "display_name", "qty", "qty_ordered",
     ],
     "properties": {
         "external_id":  {"type": "string", "format": "uuid"},
         "sku":          {"type": "string"},
         "display_name": {"type": "string"},
-        "upc":          {"type": ["string", "null"]},
         "qty": {
             "type": "integer",
             "description": (

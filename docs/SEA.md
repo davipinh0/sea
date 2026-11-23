@@ -1,4 +1,4 @@
-# SEA — Sistema de Expedição e Armazenamento
+# SEA - Sistema de Entrada e Armazenamento
 
 Protótipo. Usa somente **dados fictícios**. Licença Apache 2.0 (arquivos `LICENSE` e `NOTICE`).
 
@@ -104,6 +104,12 @@ armazenamento concluído) com aviso sonoro.
   usuário) e a senha, e a sessão termina ao fim da retirada. Sem acesso, informa só o e-mail
   corporativo: o pedido é feito pelo usuário do terminal em nome desse e-mail
   (`withdrawals.requester_email`), e a entrega é confirmada no próprio terminal.
+* **Situação da ordem no terminal** (`sea_service.material_situation`): a consulta da ordem traz cada
+  material com a situação dele: **Disponível**, **Aguardando Armazenamento** (ainda na área de
+  recebimento), **Em retirada** (reservado por outro pedido), **Aguardando Recebimento** (não chegou,
+  inclusive a ordem que só existe na base do SAP) e **Esgotado** (já retirado). Sem nada
+  disponível, o terminal explica o motivo (por exemplo, "Esta ordem já foi retirada em …") e não
+  oferece o pedido; com parte disponível, os demais aparecem em "Outros materiais desta ordem".
 * **Quem aceitou acompanha** (migração `098`): depois que alguém aceita a retirada, só essa pessoa
   dá andamento (marcar pronta; cancelar, além do solicitante e do administrador) e só ela recebe
   avisos dessa retirada; para os demais os avisos somem e fica o registro. Se o solicitante
@@ -181,6 +187,10 @@ Limites conhecidos do protótipo:
   2 caixas; retirar 1 caixa baixa 18 KG. No recebimento pela etiqueta, ao informar a unidade KG o
   formulário pergunta os **KG por caixa** e completa o cadastro do material. No terminal o seletor anda pelo peso da caixa
   (0 > 18 KG > 36 KG). A API recusa quantidade que não seja de caixas inteiras.
+* **Sem UPC e MPN** (migração `100`): o cadastro de materiais não guarda UPC nem MPN. O material é
+  identificado pelo código (`sku`); códigos alternativos lidos no scanner ficam em
+  `barcode_aliases`. A leitura por código de barras (app, PDV e integrações) procura pelo código e
+  pelos alternativos, e a importação de planilha ignora colunas `upc`/`mpn` antigas.
 
 * **Transferência entre endereços**: em Estoque > Materiais, ao abrir um material, "Localizações
   no estoque" traz o botão **Transferir** em cada endereço. O destino pode ser outra prateleira
@@ -379,6 +389,12 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   nenhuma requisição (por exemplo, navegador fechado); ajuste com `SEA_WEB_IDLE_MINUTES`.
 - O app não sai por inatividade: ele tem o bloqueio por digital/PIN. O terminal de retirada volta
   ao login após 2 minutos sem uso enquanto o funcionário ainda não pediu material.
+- **Gerenciar Acessos** (menu da foto, no painel em `/acessos` e no app): o usuário vê onde está
+  conectado (aparelho, tipo, IP, início e último uso; a sessão atual marcada) e **desconecta** um
+  aparelho ou todos os outros (`POST /api/sea/meus-acessos/sessoes/encerrar`, registrado no log como
+  `USER_SESSIONS_ENDED`). A sessão em uso só sai por **Sair**. Os ids da lista não expõem o `jti`.
+  Locais, permissões e os celulares que confirmam login continuam só para leitura: quem muda é o
+  administrador, porque sem celular cadastrado o login deixa de pedir confirmação.
 
 **Foto do usuário** (migração `091`): só o administrador coloca, troca ou remove, em
 Sistema > Usuários (editar o usuário). O painel corta a foto em quadrado e reduz para 256 px (JPEG)

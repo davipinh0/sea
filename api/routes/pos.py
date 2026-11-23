@@ -192,19 +192,20 @@ def availability():
         item = g.db.execute(
             text(
                 """
-                SELECT item_id, sku, item_name, upc, is_active
+                SELECT item_id, sku, item_name, is_active
                   FROM items
-                 WHERE upc = :barcode
+                 WHERE sku = :barcode
+                    OR barcode_aliases @> CAST(:barcode_json AS jsonb)
                  LIMIT 1
                 """
             ),
-            {"barcode": barcode},
+            {"barcode": barcode, "barcode_json": json.dumps([barcode])},
         ).fetchone()
     else:
         item = g.db.execute(
             text(
                 """
-                SELECT item_id, sku, item_name, upc, is_active
+                SELECT item_id, sku, item_name, is_active
                   FROM items
                  WHERE sku = :sku
                  LIMIT 1
@@ -293,7 +294,8 @@ def availability():
     body = {
         "sku":          item.sku,
         "name":         item.item_name,
-        "barcode":      item.upc,
+        # Sem UPC (mig 100): o código lido no SEA é o do material.
+        "barcode":      item.sku,
         # is_taxable is hardcoded true. items has no is_taxable column
         # in v1.10; a follow-up adds the column when a deployment
         # needs tax-exempt SKUs. The POS Service treats every item as

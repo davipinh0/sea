@@ -62,6 +62,7 @@ export const ACTION_LABELS = {
   LOGIN_DENIED: 'Login negado no celular',
   LOGIN_APPROVAL_SETTING: 'Confirmação de login no celular',
   USER_DEVICES_REMOVED: 'Celulares do usuário removidos',
+  USER_SESSIONS_ENDED: 'Aparelhos desconectados pelo usuário',
   USER_DELETED: 'Usuário excluído',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',
@@ -171,5 +172,35 @@ export async function readError(res, fallback) {
     return errorMessage(await res.json(), fallback);
   } catch {
     return fallback;
+  }
+}
+
+// Terminal de retirada: situação de cada material da ordem (sea_service.material_situation).
+export const MATERIAL_SITUATION = {
+  DISPONIVEL: { label: 'Disponível', tone: 'ok' },
+  AGUARDANDO_ARMAZENAMENTO: { label: 'Aguardando Armazenamento', tone: 'wait' },
+  EM_RETIRADA: { label: 'Em retirada', tone: 'wait' },
+  AGUARDANDO_RECEBIMENTO: { label: 'Aguardando Recebimento', tone: 'wait' },
+  ESGOTADO: { label: 'Esgotado', tone: 'out' },
+  INDISPONIVEL: { label: 'Indisponível', tone: 'out' },
+};
+
+// O que dizer quando a ordem não tem nada para retirar agora; null quando tem.
+export function orderSituationMessage(order) {
+  if (!order) return null;
+  if (!order.status && order.stock?.length) return null;
+  switch (order.status) {
+    case 'RETIRADA':
+      return `Esta ordem já foi retirada${order.withdrawn_at ? ` em ${formatDateTime(order.withdrawn_at)}` : ''}. Todos os materiais dela estão esgotados.`;
+    case 'AGUARDANDO_RECEBIMENTO':
+      return 'Aguardando Recebimento: os materiais desta ordem ainda não chegaram à expedição.';
+    case 'AGUARDANDO_ARMAZENAMENTO':
+      return 'Aguardando Armazenamento: os materiais chegaram e ainda estão sendo guardados. Tente de novo mais tarde.';
+    case 'EM_RETIRADA':
+      return 'Os materiais desta ordem já estão reservados em outra solicitação de retirada.';
+    case 'DISPONIVEL':
+      return null;
+    default:
+      return 'Nenhum material desta ordem está disponível no estoque no momento.';
   }
 }

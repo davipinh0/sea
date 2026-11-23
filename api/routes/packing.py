@@ -49,7 +49,7 @@ def get_order(barcode):
         text(
             """
             SELECT sol.so_line_id, sol.line_number, sol.item_id,
-                   i.sku, i.item_name, i.upc, i.weight_lbs,
+                   i.sku, i.item_name, i.weight_lbs,
                    sol.quantity_ordered, sol.quantity_picked, sol.quantity_packed
             FROM sales_order_lines sol
             JOIN items i ON i.item_id = sol.item_id
@@ -79,7 +79,6 @@ def get_order(barcode):
             "item_id": l.item_id,
             "sku": l.sku,
             "item_name": l.item_name,
-            "upc": l.upc,
             "weight_lbs": weight,
             "quantity_ordered": l.quantity_ordered,
             "quantity_picked": l.quantity_picked,
@@ -138,7 +137,7 @@ def verify_item(validated):
         text(
             """
             SELECT sol.so_line_id, sol.item_id, sol.quantity_picked, sol.quantity_packed,
-                   i.sku, i.item_name, i.upc, i.barcode_aliases
+                   i.sku, i.item_name, i.barcode_aliases
             FROM sales_order_lines sol
             JOIN items i ON i.item_id = sol.item_id
             WHERE sol.so_id = :so_id
@@ -149,14 +148,14 @@ def verify_item(validated):
 
     matched_line = None
     for line in lines:
-        if _barcode_matches(scanned_barcode, line.upc, line.barcode_aliases):
+        if _barcode_matches(scanned_barcode, line.sku, line.barcode_aliases):
             if line.quantity_picked > line.quantity_packed:
                 matched_line = line
                 break
 
     if not matched_line:
         # Check if barcode matches any item on the order at all
-        any_match = any(_barcode_matches(scanned_barcode, l.upc, l.barcode_aliases) for l in lines)
+        any_match = any(_barcode_matches(scanned_barcode, l.sku, l.barcode_aliases) for l in lines)
         if any_match:
             return jsonify({"error": "Material já totalmente conferido neste pedido"}), 400
         return jsonify({"error": "Material não encontrado neste pedido"}), 400
@@ -407,8 +406,8 @@ def complete_packing(validated):
     })
 
 
-def _barcode_matches(scanned, upc, barcode_aliases):
-    if scanned == upc:
+def _barcode_matches(scanned, sku, barcode_aliases):
+    if scanned == sku:
         return True
     if barcode_aliases and isinstance(barcode_aliases, list):
         return scanned in barcode_aliases

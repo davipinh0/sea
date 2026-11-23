@@ -2,7 +2,7 @@
   "expo": {
     "name": "SEA",
     "slug": "sea-prototipo",
-    "version": "1.40.0",
+    "version": "1.41.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -33,7 +33,7 @@
         "backgroundColor": "#F26522"
       },
       "package": "br.sea.prototipo",
-      "versionCode": 21,
+      "versionCode": 22,
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",

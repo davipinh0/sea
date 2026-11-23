@@ -197,3 +197,12 @@ class CancelWithdrawalRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     reason: str = Field(..., min_length=1, max_length=500)
+
+
+SessionId = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
+
+
+class EndSessionsRequest(BaseModel):
+    """Sessões do próprio usuário a desconectar ("Gerenciar Acessos"), pelos ids da lista."""
+
+    ids: List[SessionId] = Field(..., min_length=1, max_length=50)

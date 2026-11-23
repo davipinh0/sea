@@ -319,7 +319,7 @@ export default function PurchaseOrders() {
         const created = await res.json();
         setEditLines((ls) => [
           ...ls,
-          { ...created, item_name: item.item_name, upc: item.upc, mpn: item.mpn },
+          { ...created, item_name: item.item_name },
         ]);
         setNewLineSku('');
         setNewLineQty('');
@@ -459,8 +459,6 @@ export default function PurchaseOrders() {
                 <thead>
                   <tr>
                     <th>Código</th>
-                    <th>UPC</th>
-                    <th>MPN</th>
                     <th>Nome do material</th>
                     <th style={{ textAlign: 'right' }}>Pedido</th>
                     <th style={{ textAlign: 'right' }}>Recebido</th>
@@ -473,8 +471,6 @@ export default function PurchaseOrders() {
                     return (
                       <tr key={i}>
                         <td className="mono">{l.sku}</td>
-                        <td className="mono">{l.upc || '-'}</td>
-                        <td className="mono">{l.mpn || '-'}</td>
                         <td style={{ color: 'var(--text-secondary)' }}>{l.item_name}</td>
                         <td className="mono" style={{ textAlign: 'right' }}>{l.quantity_ordered}</td>
                         <td className="mono" style={{ textAlign: 'right' }}>{l.quantity_received}</td>

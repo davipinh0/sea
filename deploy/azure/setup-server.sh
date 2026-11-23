@@ -46,7 +46,7 @@ if [ -n "$DUMP" ]; then
 fi
 
 # Migrações do SEA (podem rodar de novo): mantêm um banco restaurado em dia.
-for f in db/migrations/08[2-9]_*.sql db/migrations/09[0-9]_*.sql; do
+for f in db/migrations/08[2-9]_*.sql db/migrations/09[0-9]_*.sql db/migrations/1[0-9][0-9]_*.sql; do
   docker exec -i sea-db sh -c 'psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$f"
 done
 

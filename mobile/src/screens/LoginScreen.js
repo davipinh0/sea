@@ -84,7 +84,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.logo}>SEA</Text>
-          <Text style={styles.subtitle}>Sistema de Expedição e Armazenamento</Text>
+          <Text style={styles.subtitle}>Sistema de Entrada e Armazenamento</Text>
 
           <TextInput
             style={styles.input} value={username} onChangeText={setUsername} placeholder="Usuário ou e-mail"

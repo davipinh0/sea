@@ -8,6 +8,7 @@ import { useWarehouse } from './warehouse.jsx';
 import { EXPEDICAO_CODE } from './utils/sea.js';
 import Login from './pages/Login.jsx';
 import ChangePassword from './pages/ChangePassword.jsx';
+import MeusAcessos from './pages/MeusAcessos.jsx';
 import Painel from './pages/Painel.jsx';
 import EstoqueSP12 from './pages/EstoqueSP12.jsx';
 import Items from './pages/Items.jsx';
@@ -107,6 +108,7 @@ export default function App() {
       />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/change-password" element={page(<ChangePassword />, 'Não foi possível carregar a troca de senha.')} />
+        <Route path="/acessos" element={page(<MeusAcessos />, 'Não foi possível carregar os seus acessos.')} />
         <Route path="/" element={page(<Painel />, 'Não foi possível carregar o painel.')} />
 
         <Route path="/estoque" element={page(<SectionTabs basePath="/estoque" tabs={ESTOQUE_TABS} />, 'Não foi possível carregar o estoque.')}>

@@ -6,7 +6,6 @@ mode) features. Mirrors the lookup_bp shape but takes an X-WMS-Token.
 Coverage:
 - 200 happy path: response shape + DRAFT-v1 header + item/locations
 - 200 SKU lookup matches by sku
-- 200 UPC lookup matches by upc
 - 200 alias lookup matches by barcode_aliases @> ...
 - Warehouse scoping: locations in non-allowed warehouses are filtered
   from the response; the item still 200s (catalog row isn't warehouse-
@@ -75,18 +74,18 @@ def dockd_token_other_warehouse(seed_data):
     delete_token(token_id)
 
 
-def _insert_item(sku=None, item_name="Widget", upc="0123456789012",
+def _insert_item(sku=None, item_name="Widget",
                  category="general", weight_lbs=None, barcode_aliases=None):
     conn = get_raw_connection()
     cur = conn.cursor()
     sku = sku or f"SKU-{uuid.uuid4().hex[:8]}"
     cur.execute(
         "INSERT INTO items "
-        "  (sku, item_name, upc, category, weight_lbs, "
+        "  (sku, item_name, category, weight_lbs, "
         "   barcode_aliases, external_id) "
-        "VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s) RETURNING item_id",
+        "VALUES (%s, %s, %s, %s, %s::jsonb, %s) RETURNING item_id",
         (
-            sku, item_name, upc, category, weight_lbs,
+            sku, item_name, category, weight_lbs,
             barcode_aliases, str(uuid.uuid4()),
         ),
     )
@@ -185,24 +184,11 @@ class TestPathParameter:
 
 
 # ----------------------------------------------------------------------
-# Lookup paths: UPC, SKU, alias
+# Lookup paths: SKU, alias (sem UPC desde a mig 100)
 # ----------------------------------------------------------------------
 
 
 class TestLookupBy:
-    def test_upc_lookup(self, client, dockd_token):
-        upc = f"UPC{uuid.uuid4().hex[:8]}"
-        item_id, sku = _insert_item(upc=upc)
-        resp = client.get(
-            f"/api/v1/dockd/items/{upc}",
-            headers={"X-WMS-Token": dockd_token["plaintext"]},
-        )
-        assert resp.status_code == 200, resp.get_json()
-        body = resp.get_json()
-        assert body["item"]["item_id"] == item_id
-        assert body["item"]["sku"] == sku
-        assert body["item"]["upc"] == upc
-
     def test_sku_lookup(self, client, dockd_token):
         item_id, sku = _insert_item()
         resp = client.get(
@@ -243,7 +229,7 @@ class TestResponseShape:
         body = resp.get_json()
         item = body["item"]
         assert set(item.keys()) == {
-            "item_id", "sku", "item_name", "upc",
+            "item_id", "sku", "item_name",
             "category", "weight_lbs",
         }
         assert item["item_name"] == "Test Widget Pro"

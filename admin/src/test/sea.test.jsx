@@ -158,6 +158,57 @@ describe('Terminal de retirada', () => {
     expect(terminalTokens).toEqual([]);
   });
 
+  it('says why an order has nothing to withdraw and marks each material', async () => {
+    const mat = (sku, status, extra = {}) => ({
+      ot: 'OT-9', sku, item_name: `Peça ${sku}`, uom: 'PC', pack_weight_kg: null, status,
+      quantity_ordered: 2, quantity_received: 2, awaiting_storage: 0, available: 0, withdrawn: 0, ...extra,
+    });
+    const orders = {
+      '2000000091': { order_number: '2000000091', status: 'RETIRADA', withdrawn_at: '2026-11-20T13:05:00Z', stock: [],
+        materials: [mat('ESG-1', 'ESGOTADO', { withdrawn: 2 })] },
+      '2000000092': { order_number: '2000000092', status: 'AGUARDANDO_RECEBIMENTO', stock: [],
+        materials: [mat('SAP-1', 'AGUARDANDO_RECEBIMENTO', { quantity_received: 0 })] },
+      '2000000093': { order_number: '2000000093', status: 'AGUARDANDO_ARMAZENAMENTO', stock: [],
+        materials: [mat('STG-1', 'AGUARDANDO_ARMAZENAMENTO', { awaiting_storage: 2 })] },
+      '2000000094': { ...ORDER, order_number: '2000000094', status: 'DISPONIVEL',
+        materials: [mat('MAT-1', 'DISPONIVEL', { available: 5 }), mat('ESG-2', 'ESGOTADO', { withdrawn: 2 })] },
+    };
+    apiGet.mockImplementation((path) => ok(orders[path.split('/').pop()] || {}));
+    render(<MemoryRouter><TerminalRetirada /></MemoryRouter>);
+    fireEvent.click(screen.getByText('Não tenho acesso ao SEA'));
+    fireEvent.change(screen.getByLabelText('E-mail corporativo'), { target: { value: 'fulano@empresa.example' } });
+    fireEvent.click(screen.getByText('Continuar'));
+    const ask = async (number) => {
+      fireEvent.change(await screen.findByLabelText('Ordem'), { target: { value: number } });
+      fireEvent.click(screen.getByText('Consultar ordem'));
+    };
+
+    await ask('2000000091');
+    expect(await screen.findByRole('status')).toHaveTextContent(/já foi retirada em \d{2}\/11\/2026/);
+    expect(screen.getByText('Esgotado')).toBeInTheDocument();
+    expect(screen.getByText(/retirado: 2/)).toBeInTheDocument();
+    expect(screen.queryByText('Solicitar retirada')).toBeNull();
+    expect(screen.queryByText(/materiais disponíveis/)).toBeNull();
+
+    fireEvent.click(screen.getByText('Voltar'));
+    await ask('2000000092');
+    expect(await screen.findByRole('status')).toHaveTextContent('Aguardando Recebimento');
+    expect(screen.getByText(/previsto: 2 PC · recebido: 0 PC/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Voltar'));
+    await ask('2000000093');
+    expect(await screen.findByRole('status')).toHaveTextContent('Aguardando Armazenamento');
+
+    // Com material disponível, os esgotados aparecem à parte e o pedido segue normal.
+    fireEvent.click(screen.getByText('Voltar'));
+    await ask('2000000094');
+    await screen.findByText('Parafuso');
+    expect(screen.queryByText(/já foi retirada|Aguardando Recebimento:|Nenhum material desta ordem/)).toBeNull();
+    expect(screen.getByText('Outros materiais desta ordem')).toBeInTheDocument();
+    expect(screen.getByText('Esgotado')).toBeInTheDocument();
+    expect(screen.getByText('Solicitar retirada')).toBeInTheDocument();
+  });
+
   it('signs out an employee who walks away before asking for material', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

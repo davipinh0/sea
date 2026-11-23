@@ -143,14 +143,14 @@ def _insert_so_line(so_id, item_id, quantity_picked=1, line_number=1, quantity_o
     cur.close()
 
 
-def _insert_item(sku=None, item_name="Widget", upc="0123456789012"):
+def _insert_item(sku=None, item_name="Widget"):
     conn = get_raw_connection()
     cur = conn.cursor()
     sku = sku or f"SKU-{uuid.uuid4().hex[:8]}"
     cur.execute(
-        "INSERT INTO items (sku, item_name, upc, external_id) "
-        "VALUES (%s, %s, %s, %s) RETURNING item_id",
-        (sku, item_name, upc, str(uuid.uuid4())),
+        "INSERT INTO items (sku, item_name, external_id) "
+        "VALUES (%s, %s, %s) RETURNING item_id",
+        (sku, item_name, str(uuid.uuid4())),
     )
     item_id = cur.fetchone()[0]
     cur.close()
@@ -340,7 +340,7 @@ class TestHappyPath:
         item = body["items"][0]
         assert item["sku"] == "WIDGET-RED-S"
         assert item["display_name"] == "Widget Red Small"
-        assert item["upc"] == "0123456789012"
+        assert "upc" not in item
         assert item["qty"] == 2
         # Fully picked line: qty_ordered matches qty.
         assert item["qty_ordered"] == 2

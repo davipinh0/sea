@@ -39,7 +39,7 @@ def _search_items(pattern: str) -> list[dict]:
             """
             SELECT item_id, sku, item_name
               FROM items
-             WHERE sku ILIKE :p OR item_name ILIKE :p OR upc ILIKE :p
+             WHERE sku ILIKE :p OR item_name ILIKE :p
              ORDER BY sku
              LIMIT :limit
             """

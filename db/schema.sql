@@ -71,8 +71,6 @@ CREATE TABLE items (
     sku VARCHAR(50) NOT NULL UNIQUE,
     item_name VARCHAR(200) NOT NULL,
     description VARCHAR(1000),
-    upc VARCHAR(50),                       -- primary barcode
-    mpn VARCHAR(64),                        -- manufacturer part number (mig 079)
     barcode_aliases JSONB,                 -- array of alternate barcodes
     category VARCHAR(100),
     weight_lbs DECIMAL(10,4),
@@ -93,8 +91,6 @@ CREATE TABLE items (
     latest_inbound_id BIGINT
 );
 
-CREATE INDEX ix_items_upc ON items(upc);
-CREATE INDEX ix_items_mpn ON items(mpn);
 CREATE INDEX ix_items_sku ON items(sku);
 
 -- ============================================================
@@ -2506,3 +2502,9 @@ ALTER TABLE sea_login_challenges ADD CONSTRAINT sea_login_challenges_purpose_che
 ALTER TABLE sea_step_up DROP CONSTRAINT IF EXISTS sea_step_up_purpose_check;
 ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
     CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario'));
+
+-- mig 100: materiais sem UPC e MPN (o SEA identifica o material pelo código; códigos alternativos
+-- ficam em barcode_aliases).
+DROP INDEX IF EXISTS ix_items_upc;
+DROP INDEX IF EXISTS ix_items_mpn;
+ALTER TABLE items DROP COLUMN IF EXISTS upc, DROP COLUMN IF EXISTS mpn;

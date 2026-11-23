@@ -67,8 +67,6 @@ class ItemImportRow(_BaseImportRow):
     item_name: Optional[str] = Field(None, max_length=256)
     name: Optional[str] = Field(None, max_length=256)  # synonym accepted
     description: Optional[str] = Field(None, max_length=1000)
-    upc: Optional[str] = Field(None, max_length=128)
-    mpn: Optional[str] = Field(None, max_length=64)
     category: Optional[str] = Field(None, max_length=128)
     weight_lbs: Optional[Decimal] = Field(None, ge=0, le=99999)
     weight: Optional[Decimal] = Field(None, ge=0, le=99999)  # synonym accepted
@@ -80,7 +78,7 @@ class ItemImportRow(_BaseImportRow):
     compat_group: Optional[str] = Field(None, max_length=50)
 
     @field_validator(
-        "sku", "item_name", "name", "description", "upc", "mpn", "category", "default_bin",
+        "sku", "item_name", "name", "description", "category", "default_bin",
         mode="before",
     )
     @classmethod

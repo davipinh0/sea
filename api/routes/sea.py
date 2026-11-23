@@ -20,6 +20,7 @@ from schemas.sea import (
     CreateBaseOtRequest,
     CreateCatalogMaterialRequest,
     CreateWithdrawalRequest,
+    EndSessionsRequest,
     EvaluateWithdrawalRequest,
     InterpretLabelRequest,
     LoginDecisionRequest,
@@ -31,7 +32,7 @@ from schemas.sea import (
     UpdateOtDataRequest,
     UpdateOtMaterialRequest,
 )
-from services import login_approval, sap_base, step_up, user_photo
+from services import login_approval, sap_base, step_up, user_photo, web_sessions
 from services import notification_service as notifications
 from services import sea_service as sea
 from services.audit_service import write_audit_log
@@ -135,8 +136,10 @@ def locais():
 @require_auth
 @with_db
 def meus_acessos():
-    """O que o próprio usuário pode usar ("Gerenciar Acessos" no app): locais, confirmação de login
-    e os celulares dele. As permissões vêm de /api/auth/me. Só leitura: quem muda é o administrador.
+    """O que o próprio usuário pode usar ("Gerenciar Acessos" no app e no painel): locais,
+    confirmação de login, os celulares dele e onde está conectado. As permissões vêm de
+    /api/auth/me. Locais, permissões e celulares só o administrador muda; o usuário pode
+    desconectar as próprias sessões (POST .../sessoes/encerrar).
     """
     uid = g.current_user["user_id"]
     user = g.db.execute(
@@ -181,7 +184,26 @@ def meus_acessos():
              "updated_at": _iso(r.updated_at)}
             for r in devices
         ],
+        "sessions": web_sessions.active_for_user(g.db, uid, g.current_user.get("jti")),
     })
+
+
+@sea_bp.route("/meus-acessos/sessoes/encerrar", methods=["POST"])
+@require_auth
+@validate_body(EndSessionsRequest)
+@with_db
+def encerrar_minhas_sessoes(validated):
+    """Desconecta aparelhos do próprio usuário. A sessão em uso não entra: essa sai por "Sair"."""
+    uid = g.current_user["user_id"]
+    ended = web_sessions.end_for_user(g.db, uid, validated.ids, g.current_user.get("jti"))
+    if not ended:
+        return _user_error("Nenhuma das sessões escolhidas está conectada.", 404)
+    write_audit_log(
+        g.db, "USER_SESSIONS_ENDED", "USER", uid, g.current_user["username"], None,
+        {"sessoes": len(ended), "aparelhos": sorted(set(ended))},
+    )
+    g.db.commit()
+    return jsonify({"ended": len(ended)})
 
 
 # --- Painel
@@ -488,7 +510,7 @@ def list_materiais():
     rows = g.db.execute(
         text(
             f"""
-            SELECT i.item_id, i.sku, i.item_name, i.upc, i.mpn, i.category, i.size_class,
+            SELECT i.item_id, i.sku, i.item_name, i.category, i.size_class,
                    i.compat_group, i.weight_lbs, i.default_bin_id, i.is_active,
                    i.uom AS item_uom, i.pack_weight_kg, l.po_line_id, l.quantity_ordered, l.uom AS line_uom,
                    p.po_number,
@@ -505,7 +527,7 @@ def list_materiais():
     return jsonify({
         "items": [
             {"row_id": f"{r.item_id}-{r.po_line_id or 0}", "item_id": r.item_id, "sku": r.sku,
-             "item_name": r.item_name, "upc": r.upc, "mpn": r.mpn, "category": r.category,
+             "item_name": r.item_name, "category": r.category,
              "size_class": r.size_class, "compat_group": r.compat_group,
              "weight_lbs": float(r.weight_lbs) if r.weight_lbs is not None else None,
              "default_bin_id": r.default_bin_id, "is_active": r.is_active,

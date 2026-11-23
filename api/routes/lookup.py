@@ -17,15 +17,14 @@ lookup_bp = Blueprint("lookup", __name__)
 def lookup_item(barcode):
     barcode = barcode.strip()
 
-    # Look up by UPC, SKU, or barcode_aliases
+    # Look up by SKU or barcode_aliases
     item_row = g.db.execute(
         text(
             """
-            SELECT item_id, sku, item_name, upc, category, weight_lbs,
+            SELECT item_id, sku, item_name, category, weight_lbs,
                    description, barcode_aliases
             FROM items
-            WHERE upc = :barcode
-               OR sku = :barcode
+            WHERE sku = :barcode
                OR barcode_aliases @> CAST(:barcode_json AS jsonb)
             LIMIT 1
             """
@@ -40,7 +39,6 @@ def lookup_item(barcode):
         "item_id": item_row.item_id,
         "sku": item_row.sku,
         "item_name": item_row.item_name,
-        "upc": item_row.upc,
         "category": item_row.category,
         "weight_lbs": float(item_row.weight_lbs) if item_row.weight_lbs else None,
     }
@@ -129,7 +127,7 @@ def lookup_bin(barcode):
     item_rows = g.db.execute(
         text(
             """
-            SELECT it.item_id, it.sku, it.item_name, it.upc,
+            SELECT it.item_id, it.sku, it.item_name,
                    inv.quantity_on_hand, inv.quantity_allocated,
                    (inv.quantity_on_hand - inv.quantity_allocated) AS quantity_available,
                    inv.lot_number
@@ -146,7 +144,6 @@ def lookup_bin(barcode):
             "item_id": r.item_id,
             "sku": r.sku,
             "item_name": r.item_name,
-            "upc": r.upc,
             "quantity_on_hand": r.quantity_on_hand,
             "quantity_allocated": r.quantity_allocated,
             "quantity_available": r.quantity_available,
@@ -242,9 +239,9 @@ def search_items():
         rows = g.db.execute(
             text(
                 """
-                SELECT item_id, sku, item_name, upc, category, weight_lbs
+                SELECT item_id, sku, item_name, category, weight_lbs
                 FROM items
-                WHERE sku ILIKE :q OR item_name ILIKE :q OR upc ILIKE :q
+                WHERE sku ILIKE :q OR item_name ILIKE :q
                 LIMIT 50
                 """
             ),
@@ -255,10 +252,10 @@ def search_items():
         rows = g.db.execute(
             text(
                 """
-                SELECT DISTINCT i.item_id, i.sku, i.item_name, i.upc,
+                SELECT DISTINCT i.item_id, i.sku, i.item_name,
                                 i.category, i.weight_lbs
                 FROM items i
-                WHERE (i.sku ILIKE :q OR i.item_name ILIKE :q OR i.upc ILIKE :q)
+                WHERE (i.sku ILIKE :q OR i.item_name ILIKE :q)
                   AND (
                     EXISTS (
                         SELECT 1 FROM inventory inv
@@ -283,7 +280,6 @@ def search_items():
             "item_id": r.item_id,
             "sku": r.sku,
             "item_name": r.item_name,
-            "upc": r.upc,
             "category": r.category,
             "weight_lbs": float(r.weight_lbs) if r.weight_lbs else None,
         }

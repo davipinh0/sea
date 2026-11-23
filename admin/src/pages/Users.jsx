@@ -12,13 +12,13 @@ import { readError } from '../utils/sea.js';
 
 const ROLES = ['ADMIN', 'USER'];
 
-const ALL_FUNCTIONS = [
+export const ALL_FUNCTIONS = [
   { key: 'receive', label: 'Receber' },
   { key: 'putaway', label: 'Armazenagem' },
 ];
 
 // As permissões só valem para usuários comuns; o administrador passa direto.
-const PAGE_GROUPS = [
+export const PAGE_GROUPS = [
   {
     label: 'Estoque',
     pages: [

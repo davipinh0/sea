@@ -626,7 +626,7 @@ def get_next_task(db, batch_id):
             SELECT pt.pick_task_id, pt.pick_sequence, pt.quantity_to_pick, pt.quantity_picked,
                    pt.tote_number, pt.status,
                    b.bin_code, b.bin_barcode, b.aisle, b.row_num, b.level_num,
-                   i.sku, i.item_name, i.upc,
+                   i.sku, i.item_name,
                    so.so_number,
                    tro.to_number,
                    z.zone_name
@@ -701,11 +701,11 @@ def confirm_pick(db, pick_task_id, scanned_barcode, quantity_picked, username):
 
     # 2. Validate barcode
     item = db.execute(
-        text("SELECT item_id, sku, upc, barcode_aliases FROM items WHERE item_id = :iid"),
+        text("SELECT item_id, sku, barcode_aliases FROM items WHERE item_id = :iid"),
         {"iid": task.item_id},
     ).fetchone()
 
-    if not _barcode_matches(scanned_barcode, item.upc, item.barcode_aliases):
+    if not _barcode_matches(scanned_barcode, item.sku, item.barcode_aliases):
         raise BarcodeError(f"Wrong item scanned. Expected SKU: {item.sku}")
 
     # 3. Update pick task
@@ -1968,7 +1968,7 @@ def _get_tasks_for_batch(db, batch_id):
             SELECT pt.pick_task_id, pt.pick_sequence, pt.quantity_to_pick, pt.quantity_picked,
                    pt.tote_number, pt.status,
                    b.bin_code, b.bin_barcode, b.aisle, b.row_num, b.level_num,
-                   i.sku, i.item_name, i.upc,
+                   i.sku, i.item_name,
                    so.so_number,
                    tro.to_number,
                    z.zone_name
@@ -2000,7 +2000,6 @@ def _task_row_to_dict(row):
         "level_num": row.level_num,
         "sku": row.sku,
         "item_name": row.item_name,
-        "upc": row.upc,
         "quantity_to_pick": row.quantity_to_pick,
         "tote_number": row.tote_number,
         "so_number": row.so_number,
@@ -2012,8 +2011,8 @@ def _task_row_to_dict(row):
     }
 
 
-def _barcode_matches(scanned, upc, barcode_aliases):
-    if scanned == upc:
+def _barcode_matches(scanned, sku, barcode_aliases):
+    if scanned == sku:
         return True
     if barcode_aliases and isinstance(barcode_aliases, list):
         return scanned in barcode_aliases

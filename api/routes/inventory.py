@@ -139,7 +139,7 @@ def get_cycle_count(count_id):
     lines = g.db.execute(
         text(
             """
-            SELECT ccl.count_line_id, ccl.item_id, i.sku, i.item_name, i.upc,
+            SELECT ccl.count_line_id, ccl.item_id, i.sku, i.item_name,
                    ccl.expected_quantity, ccl.counted_quantity,
                    ccl.scanned, ccl.unexpected
             FROM cycle_count_lines ccl
@@ -175,7 +175,6 @@ def get_cycle_count(count_id):
                 "item_id": l.item_id,
                 "sku": l.sku,
                 "item_name": l.item_name,
-                "upc": l.upc,
                 "expected_quantity": l.expected_quantity,
                 "counted_quantity": l.counted_quantity,
                 "variance": (l.counted_quantity - l.expected_quantity) if l.counted_quantity is not None else None,

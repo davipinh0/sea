@@ -111,8 +111,6 @@ export default function Items() {
     const body = {
       sku: form.sku,
       item_name: form.item_name,
-      upc: form.upc || null,
-      mpn: form.mpn || null,
       category: form.category || null,
       size_class: form.size_class || null,
       uom: (form.uom || '').trim().toUpperCase() || null,
@@ -216,8 +214,6 @@ export default function Items() {
         >
           <div className="detail-grid">
             <span className="detail-label">Código</span><span className="mono">{detail.sku}</span>
-            <span className="detail-label">UPC</span><span className="mono">{detail.upc || '-'}</span>
-            <span className="detail-label">MPN</span><span className="mono">{detail.mpn || '-'}</span>
             <span className="detail-label">Categoria</span><span>{detail.category || '-'}</span>
             <span className="detail-label">Tamanho</span><span>{detail.size_class || '-'}</span>
             <span className="detail-label">Peso</span><span>{(detail.weight_lbs || detail.weight) ? `${detail.weight_lbs || detail.weight} kg` : '-'}</span>
@@ -256,19 +252,9 @@ export default function Items() {
           }
         >
           {error && <div className="form-error" style={{ marginBottom: 12 }}>{error}</div>}
-          <div className="form-row">
-            <div className="form-group">
-              <label>Código</label>
-              <input className="form-input" value={form.sku || ''} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>UPC</label>
-              <input className="form-input" value={form.upc || ''} onChange={(e) => setForm({ ...form, upc: e.target.value })} />
-            </div>
-          </div>
           <div className="form-group">
-            <label>MPN</label>
-            <input className="form-input" value={form.mpn || ''} onChange={(e) => setForm({ ...form, mpn: e.target.value })} />
+            <label>Código</label>
+            <input className="form-input" value={form.sku || ''} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
           </div>
           <div className="form-group">
             <label>Descrição</label>

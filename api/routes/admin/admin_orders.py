@@ -193,7 +193,7 @@ def get_purchase_order(po_id):
 
     lines = g.db.execute(
         text("""
-            SELECT pol.po_line_id, pol.line_number, pol.item_id, i.sku, i.item_name, i.upc, i.mpn,
+            SELECT pol.po_line_id, pol.line_number, pol.item_id, i.sku, i.item_name,
                    pol.quantity_ordered, pol.quantity_received, pol.unit_cost, pol.status
             FROM purchase_order_lines pol JOIN items i ON i.item_id = pol.item_id
             WHERE pol.po_id = :pid ORDER BY pol.line_number
@@ -213,7 +213,7 @@ def get_purchase_order(po_id):
         },
         "lines": [
             {"po_line_id": l.po_line_id, "line_number": l.line_number, "item_id": l.item_id,
-             "sku": l.sku, "item_name": l.item_name, "upc": l.upc, "mpn": l.mpn,
+             "sku": l.sku, "item_name": l.item_name,
              "quantity_ordered": l.quantity_ordered, "quantity_received": l.quantity_received,
              "unit_cost": float(l.unit_cost) if l.unit_cost else None, "status": l.status}
             for l in lines
@@ -1151,7 +1151,7 @@ def get_sales_order(so_id):
 
     lines = g.db.execute(
         text("""
-            SELECT sol.so_line_id, sol.line_number, sol.item_id, i.sku, i.item_name, i.upc,
+            SELECT sol.so_line_id, sol.line_number, sol.item_id, i.sku, i.item_name,
                    sol.quantity_ordered, sol.quantity_allocated, sol.quantity_picked, sol.quantity_packed, sol.quantity_shipped, sol.quantity_received, sol.status
             FROM sales_order_lines sol JOIN items i ON i.item_id = sol.item_id
             WHERE sol.so_id = :sid ORDER BY sol.line_number
@@ -1246,7 +1246,7 @@ def get_sales_order(so_id):
         },
         "lines": [
             {"so_line_id": l.so_line_id, "line_number": l.line_number, "item_id": l.item_id,
-             "sku": l.sku, "item_name": l.item_name, "upc": l.upc,
+             "sku": l.sku, "item_name": l.item_name,
              "quantity_ordered": l.quantity_ordered, "quantity_allocated": l.quantity_allocated,
              "quantity_picked": l.quantity_picked, "quantity_packed": l.quantity_packed,
              "quantity_shipped": l.quantity_shipped, "quantity_received": l.quantity_received,
@@ -1468,7 +1468,7 @@ def get_picking_ticket(so_id):
     lines = g.db.execute(
         text("""
             SELECT sol.so_line_id, sol.line_number, sol.item_id,
-                   i.sku, i.item_name, i.upc,
+                   i.sku, i.item_name,
                    sol.quantity_ordered, sol.quantity_shipped,
                    pref.bin_code AS preferred_bin_code
             FROM sales_order_lines sol
@@ -1511,7 +1511,7 @@ def get_picking_ticket(so_id):
         },
         "lines": [
             {"so_line_id": l.so_line_id, "line_number": l.line_number,
-             "sku": l.sku, "item_name": l.item_name, "upc": l.upc,
+             "sku": l.sku, "item_name": l.item_name,
              "quantity_ordered": l.quantity_ordered,
              "quantity_shipped": l.quantity_shipped,
              "preferred_bin_code": l.preferred_bin_code}

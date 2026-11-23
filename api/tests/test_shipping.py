@@ -48,7 +48,7 @@ def _advance_so_to_picked(client, auth_headers, so_number="SO-2026-001"):
             "/api/picking/confirm",
             json={
                 "pick_task_id": data["pick_task_id"],
-                "scanned_barcode": data["upc"],
+                "scanned_barcode": data["sku"],
                 "quantity_picked": data["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -69,7 +69,7 @@ def _advance_so_to_packed(client, auth_headers, so_number="SO-2026-001"):
         if remaining > 0:
             client.post(
                 "/api/packing/verify",
-                json={"so_id": so_id, "scanned_barcode": line["upc"], "quantity": remaining},
+                json={"so_id": so_id, "scanned_barcode": line["sku"], "quantity": remaining},
                 headers=auth_headers,
             )
 

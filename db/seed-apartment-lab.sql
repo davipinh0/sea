@@ -57,27 +57,27 @@ INSERT INTO bins (zone_id, warehouse_id, bin_code, bin_barcode, bin_type, aisle,
 --   A-01-03=5, A-02-01=6, A-02-02=7, A-02-03=8, B-01-01=9, B-01-02=10,
 --   B-01-03=11, BULK-01=12, BULK-02=13, SHIP-01=14, SHIP-02=15, QC-01=16
 -- ============================================================
-INSERT INTO items (sku, item_name, description, upc, category, weight_lbs, default_bin_id, external_id) VALUES
-('TST-001', 'Elk Hair Caddis (Sz 14)',       'Classic dry fly pattern',              '100000000001', 'Flies',       0.01, 3,  gen_random_uuid()),
-('TST-002', 'Woolly Bugger Black (Sz 8)',     'Versatile streamer pattern',           '100000000002', 'Flies',       0.01, 4,  gen_random_uuid()),
-('TST-003', 'Adams Dry Fly (Sz 16)',          'All-purpose dry fly',                  '100000000003', 'Flies',       0.01, 5,  gen_random_uuid()),
-('TST-004', 'Pheasant Tail Nymph (Sz 12)',    'Classic nymph pattern',                '100000000004', 'Flies',       0.01, 6,  gen_random_uuid()),
-('TST-005', 'Weight Forward Fly Line 5wt',    'Premium weight-forward fly line',      '100000000005', 'Lines',       0.25, 7,  gen_random_uuid()),
-('TST-006', 'Felt Sole Wading Boot',         'Premium felt-sole wading boot',        '100000000006', 'Footwear',    2.50, 8,  gen_random_uuid()),
-('TST-007', 'Tapered Leader 9ft 5X',         'Knotless tapered leader',              '100000000007', 'Terminal',    0.02, 9,  gen_random_uuid()),
-('TST-008', '9ft 5wt Fly Rod',               '5-weight 4-piece fly rod',             '100000000008', 'Rods',        3.00, 10, gen_random_uuid()),
-('TST-009', 'Large Slim Fly Box',            'Waterproof fly storage box',           '100000000009', 'Accessories', 0.30, 11, gen_random_uuid()),
-('TST-010', 'UV Wader Repair Kit',           'UV-cure wader patch kit',              '100000000010', 'Repair',      0.15, 11, gen_random_uuid()),
-('TST-011', '4pc Trout Rod 9ft',             '4-weight 4-piece rod',                 '100000000011', 'Rods',        2.80, 3,  gen_random_uuid()),
-('TST-012', 'Premium Fly Line WF5F',         'Weight-forward floating line',         '100000000012', 'Lines',       0.25, 4,  gen_random_uuid()),
-('TST-013', 'Stockingfoot Chest Waders',     'Breathable stockingfoot waders',       '100000000013', 'Waders',      3.50, 5,  gen_random_uuid()),
-('TST-014', 'Large Arbor Fly Reel',          'Large arbor fly reel',                 '100000000014', 'Reels',       0.45, 6,  gen_random_uuid()),
-('TST-015', 'Waterproof Sling Pack',         'Waterproof sling pack',                '100000000015', 'Packs',       1.20, 7,  gen_random_uuid()),
-('TST-016', 'Hare''s Ear Nymph (Sz 14)',     'Classic bead-head nymph',              '100000000016', 'Flies',       0.01, 8,  gen_random_uuid()),
-('TST-017', 'Copper John (Sz 16)',           'Weighted nymph pattern',               '100000000017', 'Flies',       0.01, 9,  gen_random_uuid()),
-('TST-018', 'Parachute Adams (Sz 18)',       'High-visibility dry fly',              '100000000018', 'Flies',       0.01, 10, gen_random_uuid()),
-('TST-019', 'Stimulator Orange (Sz 10)',     'Attractor dry fly pattern',            '100000000019', 'Flies',       0.01, 11, gen_random_uuid()),
-('TST-020', 'San Juan Worm Red (Sz 12)',     'Simple worm pattern',                  '100000000020', 'Flies',       0.01, 12, gen_random_uuid());
+INSERT INTO items (sku, item_name, description, category, weight_lbs, default_bin_id, external_id) VALUES
+('TST-001', 'Elk Hair Caddis (Sz 14)',       'Classic dry fly pattern',              'Flies',       0.01, 3,  gen_random_uuid()),
+('TST-002', 'Woolly Bugger Black (Sz 8)',     'Versatile streamer pattern',           'Flies',       0.01, 4,  gen_random_uuid()),
+('TST-003', 'Adams Dry Fly (Sz 16)',          'All-purpose dry fly',                  'Flies',       0.01, 5,  gen_random_uuid()),
+('TST-004', 'Pheasant Tail Nymph (Sz 12)',    'Classic nymph pattern',                'Flies',       0.01, 6,  gen_random_uuid()),
+('TST-005', 'Weight Forward Fly Line 5wt',    'Premium weight-forward fly line',      'Lines',       0.25, 7,  gen_random_uuid()),
+('TST-006', 'Felt Sole Wading Boot',         'Premium felt-sole wading boot',        'Footwear',    2.50, 8,  gen_random_uuid()),
+('TST-007', 'Tapered Leader 9ft 5X',         'Knotless tapered leader',              'Terminal',    0.02, 9,  gen_random_uuid()),
+('TST-008', '9ft 5wt Fly Rod',               '5-weight 4-piece fly rod',             'Rods',        3.00, 10, gen_random_uuid()),
+('TST-009', 'Large Slim Fly Box',            'Waterproof fly storage box',           'Accessories', 0.30, 11, gen_random_uuid()),
+('TST-010', 'UV Wader Repair Kit',           'UV-cure wader patch kit',              'Repair',      0.15, 11, gen_random_uuid()),
+('TST-011', '4pc Trout Rod 9ft',             '4-weight 4-piece rod',                 'Rods',        2.80, 3,  gen_random_uuid()),
+('TST-012', 'Premium Fly Line WF5F',         'Weight-forward floating line',         'Lines',       0.25, 4,  gen_random_uuid()),
+('TST-013', 'Stockingfoot Chest Waders',     'Breathable stockingfoot waders',       'Waders',      3.50, 5,  gen_random_uuid()),
+('TST-014', 'Large Arbor Fly Reel',          'Large arbor fly reel',                 'Reels',       0.45, 6,  gen_random_uuid()),
+('TST-015', 'Waterproof Sling Pack',         'Waterproof sling pack',                'Packs',       1.20, 7,  gen_random_uuid()),
+('TST-016', 'Hare''s Ear Nymph (Sz 14)',     'Classic bead-head nymph',              'Flies',       0.01, 8,  gen_random_uuid()),
+('TST-017', 'Copper John (Sz 16)',           'Weighted nymph pattern',               'Flies',       0.01, 9,  gen_random_uuid()),
+('TST-018', 'Parachute Adams (Sz 18)',       'High-visibility dry fly',              'Flies',       0.01, 10, gen_random_uuid()),
+('TST-019', 'Stimulator Orange (Sz 10)',     'Attractor dry fly pattern',            'Flies',       0.01, 11, gen_random_uuid()),
+('TST-020', 'San Juan Worm Red (Sz 12)',     'Simple worm pattern',                  'Flies',       0.01, 12, gen_random_uuid());
 
 -- ============================================================
 -- INITIAL INVENTORY (all items stocked in their default bins)

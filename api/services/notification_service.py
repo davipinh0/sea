@@ -310,7 +310,7 @@ def send_email(db, notification_id: int,
             f"Local: {row.warehouse_code} - {row.warehouse_name}\n"
             f"Responsável: {row.created_by or '-'}\n"
             f"Data/hora: {row.created_at:%d/%m/%Y %H:%M} (UTC)\n\n"
-            "Mensagem automática do SEA - Sistema de Expedição e Armazenamento."
+            "Mensagem automática do SEA - Sistema de Entrada e Armazenamento."
         )
         try:
             mailer(config, message)

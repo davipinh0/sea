@@ -40,12 +40,23 @@ describe('Gerenciar Acessos', () => {
     expect(appModules(null)).toEqual([]);
   });
 
-  it('is reachable from the photo menu and read only', () => {
+  it('is reachable from the photo menu and only disconnects devices', () => {
     const home = readFileSync(fileURLToPath(new URL('../../screens/HomeScreen.js', import.meta.url)), 'utf8');
     expect(home).toMatch(/navigation\.navigate\('Acessos'\)/);
     expect(home).toMatch(/>Gerenciar Acessos</);
     const screen = readFileSync(fileURLToPath(new URL('../../screens/AcessosScreen.js', import.meta.url)), 'utf8');
-    expect(screen).not.toMatch(/client\.(post|put|patch|delete)/);
+    // A única escrita é desconectar as próprias sessões; permissões e celulares seguem com o admin.
+    const writes = [...screen.matchAll(/client\.(post|put|patch|delete)\('([^']+)'/g)].map((m) => `${m[1]} ${m[2]}`);
+    expect(writes).toEqual(['post /api/sea/meus-acessos/sessoes/encerrar']);
+    expect(screen).toMatch(/DISPOSITIVOS CONECTADOS/);
+    // Pergunta antes de desconectar.
+    expect(screen).toMatch(/Alert\.alert\(title, text/);
+  });
+
+  it('shows the new system name on the login screen', () => {
+    const login = readFileSync(fileURLToPath(new URL('../../screens/LoginScreen.js', import.meta.url)), 'utf8');
+    expect(login).toMatch(/Sistema de Entrada e Armazenamento/);
+    expect(login).not.toMatch(/Expedição e Armazenamento/);
   });
 });
 

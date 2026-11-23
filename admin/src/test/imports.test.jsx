@@ -26,7 +26,9 @@ describe('CSV import templates', () => {
     expect(cols).toContain('name');
     expect(cols).toContain('category');
     expect(cols).toContain('weight');
-    expect(cols).toContain('upc');
+    // Mig 100: materiais sem UPC nem MPN.
+    expect(cols).not.toContain('upc');
+    expect(cols).not.toContain('mpn');
     expect(cols).toContain('default_bin');
     expect(cols).toContain('quantity');
   });

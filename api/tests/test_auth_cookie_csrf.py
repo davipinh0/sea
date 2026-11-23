@@ -98,7 +98,7 @@ class TestCookieAuth:
     def test_cookie_auth_takes_effect_without_localstorage_token(self, client):
         # Simulates admin SPA after V-045: no Authorization header ever sent.
         _login(client)
-        resp = client.get("/api/lookup/item/100000000001")
+        resp = client.get("/api/lookup/item/TST-001")
         # Either 404 (item missing in test seed) or 200 -- the important part
         # is that it's not 401. Cookie auth must be accepted.
         assert resp.status_code != 401

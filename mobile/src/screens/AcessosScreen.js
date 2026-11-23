@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import client from '../api/client';
 import ScreenHeader from '../components/ScreenHeader';
@@ -32,23 +32,72 @@ function Row({ label, sub, granted }) {
   );
 }
 
-// Só mostra: quem muda permissões, locais e celulares é o administrador, no painel.
+function Session({ session, onDisconnect, busy }) {
+  const icon = session.kind === 'App' ? '📱' : '💻';
+  return (
+    <View style={styles.row}>
+      <Text style={styles.sessionIcon}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowLabel}>{session.device}</Text>
+        <Text style={styles.rowSub}>{session.ip ? `IP ${session.ip} · ` : ''}último uso {when(session.last_seen_at)}</Text>
+      </View>
+      {session.current ? (
+        <Text style={styles.currentTag}>ESTE CELULAR</Text>
+      ) : (
+        <TouchableOpacity
+          style={styles.disconnect} onPress={onDisconnect} disabled={busy}
+          accessibilityRole="button" accessibilityLabel={`Desconectar ${session.device}`}
+        >
+          <Text style={styles.disconnectText}>DESCONECTAR</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// Permissões, locais e celulares só o administrador muda, no painel. Aqui o usuário vê tudo e
+// desconecta os aparelhos onde ainda está conectado.
 export default function AcessosScreen({ navigation }) {
   const [me, setMe] = useState(null);
   const [mine, setMine] = useState(null);
   const [message, setMessage] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [meResp, mineResp] = await Promise.all([client.get('/api/auth/me'), client.get('/api/sea/meus-acessos')]);
       setMe(meResp.data);
       setMine(mineResp.data);
-      setMessage(null);
     } catch (err) {
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível carregar os seus acessos.') });
     }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  async function disconnect(ids) {
+    setBusy(true);
+    try {
+      const resp = await client.post('/api/sea/meus-acessos/sessoes/encerrar', { ids });
+      await load();
+      const { ended } = resp.data;
+      setMessage({ type: 'ok', text: ended === 1 ? '1 aparelho desconectado.' : `${ended} aparelhos desconectados.` });
+    } catch (err) {
+      await load();
+      setMessage({ type: 'error', text: apiError(err, 'Não foi possível desconectar.') });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function askDisconnect(ids, title, text) {
+    Alert.alert(title, text, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Desconectar', style: 'destructive', onPress: () => disconnect(ids) },
+    ]);
+  }
+
+  const sessions = mine?.sessions || [];
+  const others = sessions.filter((sess) => !sess.current);
 
   const admin = me?.role === 'ADMIN';
   let index = 0;
@@ -75,6 +124,28 @@ export default function AcessosScreen({ navigation }) {
                 {mine?.last_login ? <Text style={styles.muted}>Último login: {when(mine.last_login)}</Text> : null}
               </Card>
             </FadeIn>
+
+            {mine && (
+              <FadeIn index={next()}>
+                <Card title="DISPOSITIVOS CONECTADOS">
+                  <Text style={styles.muted}>Onde você está conectado agora (painel, app e terminal). Não reconhece um? Desconecte e troque a senha.</Text>
+                  {sessions.map((sess) => (
+                    <Session
+                      key={sess.id} session={sess} busy={busy}
+                      onDisconnect={() => askDisconnect([sess.id], `Desconectar ${sess.device}?`, 'Ele vai precisar entrar de novo com usuário e senha.')}
+                    />
+                  ))}
+                  {others.length > 1 && (
+                    <TouchableOpacity
+                      style={[styles.disconnect, styles.disconnectAll]} disabled={busy} accessibilityRole="button"
+                      onPress={() => askDisconnect(others.map((sess) => sess.id), 'Desconectar todos os outros?', `${others.length} aparelhos vão precisar entrar de novo. Este celular continua conectado.`)}
+                    >
+                      <Text style={styles.disconnectText}>DESCONECTAR TODOS OS OUTROS</Text>
+                    </TouchableOpacity>
+                  )}
+                </Card>
+              </FadeIn>
+            )}
 
             <FadeIn index={next()}>
               <Card title="LOCAIS">
@@ -145,5 +216,10 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
   rowOff: { color: colors.textMuted, fontWeight: '500' },
   rowSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  sessionIcon: { fontSize: 22, width: 28, textAlign: 'center' },
+  currentTag: { fontSize: 11, fontWeight: '800', color: colors.success, backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radii.small, overflow: 'hidden' },
+  disconnect: { minHeight: 40, paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.danger, borderRadius: radii.small },
+  disconnectAll: { marginTop: 10 },
+  disconnectText: { fontSize: 12, fontWeight: '800', color: colors.danger },
   footer: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 16, lineHeight: 18, borderRadius: radii.card },
 });

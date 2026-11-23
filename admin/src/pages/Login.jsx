@@ -102,7 +102,7 @@ export default function Login() {
           <SeaLogo size={32} />
           SEA
         </div>
-        <div className="login-subtitle">Sistema de Expedição e Armazenamento</div>
+        <div className="login-subtitle">Sistema de Entrada e Armazenamento</div>
         {flashMessage && (
           <div
             role="status"

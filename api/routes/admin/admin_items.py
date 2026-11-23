@@ -65,13 +65,13 @@ def list_items():
         params["active"] = active.lower() == "true"
     if search:
         # barcode_aliases is a JSONB array of alternate scannable
-        # barcodes (vendor packs, distributor labels, secondary UPCs).
-        # Operators who scan one of these expect the matching item to
-        # surface even though the primary UPC differs; without the
-        # alias match they have to look up the item manually.
+        # barcodes (vendor packs, distributor labels). Operators who scan
+        # one of these expect the matching item to surface even though
+        # the SKU differs; without the alias match they have to look up
+        # the item manually.
         where_clauses.append(
             "(i.sku ILIKE :search OR i.item_name ILIKE :search "
-            "OR i.upc ILIKE :search OR i.mpn ILIKE :search OR EXISTS (SELECT 1 FROM "
+            "OR EXISTS (SELECT 1 FROM "
             "jsonb_array_elements_text(COALESCE(i.barcode_aliases, '[]'::jsonb)) "
             "AS alias(code) WHERE alias.code ILIKE :search))"
         )
@@ -86,7 +86,7 @@ def list_items():
     params["offset"] = (page - 1) * per_page
     rows = g.db.execute(
         text(f"""
-            SELECT i.item_id, i.sku, i.item_name, i.upc, i.mpn, i.category, i.size_class, i.compat_group, i.weight_lbs,
+            SELECT i.item_id, i.sku, i.item_name, i.category, i.size_class, i.compat_group, i.weight_lbs,
                    i.default_bin_id, i.is_active, i.created_at,
                    b.bin_code AS default_bin_code
             FROM items i
@@ -113,8 +113,7 @@ def list_items():
 
     return jsonify({
         "items": [
-            {"item_id": r.item_id, "sku": r.sku, "item_name": r.item_name, "upc": r.upc,
-             "mpn": r.mpn,
+            {"item_id": r.item_id, "sku": r.sku, "item_name": r.item_name,
              "category": r.category, "size_class": r.size_class, "compat_group": r.compat_group, "weight_lbs": float(r.weight_lbs) if r.weight_lbs else None,
              "default_bin_id": r.default_bin_id, "default_bin_code": r.default_bin_code,
              "is_active": r.is_active,
@@ -131,7 +130,7 @@ def list_items():
 @with_db
 def get_item(item_id):
     item = g.db.execute(
-        text("SELECT item_id, sku, item_name, description, upc, mpn, barcode_aliases, category, size_class, compat_group, weight_lbs, length_in, width_in, height_in, default_bin_id, reorder_point, reorder_qty, is_lot_tracked, is_serial_tracked, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
+        text("SELECT item_id, sku, item_name, description, barcode_aliases, category, size_class, compat_group, weight_lbs, length_in, width_in, height_in, default_bin_id, reorder_point, reorder_qty, is_lot_tracked, is_serial_tracked, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
         {"iid": item_id},
     ).fetchone()
     if not item:
@@ -159,7 +158,7 @@ def get_item(item_id):
     return jsonify({
         "item": {
             "item_id": item.item_id, "sku": item.sku, "item_name": item.item_name,
-            "description": item.description, "upc": item.upc, "mpn": item.mpn, "barcode_aliases": item.barcode_aliases,
+            "description": item.description, "barcode_aliases": item.barcode_aliases,
             "category": item.category, "size_class": item.size_class, "compat_group": item.compat_group, "weight_lbs": float(item.weight_lbs) if item.weight_lbs else None,
             "length_in": float(item.length_in) if item.length_in else None,
             "width_in": float(item.width_in) if item.width_in else None,
@@ -200,20 +199,15 @@ def create_item(validated):
     if dup:
         return jsonify({"error": f"SKU duplicado: {data['sku']}"}), 400
 
-    if data.get("upc"):
-        dup_upc = g.db.execute(text("SELECT 1 FROM items WHERE upc = :upc"), {"upc": data["upc"]}).fetchone()
-        if dup_upc:
-            return jsonify({"error": f"UPC duplicado: {data['upc']}"}), 400
-
     result = g.db.execute(
         text("""
-            INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, uom, pack_weight_kg, external_id)
-            VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :uom, :pack, :ext_id)
-            RETURNING item_id, sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, is_active, created_at, size_class, compat_group
+            INSERT INTO items (sku, item_name, description, category, weight_lbs, default_bin_id, size_class, compat_group, uom, pack_weight_kg, external_id)
+            VALUES (:sku, :name, :desc, :cat, :weight, :bin, :size, :compat, :uom, :pack, :ext_id)
+            RETURNING item_id, sku, item_name, description, category, weight_lbs, default_bin_id, is_active, created_at, size_class, compat_group
         """),
         {
             "sku": data["sku"], "name": data["item_name"], "desc": data.get("description"),
-            "upc": data.get("upc"), "mpn": data.get("mpn"), "cat": data.get("category"), "size": data.get("size_class"), "compat": data.get("compat_group"),
+            "cat": data.get("category"), "size": data.get("size_class"), "compat": data.get("compat_group"),
             "uom": (data.get("uom") or "").strip().upper() or None,
             "pack": data.get("pack_weight_kg"),
             "weight": float(data["weight_lbs"]) if data.get("weight_lbs") is not None else None,
@@ -225,7 +219,7 @@ def create_item(validated):
     g.db.commit()
     return jsonify({
         "item_id": row.item_id, "sku": row.sku, "item_name": row.item_name,
-        "description": row.description, "upc": row.upc, "mpn": row.mpn, "category": row.category,
+        "description": row.description, "category": row.category,
         "size_class": row.size_class, "compat_group": row.compat_group,
         "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
         "default_bin_id": row.default_bin_id, "is_active": row.is_active,
@@ -245,7 +239,7 @@ def update_item(item_id, validated):
     if not existing:
         return jsonify({"error": "Material não encontrado"}), 404
 
-    ALLOWED_FIELDS = {"sku", "item_name", "description", "upc", "mpn", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active", "size_class", "compat_group", "uom", "pack_weight_kg"}
+    ALLOWED_FIELDS = {"sku", "item_name", "description", "category", "weight_lbs", "default_bin_id", "reorder_point", "reorder_qty", "is_active", "size_class", "compat_group", "uom", "pack_weight_kg"}
     fields, params = [], {"iid": item_id}
     for col in ALLOWED_FIELDS:
         if col in data:
@@ -260,12 +254,12 @@ def update_item(item_id, validated):
     g.db.commit()
 
     row = g.db.execute(
-        text("SELECT item_id, sku, item_name, upc, mpn, category, size_class, compat_group, weight_lbs, default_bin_id, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
+        text("SELECT item_id, sku, item_name, category, size_class, compat_group, weight_lbs, default_bin_id, is_active, created_at, updated_at FROM items WHERE item_id = :iid"),
         {"iid": item_id},
     ).fetchone()
     return jsonify({
-        "item_id": row.item_id, "sku": row.sku, "item_name": row.item_name, "upc": row.upc,
-        "mpn": row.mpn, "category": row.category, "size_class": row.size_class, "compat_group": row.compat_group, "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
+        "item_id": row.item_id, "sku": row.sku, "item_name": row.item_name,
+        "category": row.category, "size_class": row.size_class, "compat_group": row.compat_group, "weight_lbs": float(row.weight_lbs) if row.weight_lbs else None,
         "default_bin_id": row.default_bin_id, "is_active": row.is_active,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
@@ -356,7 +350,7 @@ def list_inventory():
         where_clauses.append("inv.bin_id = :binid")
         params["binid"] = bin_id
     if search:
-        # SKU, item name, UPC, and bin code all read like primary
+        # SKU, item name, and bin code all read like primary
         # identifiers to a warehouse operator. Searching by any one
         # of them should return the matching inventory row rather
         # than forcing the operator to know which field the value
@@ -364,7 +358,7 @@ def list_inventory():
         # bins for display.
         where_clauses.append(
             "(i.sku ILIKE :search OR i.item_name ILIKE :search "
-            "OR i.upc ILIKE :search OR i.mpn ILIKE :search OR b.bin_code ILIKE :search)"
+            "OR b.bin_code ILIKE :search)"
         )
         params["search"] = f"%{search}%"
 
@@ -537,11 +531,6 @@ def _import_item(db, row: ItemImportRow):
     if dup:
         raise _SkipRow(f"Duplicate SKU: {sku}")
 
-    if row.upc:
-        dup_upc = db.execute(text("SELECT 1 FROM items WHERE upc = :upc"), {"upc": row.upc}).fetchone()
-        if dup_upc:
-            raise _SkipRow(f"Duplicate UPC: {row.upc}")
-
     # Resolve default_bin by code if provided
     default_bin_id = None
     if row.default_bin:
@@ -551,10 +540,10 @@ def _import_item(db, row: ItemImportRow):
 
     weight = row.resolved_weight()
     result = db.execute(
-        text("INSERT INTO items (sku, item_name, description, upc, mpn, category, weight_lbs, default_bin_id, size_class, compat_group, external_id) VALUES (:sku, :name, :desc, :upc, :mpn, :cat, :weight, :bin, :size, :compat, :ext_id) RETURNING item_id"),
+        text("INSERT INTO items (sku, item_name, description, category, weight_lbs, default_bin_id, size_class, compat_group, external_id) VALUES (:sku, :name, :desc, :cat, :weight, :bin, :size, :compat, :ext_id) RETURNING item_id"),
         {"sku": sku, "name": name, "desc": row.description,
          "size": row.size_class, "compat": (row.compat_group or "").strip() or None,
-         "upc": row.upc, "mpn": row.mpn, "cat": row.category,
+         "cat": row.category,
          "weight": float(weight) if weight is not None else None,
          "bin": default_bin_id, "ext_id": str(uuid.uuid4())},
     )

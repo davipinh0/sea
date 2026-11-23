@@ -16,6 +16,7 @@ Coverage:
 - 401 invalid_token from the decorator pre-dispatcher path.
 """
 
+import json
 import os
 import sys
 import uuid
@@ -104,13 +105,13 @@ def _insert_bin(warehouse_id, bin_code, zone_id=1):
     return bin_id
 
 
-def _insert_item(sku, item_name="Test Item", upc=None, is_active=True):
+def _insert_item(sku, item_name="Test Item", is_active=True, aliases=None):
     conn = get_raw_connection()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO items (sku, item_name, upc, is_active, external_id) "
+        "INSERT INTO items (sku, item_name, is_active, barcode_aliases, external_id) "
         "VALUES (%s, %s, %s, %s, %s) RETURNING item_id",
-        (sku, item_name, upc, is_active, str(uuid.uuid4())),
+        (sku, item_name, is_active, json.dumps(aliases) if aliases else None, str(uuid.uuid4())),
     )
     item_id = cur.fetchone()[0]
     cur.close()
@@ -188,7 +189,7 @@ class TestQueryParams:
 
     def test_both_barcode_and_sku_returns_422(self, client, pos_token):
         resp = client.get(
-            "/api/v1/pos/availability?sku=TST-001&barcode=100000000001",
+            "/api/v1/pos/availability?sku=TST-001&barcode=TST-001",
             headers={"X-WMS-Token": pos_token["plaintext"]},
         )
         assert resp.status_code == 422
@@ -242,7 +243,7 @@ class TestHappyPathSeededData:
         assert resp.status_code == 200
         body = resp.get_json()
         assert body["sku"] == "TST-001"
-        assert body["barcode"] == "100000000001"
+        assert body["barcode"] == "TST-001"
         assert body["is_taxable"] is True
         assert len(body["availability"]) == 1
         wh = body["availability"][0]
@@ -258,10 +259,21 @@ class TestHappyPathSeededData:
             headers={"X-WMS-Token": pos_token["plaintext"]},
         )
         bc_resp = client.get(
-            "/api/v1/pos/availability?barcode=100000000001",
+            "/api/v1/pos/availability?barcode=TST-001",
             headers={"X-WMS-Token": pos_token["plaintext"]},
         )
         assert sku_resp.get_json() == bc_resp.get_json()
+
+    def test_barcode_alias_finds_the_item(self, client, pos_token):
+        """Sem UPC (mig 100): o código alternativo continua achando o material."""
+        sku = f"AL-{uuid.uuid4().hex[:6]}"
+        _insert_item(sku=sku, aliases=["7891234567895"])
+        resp = client.get(
+            "/api/v1/pos/availability?barcode=7891234567895",
+            headers={"X-WMS-Token": pos_token["plaintext"]},
+        )
+        assert resp.status_code == 200, resp.get_json()
+        assert resp.get_json()["sku"] == sku
 
 
 class TestMultiWarehouseMultiBin:
@@ -275,7 +287,7 @@ class TestMultiWarehouseMultiBin:
         afc_bin2 = _insert_bin(afc_wh, f"A-{uuid.uuid4().hex[:6]}")
 
         sku = f"MW-{uuid.uuid4().hex[:6]}"
-        item_id = _insert_item(sku=sku, upc=None)
+        item_id = _insert_item(sku=sku)
 
         _insert_inventory(item_id, store_bin1, store_wh, 1)
         _insert_inventory(item_id, store_bin2, store_wh, 0)  # omit

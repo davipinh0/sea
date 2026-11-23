@@ -8,6 +8,7 @@ export const ACTION_LABELS = {
   LOGIN_DENIED: 'Login negado no celular',
   LOGIN_APPROVAL_SETTING: 'Confirmação de login no celular',
   USER_DEVICES_REMOVED: 'Celulares do usuário removidos',
+  USER_SESSIONS_ENDED: 'Aparelhos desconectados pelo usuário',
   USER_DELETED: 'Usuário excluído',
   RECEIVE_CANCEL: 'Estorno de recebimento',
   UNRECEIVE: 'Estorno de recebimento',

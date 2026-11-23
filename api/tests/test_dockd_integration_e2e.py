@@ -105,10 +105,9 @@ def _insert_item():
     conn = get_raw_connection()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO items (sku, item_name, upc, external_id) "
-        "VALUES (%s, %s, %s, %s) RETURNING item_id",
-        (f"SKU-{uuid.uuid4().hex[:8]}", "Widget Red Small",
-         "0123456789012", str(uuid.uuid4())),
+        "INSERT INTO items (sku, item_name, external_id) "
+        "VALUES (%s, %s, %s) RETURNING item_id",
+        (f"SKU-{uuid.uuid4().hex[:8]}", "Widget Red Small", str(uuid.uuid4())),
     )
     item_id = cur.fetchone()[0]
     cur.close()

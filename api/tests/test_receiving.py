@@ -30,11 +30,10 @@ class TestPOLookup:
         data = resp.get_json()
         assert data["purchase_order"]["po_id"] == 1
 
-    def test_lookup_po_line_includes_mpn(self, client, auth_headers):
-        # The receiving PO-lookup serializer returns mpn per line, joined
-        # from items, so the Receiving UI can display it alongside sku/upc.
+    def test_lookup_po_line_has_no_upc_or_mpn(self, client, auth_headers):
+        # Mig 100: o SEA não guarda UPC nem MPN dos materiais.
         item = client.post("/api/admin/items", json={
-            "sku": "RCV-MPN-ITEM", "item_name": "Rcv MPN Item", "mpn": "RCV-MFG-1"
+            "sku": "RCV-MPN-ITEM", "item_name": "Rcv MPN Item"
         }, headers=auth_headers).get_json()
         client.post("/api/admin/purchase-orders", json={
             "po_number": "PO-RCV-MPN", "po_barcode": "PO-RCV-MPN", "warehouse_id": 1,
@@ -43,8 +42,8 @@ class TestPOLookup:
         resp = client.get("/api/receiving/po/PO-RCV-MPN", headers=auth_headers)
         assert resp.status_code == 200
         line = resp.get_json()["lines"][0]
-        assert "upc" in line
-        assert line["mpn"] == "RCV-MFG-1"
+        assert line["sku"] == "RCV-MPN-ITEM"
+        assert "upc" not in line and "mpn" not in line
 
     def test_lookup_po_not_found(self, client, auth_headers):
         resp = client.get("/api/receiving/po/PO-FAKE", headers=auth_headers)

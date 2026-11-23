@@ -42,7 +42,7 @@ def pending_putaway(warehouse_id):
     rows = g.db.execute(
         text(
             """
-            SELECT inv.inventory_id, inv.item_id, i.sku, i.item_name, i.upc,
+            SELECT inv.inventory_id, inv.item_id, i.sku, i.item_name,
                    inv.quantity_on_hand AS quantity, inv.bin_id, b.bin_code,
                    inv.lot_number,
                    COALESCE(
@@ -80,7 +80,6 @@ def pending_putaway(warehouse_id):
                 "item_id": r.item_id,
                 "sku": r.sku,
                 "item_name": r.item_name,
-                "upc": r.upc,
                 "quantity": r.quantity,
                 "bin_id": r.bin_id,
                 "bin_code": r.bin_code,
@@ -139,7 +138,7 @@ def staging_summary(warehouse_id):
             """
             SELECT b.bin_id,
                    inv.inventory_id, inv.item_id,
-                   i.sku, i.item_name, i.upc,
+                   i.sku, i.item_name,
                    inv.quantity_on_hand,
                    inv.lot_number,
                    COALESCE(
@@ -193,7 +192,6 @@ def staging_summary(warehouse_id):
             "item_id": r.item_id,
             "sku": r.sku,
             "item_name": r.item_name,
-            "upc": r.upc,
             "quantity_on_hand": r.quantity_on_hand,
             "lot_number": r.lot_number,
             "suggested_bin": r.suggested_bin,

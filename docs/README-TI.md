@@ -1,4 +1,4 @@
-# SEA: Sistema de Expedição e Armazenamento
+# SEA - Sistema de Entrada e Armazenamento
 
 Situação: protótipo em funcionamento, com dados fictícios. Novembro de 2026.
 

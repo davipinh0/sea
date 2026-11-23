@@ -1,10 +1,10 @@
 class TestItemLookup:
-    def test_lookup_item_by_upc(self, client, auth_headers):
-        resp = client.get("/api/lookup/item/100000000001", headers=auth_headers)
+    def test_lookup_item_by_sku(self, client, auth_headers):
+        resp = client.get("/api/lookup/item/TST-001", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["item"]["sku"] == "TST-001"
-        assert data["item"]["upc"] == "100000000001"
+        assert "upc" not in data["item"]
         assert len(data["locations"]) >= 1, "Item should have at least one location"
 
     def test_lookup_item_not_found(self, client, auth_headers):
@@ -12,7 +12,7 @@ class TestItemLookup:
         assert resp.status_code == 404
 
     def test_lookup_item_returns_location_details(self, client, auth_headers):
-        resp = client.get("/api/lookup/item/100000000001", headers=auth_headers)
+        resp = client.get("/api/lookup/item/TST-001", headers=auth_headers)
         data = resp.get_json()
         loc = data["locations"][0]
         assert "bin_id" in loc
@@ -25,7 +25,7 @@ class TestItemLookup:
         assert loc["bin_type"] == "Pickable"
 
     def test_lookup_requires_auth(self, client):
-        resp = client.get("/api/lookup/item/100000000001")
+        resp = client.get("/api/lookup/item/TST-001")
         assert resp.status_code == 401
 
 

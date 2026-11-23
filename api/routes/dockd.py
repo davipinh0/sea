@@ -149,7 +149,7 @@ def get_order(so_number):
         text(
             """
             SELECT i.external_id AS item_external_id, i.sku, i.item_name,
-                   i.upc, sol.quantity_picked AS qty,
+                   sol.quantity_picked AS qty,
                    sol.quantity_ordered AS qty_ordered
               FROM sales_order_lines sol
               JOIN items i ON i.item_id = sol.item_id
@@ -207,7 +207,6 @@ def get_order(so_number):
                 "external_id": str(it.item_external_id),
                 "sku": it.sku,
                 "display_name": it.item_name,
-                "upc": it.upc,
                 "qty": it.qty,
                 "qty_ordered": it.qty_ordered,
             }
@@ -274,7 +273,7 @@ def _validate_barcode(barcode):
 @limiter.limit("60 per minute")
 @with_db
 def get_item(barcode):
-    """Dockd item lookup by UPC, SKU, or barcode alias.
+    """Dockd item lookup by SKU or barcode alias.
 
     Mirrors GET /api/lookup/item/<barcode> in routes/lookup.py but is
     auth-gated for machine-to-machine WMS tokens. Response shape is
@@ -289,10 +288,9 @@ def get_item(barcode):
     item_row = g.db.execute(
         text(
             """
-            SELECT item_id, sku, item_name, upc, category, weight_lbs
+            SELECT item_id, sku, item_name, category, weight_lbs
             FROM items
-            WHERE upc = :barcode
-               OR sku = :barcode
+            WHERE sku = :barcode
                OR barcode_aliases @> CAST(:barcode_json AS jsonb)
             LIMIT 1
             """
@@ -337,7 +335,6 @@ def get_item(barcode):
             "item_id": item_row.item_id,
             "sku": item_row.sku,
             "item_name": item_row.item_name,
-            "upc": item_row.upc,
             "category": item_row.category,
             "weight_lbs": (
                 float(item_row.weight_lbs) if item_row.weight_lbs else None

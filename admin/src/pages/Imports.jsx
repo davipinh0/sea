@@ -12,10 +12,10 @@ import PageHeader from '../components/PageHeader.jsx';
 // in api/schemas/csv_import.py is the only way to close that loop.
 // Exported for alignment tests in admin/src/test/imports.test.jsx.
 export const CSV_TEMPLATES = {
-  items: `sku,name,description,category,upc,default_bin,weight,quantity,size_class,compat_group
-MAT-600601,Parafuso allen M6x20 (cx 100),Fictício,Fixadores,,,,,PEQUENO,FIXADORES
-MAT-600602,Correia em V A-50,Fictício,Transmissão,,,,,,TRANSMISSAO
-MAT-600603,Filtro de ar industrial,Fictício,Filtros,,,,,GRANDE,FILTROS`,
+  items: `sku,name,description,category,default_bin,weight,quantity,size_class,compat_group
+MAT-600601,Parafuso allen M6x20 (cx 100),Fictício,Fixadores,,,,PEQUENO,FIXADORES
+MAT-600602,Correia em V A-50,Fictício,Transmissão,,,,,TRANSMISSAO
+MAT-600603,Filtro de ar industrial,Fictício,Filtros,,,,GRANDE,FILTROS`,
   'purchase-orders': `po_number,order_type,warehouse_id,vendor,sku,quantity,expected_date
 OT-7100001,PM11,1,SAP (simulado),MAT-600601,20,2026-12-01
 OT-7100001,PM11,1,SAP (simulado),MAT-600602,5,2026-12-01

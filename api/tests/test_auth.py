@@ -80,12 +80,12 @@ class TestRefresh:
 
 class TestProtectedEndpoints:
     def test_protected_endpoint_without_token(self, client):
-        resp = client.get("/api/lookup/item/100000000001")
+        resp = client.get("/api/lookup/item/TST-001")
         assert resp.status_code == 401
 
     def test_protected_endpoint_with_invalid_token(self, client):
         resp = client.get(
-            "/api/lookup/item/100000000001",
+            "/api/lookup/item/TST-001",
             headers={"Authorization": "Bearer invalid.token.here"},
         )
         assert resp.status_code == 401

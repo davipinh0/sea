@@ -130,9 +130,9 @@ def _insert_item(sku=None):
     cur = conn.cursor()
     sku = sku or f"SKU-{uuid.uuid4().hex[:8]}"
     cur.execute(
-        "INSERT INTO items (sku, item_name, upc, external_id) "
-        "VALUES (%s, %s, %s, %s) RETURNING item_id",
-        (sku, "Widget", "0123456789012", str(uuid.uuid4())),
+        "INSERT INTO items (sku, item_name, external_id) "
+        "VALUES (%s, %s, %s) RETURNING item_id",
+        (sku, "Widget", str(uuid.uuid4())),
     )
     item_id = cur.fetchone()[0]
     cur.close()

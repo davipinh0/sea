@@ -88,7 +88,7 @@ class TestFullReceiveToShipWorkflow:
                 "/api/picking/confirm",
                 json={
                     "pick_task_id": data["pick_task_id"],
-                    "scanned_barcode": data["upc"],
+                    "scanned_barcode": data["sku"],
                     "quantity_picked": data["quantity_to_pick"],
                 },
                 headers=auth_headers,
@@ -114,7 +114,7 @@ class TestFullReceiveToShipWorkflow:
             if remaining > 0:
                 resp = client.post(
                     "/api/packing/verify",
-                    json={"so_id": 1, "scanned_barcode": line["upc"], "quantity": remaining},
+                    json={"so_id": 1, "scanned_barcode": line["sku"], "quantity": remaining},
                     headers=auth_headers,
                 )
                 assert resp.status_code == 200

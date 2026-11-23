@@ -30,7 +30,7 @@ def _advance_so_to_picked(client, auth_headers, so_identifiers=None):
             "/api/picking/confirm",
             json={
                 "pick_task_id": data["pick_task_id"],
-                "scanned_barcode": data["upc"],
+                "scanned_barcode": data["sku"],
                 "quantity_picked": data["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -71,10 +71,10 @@ class TestVerifyItem:
     def test_verify_item_success(self, client, auth_headers):
         _advance_so_to_picked(client, auth_headers, ["SO-2026-001"])
 
-        # SO-2026-001 line 1: item 1 (TST-001), UPC 100000000001
+        # SO-2026-001 line 1: item 1 (TST-001), scanned by its SKU
         resp = client.post(
             "/api/packing/verify",
-            json={"so_id": 1, "scanned_barcode": "100000000001", "quantity": 1},
+            json={"so_id": 1, "scanned_barcode": "TST-001", "quantity": 1},
             headers=auth_headers,
         )
         assert resp.status_code == 200
@@ -98,7 +98,7 @@ class TestVerifyItem:
         # SO-2026-001 line 1 has quantity_picked = 2. Try to pack 100
         resp = client.post(
             "/api/packing/verify",
-            json={"so_id": 1, "scanned_barcode": "100000000001", "quantity": 100},
+            json={"so_id": 1, "scanned_barcode": "TST-001", "quantity": 100},
             headers=auth_headers,
         )
         assert resp.status_code == 400
@@ -107,10 +107,10 @@ class TestVerifyItem:
     def test_verify_item_not_on_order(self, client, auth_headers):
         _advance_so_to_picked(client, auth_headers, ["SO-2026-001"])
 
-        # Item 3 (TST-003, UPC 100000000003) is not on SO-2026-001
+        # Item 3 (TST-003) is not on SO-2026-001
         resp = client.post(
             "/api/packing/verify",
-            json={"so_id": 1, "scanned_barcode": "100000000003", "quantity": 1},
+            json={"so_id": 1, "scanned_barcode": "TST-003", "quantity": 1},
             headers=auth_headers,
         )
         assert resp.status_code == 400
@@ -125,7 +125,7 @@ class TestCompletePacking:
             if remaining > 0:
                 client.post(
                     "/api/packing/verify",
-                    json={"so_id": so_id, "scanned_barcode": line["upc"], "quantity": remaining},
+                    json={"so_id": so_id, "scanned_barcode": line["sku"], "quantity": remaining},
                     headers=auth_headers,
                 )
 

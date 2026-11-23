@@ -259,7 +259,7 @@ class TestItems:
 
     def test_create_item(self, client, auth_headers):
         resp = client.post("/api/admin/items", json={
-            "sku": "NEW-ITEM", "item_name": "New Item", "upc": "999000000001", "category": "Test", "weight_lbs": 1.5
+            "sku": "NEW-ITEM", "item_name": "New Item", "category": "Test", "weight_lbs": 1.5
         }, headers=auth_headers)
         assert resp.status_code == 201
         assert resp.get_json()["sku"] == "NEW-ITEM"
@@ -271,46 +271,22 @@ class TestItems:
         assert resp.status_code == 400
         assert "SKU duplicado" in resp.get_json()["error"]
 
-    def test_create_item_duplicate_upc(self, client, auth_headers):
-        resp = client.post("/api/admin/items", json={
-            "sku": "UNIQUE-SKU", "item_name": "Dupe UPC", "upc": "100000000001"
-        }, headers=auth_headers)
-        assert resp.status_code == 400
-        assert "UPC duplicado" in resp.get_json()["error"]
+    def test_item_has_no_upc_or_mpn(self, client, auth_headers):
+        # Mig 100: o SEA não guarda UPC nem MPN; o campo é recusado em vez de sumir calado.
+        for field in ("upc", "mpn"):
+            resp = client.post("/api/admin/items", json={
+                "sku": f"NO-{field.upper()}", "item_name": "Sem", field: "100000000001"
+            }, headers=auth_headers)
+            assert resp.status_code == 400, field
+            resp = client.put("/api/admin/items/1", json={field: "X"}, headers=auth_headers)
+            assert resp.status_code == 400, field
+        item = client.get("/api/admin/items/1", headers=auth_headers).get_json()["item"]
+        assert "upc" not in item and "mpn" not in item
 
     def test_update_item(self, client, auth_headers):
         resp = client.put("/api/admin/items/1", json={"item_name": "Updated Widget"}, headers=auth_headers)
         assert resp.status_code == 200
         assert resp.get_json()["item_name"] == "Updated Widget"
-
-    def test_item_mpn_round_trip(self, client, auth_headers):
-        # MPN is set on create, surfaced on read, and editable on update,
-        # mirroring upc. It is not unique, so no duplicate guard applies.
-        created = client.post("/api/admin/items", json={
-            "sku": "MPN-ITEM", "item_name": "MPN Item", "mpn": "MFG-12345"
-        }, headers=auth_headers)
-        assert created.status_code == 201
-        assert created.get_json()["mpn"] == "MFG-12345"
-        item_id = created.get_json()["item_id"]
-
-        detail = client.get(f"/api/admin/items/{item_id}", headers=auth_headers)
-        assert detail.get_json()["item"]["mpn"] == "MFG-12345"
-
-        updated = client.put(f"/api/admin/items/{item_id}", json={"mpn": "MFG-67890"}, headers=auth_headers)
-        assert updated.status_code == 200
-        assert updated.get_json()["mpn"] == "MFG-67890"
-
-        reread = client.get(f"/api/admin/items/{item_id}", headers=auth_headers)
-        assert reread.get_json()["item"]["mpn"] == "MFG-67890"
-
-    def test_item_search_matches_mpn(self, client, auth_headers):
-        client.post("/api/admin/items", json={
-            "sku": "MPN-SEARCH", "item_name": "Searchable Item", "mpn": "ZZZUNIQUEMPN"
-        }, headers=auth_headers)
-        resp = client.get("/api/admin/items?q=ZZZUNIQUEMPN", headers=auth_headers)
-        assert resp.status_code == 200
-        skus = [i["sku"] for i in resp.get_json()["items"]]
-        assert "MPN-SEARCH" in skus
 
     def test_delete_item_with_inventory(self, client, auth_headers):
         # Item 1 has inventory, should fail
@@ -353,10 +329,10 @@ class TestPurchaseOrders:
         assert data["purchase_order"]["po_number"] == "PO-2026-001"
         assert len(data["lines"]) == 10
 
-    def test_purchase_order_line_includes_mpn(self, client, auth_headers):
-        # PO detail lines carry mpn (and upc) alongside sku, joined from items.
+    def test_purchase_order_line_has_no_upc_or_mpn(self, client, auth_headers):
+        # Mig 100: as linhas da OT trazem o código do material, sem UPC nem MPN.
         item = client.post("/api/admin/items", json={
-            "sku": "PO-MPN-ITEM", "item_name": "PO MPN Item", "mpn": "PO-MFG-555"
+            "sku": "PO-MPN-ITEM", "item_name": "PO MPN Item"
         }, headers=auth_headers).get_json()
         created = client.post("/api/admin/purchase-orders", json={
             "po_number": "PO-MPN-TEST", "warehouse_id": 1,
@@ -367,8 +343,8 @@ class TestPurchaseOrders:
 
         resp = client.get(f"/api/admin/purchase-orders/{po_id}", headers=auth_headers)
         line = resp.get_json()["lines"][0]
-        assert "upc" in line
-        assert line["mpn"] == "PO-MFG-555"
+        assert line["sku"] == "PO-MPN-ITEM"
+        assert "upc" not in line and "mpn" not in line
 
     def test_create_purchase_order(self, client, auth_headers):
         resp = client.post("/api/admin/purchase-orders", json={
@@ -1385,8 +1361,8 @@ class TestCsvImport:
     def test_import_items_success(self, client, auth_headers):
         resp = client.post("/api/admin/import/items", json={
             "records": [
-                {"sku": "IMP-001", "item_name": "Import 1", "upc": "900000000001", "category": "Test", "weight_lbs": 1.0},
-                {"sku": "IMP-002", "item_name": "Import 2", "upc": "900000000002", "category": "Test", "weight_lbs": 2.0},
+                {"sku": "IMP-001", "item_name": "Import 1", "category": "Test", "weight_lbs": 1.0},
+                {"sku": "IMP-002", "item_name": "Import 2", "category": "Test", "weight_lbs": 2.0},
             ]
         }, headers=auth_headers)
         assert resp.status_code == 200
@@ -1631,7 +1607,7 @@ class TestDashboard:
                 break
             client.post("/api/picking/confirm", json={
                 "pick_task_id": data["pick_task_id"],
-                "scanned_barcode": data["upc"],
+                "scanned_barcode": data["sku"],
                 "quantity_picked": data["quantity_to_pick"],
             }, headers=auth_headers)
         client.post("/api/picking/complete-batch", json={"batch_id": batch_id}, headers=auth_headers)
@@ -1642,7 +1618,7 @@ class TestDashboard:
             remaining = line["quantity_picked"] - line["quantity_packed"]
             if remaining > 0:
                 client.post("/api/packing/verify", json={
-                    "so_id": 1, "scanned_barcode": line["upc"], "quantity": remaining,
+                    "so_id": 1, "scanned_barcode": line["sku"], "quantity": remaining,
                 }, headers=auth_headers)
         client.post("/api/packing/complete", json={"so_id": 1}, headers=auth_headers)
 
@@ -2183,8 +2159,8 @@ class TestBinDelete:
 
 class TestItemsSearchQ:
     """The Items page search must reach the identifiers an operator
-    will type or scan: SKU, item name, primary UPC, and any entry in
-    the barcode_aliases JSONB array."""
+    will type or scan: SKU, item name, and any entry in the
+    barcode_aliases JSONB array."""
 
     def test_q_matches_sku(self, client, auth_headers):
         resp = client.get("/api/admin/items?q=TST-005", headers=auth_headers)
@@ -2192,14 +2168,6 @@ class TestItemsSearchQ:
         data = resp.get_json()
         assert data["total"] >= 1
         assert all(i["sku"] == "TST-005" for i in data["items"])
-
-    def test_q_matches_upc(self, client, auth_headers):
-        # TST-005 has UPC 100000000005 in the seed.
-        resp = client.get("/api/admin/items?q=100000000005", headers=auth_headers)
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["total"] >= 1
-        assert any(i["sku"] == "TST-005" for i in data["items"])
 
     def test_q_matches_barcode_alias(self, client, auth_headers):
         # Attach an alternate barcode to TST-001 and confirm the
@@ -2257,19 +2225,6 @@ class TestInventorySearchQ:
         resp = client.get("/api/admin/inventory?warehouse_id=1&q=%20%20%20", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.get_json()["total"] == baseline
-
-    def test_q_matches_upc(self, client, auth_headers):
-        # TST-005 has UPC 100000000005 in the seed. Operators scanning a
-        # barcode at the inventory page expect the row to surface even
-        # though the SKU is different.
-        resp = client.get(
-            "/api/admin/inventory?warehouse_id=1&q=100000000005",
-            headers=auth_headers,
-        )
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["total"] >= 1
-        assert all(r["sku"] == "TST-005" for r in data["inventory"])
 
     def test_q_matches_bin_code(self, client, auth_headers):
         # TST-005 lives in bin A-02-02 per seed. Searching by the bin

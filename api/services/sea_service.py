@@ -1380,11 +1380,16 @@ def order_stock(db, order_number, warehouse_ids=None):
         {"n": order_number, "staging": list(STAGING_TYPES),
          "wids": list(warehouse_ids) if warehouse_ids is not None else None},
     ).fetchall()
-    if not rows:
+    materials = _order_materials(db, order_number) + _order_awaiting_receipt(db, order_number)
+    if not materials:
         return None
+    delivered = [m["withdrawn_at"] for m in materials if m["withdrawn_at"]]
     return {
         "order_number": order_number,
-        "order_type": rows[0].order_type,
+        "order_type": rows[0].order_type if rows else materials[0]["order_type"],
+        "status": order_situation(materials),
+        "withdrawn_at": max(delivered) if delivered else None,
+        "materials": materials,
         "stock": [
             {"inventory_id": r.inventory_id, "ot": r.po_number, "item_id": r.item_id,
              "sku": r.sku, "item_name": r.item_name, "bin_id": r.bin_id,
@@ -1394,6 +1399,133 @@ def order_stock(db, order_number, warehouse_ids=None):
             for r in rows if r.inventory_id is not None
         ],
     }
+
+
+# Situação de cada material da ordem no terminal, e da ordem inteira.
+MAT_AVAILABLE = "DISPONIVEL"
+MAT_AWAITING_STORAGE = "AGUARDANDO_ARMAZENAMENTO"
+MAT_IN_WITHDRAWAL = "EM_RETIRADA"
+MAT_AWAITING_RECEIPT = "AGUARDANDO_RECEBIMENTO"
+MAT_SOLD_OUT = "ESGOTADO"
+MAT_UNAVAILABLE = "INDISPONIVEL"
+ORDER_WITHDRAWN = "RETIRADA"
+
+
+def material_situation(*, ordered, received, staging, stored, available, withdrawn):
+    """O que o funcionário pode esperar deste material agora."""
+    if available > 0:
+        return MAT_AVAILABLE
+    if staging > 0:
+        return MAT_AWAITING_STORAGE
+    if stored > 0:  # guardado, mas reservado por outro pedido em andamento
+        return MAT_IN_WITHDRAWAL
+    if received < ordered:
+        return MAT_AWAITING_RECEIPT
+    if withdrawn > 0:
+        return MAT_SOLD_OUT
+    return MAT_UNAVAILABLE
+
+
+def order_situation(materials):
+    states = {m["status"] for m in materials}
+    if states == {MAT_SOLD_OUT}:
+        return ORDER_WITHDRAWN
+    for state in (MAT_AVAILABLE, MAT_AWAITING_STORAGE, MAT_IN_WITHDRAWAL, MAT_AWAITING_RECEIPT,
+                  MAT_SOLD_OUT):
+        if state in states:
+            return state
+    return MAT_UNAVAILABLE
+
+
+def _order_materials(db, order_number):
+    """Materiais da ordem já cadastrados no SEA, com o que chegou, o que está guardado e o que já
+    saiu. Sem filtro de local, como o terminal.
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT p.po_number, i.sku, i.item_name, i.uom, i.pack_weight_kg,
+                   COALESCE(l.service_order_type, p.order_type) AS order_type,
+                   l.quantity_ordered, l.quantity_received,
+                   COALESCE(s.staging, 0) AS staging, COALESCE(s.stored, 0) AS stored,
+                   COALESCE(s.available, 0) AS available,
+                   COALESCE(wd.quantity, 0) AS withdrawn, wd.at AS withdrawn_at
+            FROM purchase_order_lines l
+            JOIN purchase_orders p ON p.po_id = l.po_id AND p.order_type IS NOT NULL
+            JOIN items i ON i.item_id = l.item_id
+            LEFT JOIN LATERAL (
+                SELECT SUM(inv.quantity_on_hand) FILTER (WHERE b.bin_type IN :staging) AS staging,
+                       SUM(inv.quantity_on_hand)
+                           FILTER (WHERE b.bin_type NOT IN :staging) AS stored,
+                       SUM(GREATEST(0, inv.quantity_on_hand - inv.quantity_allocated))
+                           FILTER (WHERE b.bin_type NOT IN :staging) AS available
+                FROM inventory inv JOIN bins b ON b.bin_id = inv.bin_id
+                WHERE inv.lot_number = p.po_number AND inv.item_id = l.item_id
+                  AND inv.quantity_on_hand > 0
+            ) s ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT SUM(wl.quantity) AS quantity, MAX(w.delivered_at) AS at
+                FROM withdrawals w JOIN withdrawal_lines wl ON wl.withdrawal_id = w.withdrawal_id
+                WHERE w.po_id = p.po_id AND wl.item_id = l.item_id AND w.status = :delivered
+            ) wd ON TRUE
+            WHERE COALESCE(l.service_order_number, p.service_order_number, p.po_number) = :n
+            ORDER BY p.po_id, l.line_number
+            """
+        ).bindparams(_staging_param()),
+        {"n": order_number, "staging": list(STAGING_TYPES), "delivered": W_DELIVERED},
+    ).fetchall()
+    result = []
+    for r in rows:
+        amounts = {
+            "ordered": int(r.quantity_ordered), "received": int(r.quantity_received),
+            "staging": int(r.staging), "stored": int(r.stored),
+            "available": int(r.available), "withdrawn": int(r.withdrawn),
+        }
+        result.append({
+            "ot": r.po_number, "sku": r.sku, "item_name": r.item_name, "uom": r.uom,
+            "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg), "order_type": r.order_type,
+            "status": material_situation(**amounts),
+            "quantity_ordered": amounts["ordered"], "quantity_received": amounts["received"],
+            "awaiting_storage": amounts["staging"], "available": amounts["available"],
+            "withdrawn": amounts["withdrawn"],
+            "withdrawn_at": r.withdrawn_at.isoformat() if r.withdrawn_at else None,
+        })
+    return result
+
+
+def _order_awaiting_receipt(db, order_number):
+    """Materiais da ordem que a base do SAP conhece e que ainda não chegaram ao SEA (a OT não foi
+    registrada no recebimento, ou foi sem este material).
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT ri.ot_number, ri.material_code,
+                   COALESCE(m.description, ri.material_code) AS description,
+                   COALESCE(ri.uom, m.uom) AS uom, m.pack_weight_kg, ri.quantity, o.order_type
+            FROM sap_reservation_items ri
+            JOIN sap_orders o ON o.order_number = ri.order_number
+            LEFT JOIN sap_materials m ON m.material_code = ri.material_code
+            WHERE ri.order_number = :n
+              AND NOT EXISTS (
+                  SELECT 1 FROM purchase_orders p
+                  JOIN purchase_order_lines l ON l.po_id = p.po_id
+                  JOIN items i ON i.item_id = l.item_id
+                  WHERE (p.po_number = ri.ot_number OR p.po_barcode = ri.ot_number)
+                    AND i.sku = ri.material_code)
+            ORDER BY ri.ot_number, ri.material_code
+            """
+        ),
+        {"n": order_number},
+    ).fetchall()
+    return [
+        {"ot": r.ot_number, "sku": r.material_code, "item_name": r.description, "uom": r.uom,
+         "pack_weight_kg": pack_weight(r.uom, r.pack_weight_kg), "order_type": r.order_type,
+         "status": MAT_AWAITING_RECEIPT, "quantity_ordered": int(r.quantity),
+         "quantity_received": 0, "awaiting_storage": 0, "available": 0, "withdrawn": 0,
+         "withdrawn_at": None}
+        for r in rows
+    ]
 
 
 def order_display(order_type, number):

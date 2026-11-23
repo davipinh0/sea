@@ -144,7 +144,7 @@ class TestConfirmPick:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -184,7 +184,7 @@ class TestConfirmPick:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -195,7 +195,7 @@ class TestConfirmPick:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -212,7 +212,7 @@ class TestConfirmPick:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -240,7 +240,7 @@ class TestConfirmPick:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -304,7 +304,7 @@ class TestCompleteBatch:
                 "/api/picking/confirm",
                 json={
                     "pick_task_id": data["pick_task_id"],
-                    "scanned_barcode": data["upc"],
+                    "scanned_barcode": data["sku"],
                     "quantity_picked": data["quantity_to_pick"],
                 },
                 headers=auth_headers,
@@ -417,7 +417,7 @@ class TestCompleteBatch:
                 "/api/picking/confirm",
                 json={
                     "pick_task_id": nx["pick_task_id"],
-                    "scanned_barcode": nx["upc"],
+                    "scanned_barcode": nx["sku"],
                     "quantity_picked": nx["quantity_to_pick"],
                 },
                 headers=auth_headers,
@@ -690,7 +690,7 @@ class TestCancelBatch:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,
@@ -783,7 +783,7 @@ class TestCancelBatch:
             "/api/picking/confirm",
             json={
                 "pick_task_id": task["pick_task_id"],
-                "scanned_barcode": task["upc"],
+                "scanned_barcode": task["sku"],
                 "quantity_picked": task["quantity_to_pick"],
             },
             headers=auth_headers,

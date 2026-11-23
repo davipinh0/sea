@@ -4,7 +4,7 @@ import { api as panelApi } from '../api.js';
 import { watchIdle } from '../utils/sessionGuard.js';
 import SeaLogo from '../components/SeaLogo.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
-import { formatQuantity, readError } from '../utils/sea.js';
+import { MATERIAL_SITUATION, formatQuantity, orderSituationMessage, readError } from '../utils/sea.js';
 
 // Terminal de retirada (quiosque), aberto pelo usuário do terminal.
 // O funcionário escolhe como se identificar: com o login do SEA (sessão própria, separada do
@@ -29,6 +29,18 @@ const looksLikeEmail = (value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim()
 // unidade em unidade. ``qty`` guarda o número de toques.
 const stockQuantity = (s, count) => count * (s.pack_weight_kg || 1);
 const maxCount = (s) => Math.floor(s.available / (s.pack_weight_kg || 1));
+
+// Por que um material da ordem não está disponível, com as quantidades que explicam.
+function situationDetail(m) {
+  const amount = (n) => formatQuantity(n, m.uom, m.pack_weight_kg);
+  switch (m.status) {
+    case 'ESGOTADO': return `retirado: ${amount(m.withdrawn)}`;
+    case 'AGUARDANDO_RECEBIMENTO': return `previsto: ${amount(m.quantity_ordered)} · recebido: ${amount(m.quantity_received)}`;
+    case 'AGUARDANDO_ARMAZENAMENTO': return `${amount(m.awaiting_storage)} na área de recebimento`;
+    case 'EM_RETIRADA': return 'reservado em outra solicitação';
+    default: return 'sem saldo no estoque';
+  }
+}
 
 // Círculo que se desenha e o check em seguida (CSS; parado para quem pede menos movimento).
 function SuccessCheck() {
@@ -233,6 +245,7 @@ export default function TerminalRetirada() {
   }, [step, signOut]);
 
   const selectedCount = Object.values(qty).filter((n) => n > 0).length;
+  const unavailable = (order?.materials || []).filter((m) => m.status !== 'DISPONIVEL');
 
   return (
     <div className="terminal">
@@ -327,11 +340,14 @@ export default function TerminalRetirada() {
           <div>
             <div className="terminal-step">Passo 2 de 4</div>
             <div className="terminal-title">
-              Ordem <OtTypeTag type={order.order_type} /> {order.order_number} · materiais disponíveis
+              Ordem <OtTypeTag type={order.order_type} /> {order.order_number}{stock.length > 0 ? ' · materiais disponíveis' : ''}
             </div>
-            {stock.length === 0 ? (
-              <div className="terminal-card">Nenhum material desta ordem está disponível no estoque no momento.</div>
-            ) : (
+            {orderSituationMessage(order) && (
+              <div className={`terminal-msg ${order.status === 'RETIRADA' ? 'error' : 'warn'}`} role="status">
+                {orderSituationMessage(order)}
+              </div>
+            )}
+            {stock.length > 0 && (
               <div className="terminal-card">
                 {stock.map((s) => (
                   <div key={s.inventory_id} className="terminal-line">
@@ -353,8 +369,27 @@ export default function TerminalRetirada() {
                 ))}
               </div>
             )}
+            {unavailable.length > 0 && (
+              <div className="terminal-card">
+                <div className="terminal-others-title">{stock.length > 0 ? 'Outros materiais desta ordem' : 'Materiais desta ordem'}</div>
+                {unavailable.map((m) => {
+                  const situation = MATERIAL_SITUATION[m.status] || MATERIAL_SITUATION.INDISPONIVEL;
+                  return (
+                    <div key={`${m.ot}-${m.sku}`} className="terminal-line">
+                      <div>
+                        <div style={{ fontSize: 20, fontWeight: 700 }}>{m.item_name}</div>
+                        <div className="settings-note" style={{ fontSize: 15 }}>Código {m.sku} · OT {m.ot} · {situationDetail(m)}</div>
+                      </div>
+                      <span className={`terminal-status ${situation.tone}`}>{situation.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="terminal-actions">
-              <button type="button" className="terminal-btn" disabled={busy || selectedCount === 0} onClick={request}>Solicitar retirada</button>
+              {stock.length > 0 && (
+                <button type="button" className="terminal-btn" disabled={busy || selectedCount === 0} onClick={request}>Solicitar retirada</button>
+              )}
               <button type="button" className="terminal-btn secondary" onClick={() => { clearRequest(); setStep('ot'); }}>Voltar</button>
             </div>
           </div>

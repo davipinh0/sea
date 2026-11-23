@@ -67,7 +67,7 @@ class ExampleConnector(BaseConnector):
 
         A real connector would:
         1. Fetch items modified after `since` from the external API
-        2. Map external fields to SEA fields (sku, item_name, upc, etc.)
+        2. Map external fields to SEA fields (sku, item_name, category, etc.)
         3. Upsert into the items table by SKU
         4. Handle field mapping differences (e.g. "product_name" -> "item_name")
 

@@ -116,7 +116,7 @@ def _pick_all_tasks(client, auth_headers, batch_id):
             "/api/picking/confirm",
             json={
                 "pick_task_id": nxt["pick_task_id"],
-                "scanned_barcode": nxt["upc"],
+                "scanned_barcode": nxt["sku"],
                 "quantity_picked": nxt["quantity_to_pick"],
             },
             headers=auth_headers,

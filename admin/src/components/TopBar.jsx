@@ -7,6 +7,7 @@ import SeaLogo from './SeaLogo.jsx';
 import Notificacoes from './Notificacoes.jsx';
 import { currentTheme, setTheme } from '../utils/theme.js';
 import { photoUrl } from '../utils/userPhoto.js';
+import { isTerminalAccount } from '../utils/permissions.js';
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -257,6 +258,11 @@ export default function TopBar({ forced = false }) {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{user?.role}</div>
             </div>
             <div className="topbar-dropdown-divider" />
+            {!forced && !isTerminalAccount(user) && (
+              <button className="topbar-dropdown-item" onClick={() => { setShowMenu(false); navigate('/acessos'); }}>
+                Gerenciar Acessos
+              </button>
+            )}
             <button className="topbar-dropdown-item" onClick={logout}>
               Sair
             </button>

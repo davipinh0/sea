@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 VALID_ROLES = ("ADMIN", "USER")
 # Só confere o formato (um @, domínio com ponto, sem espaços); vazio é permitido.
@@ -24,6 +24,45 @@ class UserPhotoRequest(BaseModel):
     """
 
     image: str = Field(..., min_length=1, max_length=1_500_000)
+
+
+# Motivos de remover os celulares de um usuário; o painel mostra os mesmos textos.
+DEVICE_REMOVAL_REASONS = {
+    "perdido": "Celular perdido",
+    "roubado": "Celular roubado ou furtado",
+    "troca": "Troca de celular",
+    "defeito": "Celular com defeito",
+    "desligamento": "Desligamento ou afastamento do funcionário",
+    "funcao": "Mudança de função ou de setor",
+    "suspeita": "Suspeita de uso indevido",
+    "outro": "Outro",
+}
+
+
+class RemoveDevicesRequest(BaseModel):
+    """Um ou mais motivos; "outro" pede a explicação."""
+
+    reasons: List[str] = Field(..., min_length=1, max_length=len(DEVICE_REMOVAL_REASONS))
+    note: str = Field("", max_length=300)
+
+    @field_validator("reasons")
+    @classmethod
+    def known_reasons(cls, value: List[str]) -> List[str]:
+        unknown = [r for r in value if r not in DEVICE_REMOVAL_REASONS]
+        if unknown:
+            raise ValueError(f"Motivo desconhecido: {', '.join(unknown)}")
+        return list(dict.fromkeys(value))
+
+    @field_validator("note")
+    @classmethod
+    def strip_note(cls, value: str) -> str:
+        return value.strip()
+
+    @model_validator(mode="after")
+    def other_needs_note(self) -> "RemoveDevicesRequest":
+        if "outro" in self.reasons and len(self.note) < 3:
+            raise ValueError('Explique o motivo em "Outro".')
+        return self
 
 
 class CreateUserRequest(BaseModel):

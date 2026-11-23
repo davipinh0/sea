@@ -11,6 +11,8 @@ import { AddressPicker, Button, Card, Field, Message, QuantityInput, ui } from '
 import { apiError, formatQuantity, orderName, parseQuantity, quantityProblem } from '../utils/sea';
 import { screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
+import SuccessAnimation from '../components/SuccessAnimation';
+import { celebration } from '../utils/celebrate';
 
 // Lista o que espera nas áreas de recebimento de todos os locais do usuário; o material vai para
 // uma prateleira de qualquer local. As regras ficam na API.
@@ -25,6 +27,7 @@ export default function ArmazenarScreen({ navigation }) {
   const [quantity, setQuantity] = useState('');
   const [picking, setPicking] = useState(false);
   const [message, setMessage] = useState(null);
+  const [celebrate, setCelebrate] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -86,6 +89,7 @@ export default function ArmazenarScreen({ navigation }) {
         quantity: parseQuantity(quantity), lot_number: active.lot_number,
       });
       setMessage({ type: 'ok', text: `Armazenagem registrada: ${formatQuantity(parseQuantity(quantity), active.uom, active.pack_weight_kg)} de ${active.sku} em ${target.warehouse_code} · ${target.bin_code}.` });
+      setCelebrate(celebration('armazenar', `${formatQuantity(parseQuantity(quantity), active.uom, active.pack_weight_kg)} de ${active.sku} em ${target.warehouse_code} · ${target.bin_code}`));
       setActive(null);
       await load();
     } catch (err) {
@@ -144,6 +148,7 @@ export default function ArmazenarScreen({ navigation }) {
         visible={picking} bins={bins} excludeBinId={active?.bin_id} suggestedBinId={suggested?.bin_id}
         onPick={(bin) => { setTarget(bin); setPicking(false); setMessage(null); }} onClose={() => setPicking(false)}
       />
+      <SuccessAnimation event={celebrate} onDone={() => setCelebrate(null)} />
     </SafeAreaView>
   );
 }

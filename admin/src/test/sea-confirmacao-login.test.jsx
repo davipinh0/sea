@@ -105,10 +105,46 @@ describe('Sistema > Usuários: confirmar login no celular', () => {
     fireEvent.click(screen.getByLabelText('Confirmar login no celular'));
     expect(onToggle).toHaveBeenCalledWith(false);
 
-    fireEvent.click(screen.getByText('Remover celulares (perdido ou trocado)'));
-    fireEvent.click(screen.getByText('Remover'));
-    await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/admin/users/3/aparelhos'));
-    expect(await screen.findByText(/Aparelhos removidos/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Remover celulares'));
+    // Nada sai sem motivo.
+    fireEvent.click(screen.getByText('Remover e salvar motivo'));
+    expect(await screen.findByText('Escolha pelo menos um motivo.')).toBeInTheDocument();
+    expect(apiDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByLabelText('Celular perdido'));
+    fireEvent.click(screen.getByLabelText('Outro'));
+    fireEvent.click(screen.getByText('Remover e salvar motivo'));
+    expect(await screen.findByText('Explique o motivo em "Outro".')).toBeInTheDocument();
+    expect(apiDelete).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Observação/), { target: { value: 'Caiu no forno de reaquecimento' } });
+    fireEvent.click(screen.getByText('Remover e salvar motivo'));
+    await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/admin/users/3/aparelhos', {
+      body: JSON.stringify({ reasons: ['perdido', 'outro'], note: 'Caiu no forno de reaquecimento' }),
+    }));
+    expect(await screen.findByText(/Aparelhos removidos e motivo salvo/)).toBeInTheDocument();
+    expect(screen.getByText(/Motivo: Celular perdido, Outro \(Caiu no forno de reaquecimento\)/)).toBeInTheDocument();
+  });
+
+  it('cancels without removing and shows the error from the server', async () => {
+    apiGet.mockImplementation(() => response(200, { devices: [
+      { device: 'SM-A155M', ending: 'zz9911', secure_lock: false, signed_in: false, updated_at: null },
+    ], last_removal: { by: 'qa.admin', at: '2026-11-20T09:00:00Z', reasons: ['Troca de celular'], note: '' } }));
+    apiDelete.mockImplementation(() => response(403, {
+      error: 'Só um administrador pode criar, promover ou alterar um administrador.', user_facing: true,
+    }));
+    render(<LoginApprovalField userId={4} enabled={false} onToggle={() => {}} />);
+    expect(await screen.findByText(/Última remoção: .* por qa.admin\. Motivo: Troca de celular\./)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Remover celulares'));
+    fireEvent.click(screen.getByText('Cancelar'));
+    expect(screen.queryByText('Remover e salvar motivo')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Remover celulares'));
+    fireEvent.click(screen.getByLabelText('Troca de celular'));
+    fireEvent.click(screen.getByText('Remover e salvar motivo'));
+    expect(await screen.findByText('Só um administrador pode criar, promover ou alterar um administrador.')).toBeInTheDocument();
+    expect(screen.getByText(/SM-A155M/)).toBeInTheDocument();
   });
 
   it('warns when the user has no phone yet', async () => {

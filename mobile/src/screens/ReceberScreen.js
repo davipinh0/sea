@@ -10,6 +10,8 @@ import { Button, Card, Field, Message, ui } from '../components/ui';
 import { apiError, formatQuantity, parseQuantity } from '../utils/sea';
 import { colors, fonts, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
+import SuccessAnimation from '../components/SuccessAnimation';
+import { celebration } from '../utils/celebrate';
 
 // Mesmo fluxo e mesma API do painel: ler a OT; se ainda não estiver cadastrada, buscar na base do
 // SAP e registrar a entrega; depois receber cada material, em parte ou inteiro.
@@ -25,6 +27,7 @@ export default function ReceberScreen({ navigation, route }) {
   const [fromBase, setFromBase] = useState(null); // OT found in the SAP base, not registered
   const [notFound, setNotFound] = useState(null);
   const [message, setMessage] = useState(null);
+  const [celebrate, setCelebrate] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function ReceberScreen({ navigation, route }) {
       const code = ot.po_number;
       await load(code, true);
       setMessage({ type: 'ok', text: `Recebimento registrado: ${done}. Material disponível para armazenagem.` });
+      setCelebrate(celebration('receber', `OT ${code}: ${done}`));
     } catch (err) {
       setMessage({ type: 'error', text: apiError(err, 'Não foi possível registrar o recebimento.') });
       setBusy(false);
@@ -213,6 +217,7 @@ export default function ReceberScreen({ navigation, route }) {
           </Card>
         )}
       </RefreshScroll>
+      <SuccessAnimation event={celebrate} onDone={() => setCelebrate(null)} />
     </SafeAreaView>
   );
 }

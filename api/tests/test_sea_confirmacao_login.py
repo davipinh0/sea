@@ -187,14 +187,58 @@ class TestDevices:
         assert _login(client, "sea.conf.adm").status_code == 202
 
         # Celular perdido: removendo os celulares, o usuário volta a entrar só com a senha.
-        assert client.delete(f"/api/admin/users/{uid}/aparelhos", headers=auth_headers).get_json()["removed"] == 1
+        resp = client.delete(f"/api/admin/users/{uid}/aparelhos", headers=auth_headers,
+                             json={"reasons": ["perdido"]})
+        assert resp.get_json()["removed"] == 1
         assert _login(client, "sea.conf.adm").status_code == 200
+
+    def test_removing_the_phones_needs_a_reason_and_saves_it(
+        self, client, auth_headers, _db_transaction
+    ):
+        conn = _db_transaction
+        uid = _setup(client, conn, "sea.conf.motivo")
+        url = f"/api/admin/users/{uid}/aparelhos"
+        assert client.get(url, headers=auth_headers).get_json()["last_removal"] is None
+        for body in (
+            None,
+            {},
+            {"reasons": []},
+            {"reasons": ["inventado"]},
+            {"reasons": ["outro"]},
+            {"reasons": ["outro"], "note": "  a "},
+            {"reasons": ["perdido"], "note": "x" * 301},
+            {"reasons": ["perdido"], "apagar_log": True},
+        ):
+            assert client.delete(url, headers=auth_headers, json=body).status_code == 400, body
+        # Nada saiu enquanto o motivo estava errado.
+        assert len(client.get(url, headers=auth_headers).get_json()["devices"]) == 1
+
+        resp = client.delete(url, headers=auth_headers, json={
+            "reasons": ["roubado", "troca", "outro", "roubado"],
+            "note": "  Boletim de ocorrência 123  ",
+        })
+        assert resp.status_code == 200 and resp.get_json()["removed"] == 1
+        last = client.get(url, headers=auth_headers).get_json()["last_removal"]
+        assert last["by"] == "admin"
+        assert last["reasons"] == ["Celular roubado ou furtado", "Troca de celular", "Outro"]
+        assert last["note"] == "Boletim de ocorrência 123"
+        row = conn.execute(text(
+            "SELECT details FROM audit_log WHERE action_type = 'USER_DEVICES_REMOVED' "
+            "AND entity_id = :u ORDER BY log_id DESC LIMIT 1"), {"u": uid}).scalar()
+        assert row["aparelhos"] == 1 and row["motivos"] == last["reasons"]
+
+    def test_removing_the_phones_of_an_unknown_user(self, client, auth_headers):
+        resp = client.delete("/api/admin/users/999999/aparelhos", headers=auth_headers,
+                             json={"reasons": ["perdido"]})
+        assert resp.status_code == 404
 
     def test_a_user_without_the_users_page_cannot_see_the_phones(self, client, _db_transaction):
         uid = _setup(client, _db_transaction, "sea.conf.alvo")
         headers = _user(client, _db_transaction, "sea.conf.curioso", [], [WAREHOUSE])
         assert client.get(f"/api/admin/users/{uid}/aparelhos", headers=headers).status_code == 403
-        assert client.delete(f"/api/admin/users/{uid}/aparelhos", headers=headers).status_code == 403
+        resp = client.delete(f"/api/admin/users/{uid}/aparelhos", headers=headers,
+                             json={"reasons": ["perdido"]})
+        assert resp.status_code == 403
 
 
 class TestPush:

@@ -126,4 +126,40 @@ test.describe('Usuários', () => {
     await approveOnPhone(request, 'qa.gestor');
     await expect(page.getByText(username)).toHaveCount(0, { timeout: 15_000 });
   });
+
+  test('remover celular pede o motivo e o salva no log', async ({ page, request }) => {
+    const admin = await apiLogin(request, 'qa.admin');
+    const username = `qa.celular.${Date.now()}`;
+    const created = await call(request, 'POST', '/api/admin/users', admin, {
+      username, password: 'Senha123', full_name: 'Celular Perdido (fictício)', role: 'USER', warehouse_ids: [1],
+    });
+    expect(created.status).toBe(201);
+    const uid = created.body.user?.user_id ?? created.body.user_id;
+    const login = await request.post('/api/auth/login', { data: { username, password: 'Senha123' } });
+    const own = { Authorization: `Bearer ${(await login.json()).token}` };
+    expect((await call(request, 'POST', '/api/sea/push/registrar', own,
+      { token: `ExponentPushToken[${username}]`, secure_lock: true, device_name: 'SM-QA01' })).status).toBe(200);
+
+    await uiLogin(page, 'qa.gestor');
+    await page.goto('/users');
+    await page.getByRole('row', { name: new RegExp(username.replace(/\./g, '\\.')) }).getByLabel('Editar').click();
+    await expect(page.getByText(/SM-QA01/)).toBeVisible();
+    await page.getByRole('button', { name: 'Remover celulares' }).click();
+    await page.getByRole('button', { name: 'Remover e salvar motivo' }).click();
+    await expect(page.getByText('Escolha pelo menos um motivo.')).toBeVisible();
+    await expect(page.getByText(/SM-QA01/)).toBeVisible();
+
+    await page.getByLabel('Celular perdido').check();
+    await page.getByLabel('Troca de celular').check();
+    await page.getByLabel(/Observação/).fill('Perdido na área de expedição');
+    await page.getByRole('button', { name: 'Remover e salvar motivo' }).click();
+    await expect(page.getByText(/Aparelhos removidos e motivo salvo/)).toBeVisible();
+    await expect(page.getByText(/SM-QA01/)).toHaveCount(0);
+
+    const saved = await call(request, 'GET', `/api/admin/users/${uid}/aparelhos`, admin);
+    expect(saved.body.devices).toEqual([]);
+    expect(saved.body.last_removal).toMatchObject({
+      by: 'qa.gestor', reasons: ['Celular perdido', 'Troca de celular'], note: 'Perdido na área de expedição',
+    });
+  });
 });

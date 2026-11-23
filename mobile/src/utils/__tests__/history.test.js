@@ -24,6 +24,13 @@ describe('Histórico in the app', () => {
       .toBe('Material MAT-1 · quantidade 2 · destino A3');
   });
 
+  it('shows why the phones were removed', () => {
+    expect(describeMovement({ details: { aparelhos: 1, motivos: ['Celular perdido', 'Outro'], observacao: 'Caiu no rio' } }))
+      .toBe('motivo: Celular perdido, Outro (Caiu no rio)');
+    expect(describeMovement({ details: { aparelhos: 1, motivos: ['Troca de celular'], observacao: '' } }))
+      .toBe('motivo: Troca de celular');
+  });
+
   it('names the order, never the OT', () => {
     expect(orderText({ orders: ['PM12 - 2002349234'], details: { ot: '1003307220' } })).toBe('Ordem PM12 - 2002349234');
     expect(orderText({ orders: ['PM11 - 1', 'PM12 - 2'] })).toBe('Ordens PM11 - 1, PM12 - 2');

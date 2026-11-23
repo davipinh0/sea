@@ -82,7 +82,11 @@ class TestManagerLimits:
         )
         assert client.delete(f"/api/admin/users/{admin_id}", headers=manager).status_code == 403
         assert (
-            client.delete(f"/api/admin/users/{admin_id}/aparelhos", headers=manager).status_code
+            client.delete(
+                f"/api/admin/users/{admin_id}/aparelhos",
+                headers=manager,
+                json={"reasons": ["perdido"]},
+            ).status_code
             == 403
         )
 

@@ -27,7 +27,9 @@ from routes.admin import VALID_ROLES, admin_bp
 from schemas.inventory_adjustments import DirectAdjustmentRequest, ReviewAdjustmentsRequest
 from schemas.settings import UpdateSettingsRequest
 from schemas.users import (
+    DEVICE_REMOVAL_REASONS,
     CreateUserRequest,
+    RemoveDevicesRequest,
     UpdateUserPagePermissionsRequest,
     UpdateUserRequest,
     UserPhotoRequest,
@@ -325,32 +327,61 @@ def list_user_devices(user_id):
         ),
         {"u": user_id},
     ).fetchall()
+    last = g.db.execute(
+        text(
+            "SELECT user_id, details, created_at FROM audit_log "
+            "WHERE action_type = 'USER_DEVICES_REMOVED' AND entity_type = 'USER' "
+            "AND entity_id = :u ORDER BY log_id DESC LIMIT 1"
+        ),
+        {"u": user_id},
+    ).fetchone()
+    last_removal = None
+    if last:
+        details = last.details or {}
+        last_removal = {
+            "by": last.user_id,
+            "at": last.created_at.isoformat() if last.created_at else None,
+            "reasons": details.get("motivos") or [],
+            "note": details.get("observacao") or "",
+        }
     # O token de push é uma credencial do celular: só o final aparece.
-    return jsonify({"devices": [
-        {"device": r.device_name or "Celular", "ending": r.token[-6:].strip("]"),
-         "secure_lock": bool(r.secure_lock), "signed_in": bool(r.signed_in),
-         "updated_at": r.updated_at.isoformat() if r.updated_at else None}
-        for r in rows
-    ]})
+    return jsonify({
+        "devices": [
+            {"device": r.device_name or "Celular", "ending": r.token.rstrip("]")[-6:],
+             "secure_lock": bool(r.secure_lock), "signed_in": bool(r.signed_in),
+             "updated_at": r.updated_at.isoformat() if r.updated_at else None}
+            for r in rows
+        ],
+        "last_removal": last_removal,
+    })
 
 
 @admin_bp.route("/users/<int:user_id>/aparelhos", methods=["DELETE"])
 @require_auth
 @require_admin_or_page_permission("users")
+@validate_body(RemoveDevicesRequest)
 @with_db
-def remove_user_devices(user_id):
+def remove_user_devices(user_id, validated):
     """Celular perdido ou trocado: os celulares do usuário param de confirmar logins até ele entrar
-    de novo no app.
+    de novo no app. O motivo fica no log de auditoria.
     """
     target_role = g.db.execute(text("SELECT role FROM users WHERE user_id = :u"), {"u": user_id}).scalar()
+    if target_role is None:
+        return jsonify({"error": "Usuário não encontrado"}), 404
     refused = _manager_refusal(target_role=target_role)
     if refused:
         return refused
     removed = g.db.execute(
         text("DELETE FROM sea_push_tokens WHERE user_id = :u RETURNING token"), {"u": user_id}
     ).fetchall()
-    write_audit_log(g.db, "USER_DEVICES_REMOVED", "USER", user_id, g.current_user["user_id"], None,
-                    {"aparelhos": len(removed)})
+    write_audit_log(
+        g.db, "USER_DEVICES_REMOVED", "USER", user_id, g.current_user["username"], None,
+        {
+            "aparelhos": len(removed),
+            "motivos": [DEVICE_REMOVAL_REASONS[r] for r in validated.reasons],
+            "observacao": validated.note,
+        },
+    )
     g.db.commit()
     return jsonify({"removed": len(removed)})
 

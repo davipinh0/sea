@@ -83,6 +83,10 @@ export function describeMovement(entry) {
   if (d.employee_name) parts.push(`entregue para ${d.employee_name}`);
   if (d.requester_email) parts.push(`solicitante ${d.requester_email}`);
   if (d.reason) parts.push(`motivo: ${d.reason}`);
+  // Remoção de celulares: um ou mais motivos e a observação.
+  if (Array.isArray(d.motivos) && d.motivos.length) {
+    parts.push(`motivo: ${d.motivos.join(', ')}${d.observacao ? ` (${d.observacao})` : ''}`);
+  }
   return parts.join(' · ');
 }
 

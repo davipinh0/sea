@@ -81,8 +81,12 @@ function parseDetails(raw) {
   }
 }
 
+// Lista de textos (motivos, por exemplo) aparece separada por vírgula, não como JSON.
+const isTextList = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
+
 function formatValue(v) {
   if (v === null || v === undefined) return '-';
+  if (isTextList(v)) return v.join(', ');
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
@@ -674,7 +678,7 @@ function KV({ label, children }) {
 }
 
 function DetailRow({ label, value }) {
-  const isObj = value !== null && typeof value === 'object';
+  const isObj = value !== null && typeof value === 'object' && !isTextList(value);
   return (
     <>
       <span style={{ color: 'var(--text-secondary)' }}>{label}</span>

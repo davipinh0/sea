@@ -131,6 +131,59 @@ def locais():
     })
 
 
+@sea_bp.route("/meus-acessos")
+@require_auth
+@with_db
+def meus_acessos():
+    """O que o próprio usuário pode usar ("Gerenciar Acessos" no app): locais, confirmação de login
+    e os celulares dele. As permissões vêm de /api/auth/me. Só leitura: quem muda é o administrador.
+    """
+    uid = g.current_user["user_id"]
+    user = g.db.execute(
+        text(
+            "SELECT role, warehouse_ids, web_login_approval, last_login, created_at "
+            "FROM users WHERE user_id = :u"
+        ),
+        {"u": uid},
+    ).fetchone()
+    if not user:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    if user.role == "ADMIN":
+        locations = g.db.execute(text(
+            "SELECT warehouse_code, warehouse_name FROM warehouses WHERE is_active = TRUE "
+            "ORDER BY warehouse_id"
+        )).fetchall()
+    else:
+        locations = g.db.execute(
+            text(
+                "SELECT warehouse_code, warehouse_name FROM warehouses WHERE is_active = TRUE "
+                "AND warehouse_id = ANY(:ids) ORDER BY warehouse_id"
+            ),
+            {"ids": list(user.warehouse_ids or [])},
+        ).fetchall()
+    devices = g.db.execute(
+        text(
+            "SELECT token, device_name, secure_lock, signed_in, updated_at FROM sea_push_tokens "
+            "WHERE user_id = :u ORDER BY updated_at DESC"
+        ),
+        {"u": uid},
+    ).fetchall()
+    return jsonify({
+        "all_locations": user.role == "ADMIN",
+        "locations": [{"code": r.warehouse_code, "name": r.warehouse_name} for r in locations],
+        "login_approval": bool(user.web_login_approval),
+        "last_login": _iso(user.last_login),
+        "since": _iso(user.created_at),
+        # O token de push é uma credencial do celular: só o final aparece.
+        "devices": [
+            {"device": r.device_name or "Celular", "ending": r.token.rstrip("]")[-6:],
+             "secure_lock": bool(r.secure_lock), "signed_in": bool(r.signed_in),
+             "updated_at": _iso(r.updated_at)}
+            for r in devices
+        ],
+    })
+
+
 # --- Painel
 
 # Detalhes do log mostrados no Painel (qualquer usuário do local vê): só estes campos, nunca dados

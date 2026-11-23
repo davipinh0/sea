@@ -1507,6 +1507,25 @@ a.sea-kpi:hover { border-color: var(--brand-orange); }
 .login-approval-devices { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .login-approval-device { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; padding: 6px 10px; border: 1px solid var(--border, #ddd); border-radius: 6px; }
 .login-approval-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.device-removal { flex-direction: column; align-items: stretch; margin: 0; padding: 10px 12px; border: 1px solid var(--border, #ddd); border-radius: 6px; }
+.device-removal legend { font-weight: 600; padding: 0 4px; }
+.device-removal-reasons { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 12px; }
+.device-removal-reasons label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.device-removal textarea { width: 100%; resize: vertical; }
+.device-last-removal { font-style: italic; }
+
+/* Retirada concluída no terminal */
+.success-check { display: block; margin: 0 auto 12px; }
+.success-check-circle { stroke: var(--success, #2e7d32); stroke-width: 3; stroke-dasharray: 151; stroke-dashoffset: 151; animation: success-draw 0.6s ease-out forwards; }
+.success-check-mark { stroke: var(--success, #2e7d32); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: success-draw 0.35s 0.55s ease-out forwards; }
+.success-check { animation: success-pop 0.5s 0.85s ease-out; }
+.success-pop { animation: success-rise 0.45s 0.3s ease-out both; }
+@keyframes success-draw { to { stroke-dashoffset: 0; } }
+@keyframes success-pop { 50% { transform: scale(1.12); } }
+@keyframes success-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .success-check, .success-check-circle, .success-check-mark, .success-pop { animation: none; stroke-dashoffset: 0; }
+}
 
 /* Painel: últimas movimentações */
 .sea-section-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

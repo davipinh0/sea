@@ -13,6 +13,7 @@ import { readSeen, unregisterDevice } from '../notifications';
 import { visibleModules } from '../utils/sea';
 import { colors, radii, saveTheme, spacing, themeChoice } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
+import FadeIn from '../components/FadeIn';
 
 const ACCENT = { red: colors.accentRed, copper: colors.copper, gray: colors.grayAccent };
 const THEMES = [['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Escuro']];
@@ -122,13 +123,15 @@ export default function HomeScreen({ navigation }) {
           </Text>
         )}
         <View style={styles.grid}>
-          {modules.map((m) => (
-            <TouchableOpacity key={m.key} style={[styles.card, { width: cardWidth }]} activeOpacity={0.7} onPress={() => navigation.navigate(m.screen)} accessibilityLabel={m.label}>
-              <View style={[styles.stripe, { backgroundColor: ACCENT[m.accent] }]} />
-              {counts[m.key] > 0 && <View style={styles.cardBadge}><Text style={styles.badgeText}>{counts[m.key]}</Text></View>}
-              <Text style={styles.cardLabel}>{m.label}</Text>
-              <Text style={styles.cardSub}>{m.sub}</Text>
-            </TouchableOpacity>
+          {modules.map((m, i) => (
+            <FadeIn key={`${current?.code}-${m.key}`} index={i}>
+              <TouchableOpacity style={[styles.card, { width: cardWidth }]} activeOpacity={0.7} onPress={() => navigation.navigate(m.screen)} accessibilityLabel={m.label}>
+                <View style={[styles.stripe, { backgroundColor: ACCENT[m.accent] }]} />
+                {counts[m.key] > 0 && <View style={styles.cardBadge}><Text style={styles.badgeText}>{counts[m.key]}</Text></View>}
+                <Text style={styles.cardLabel}>{m.label}</Text>
+                <Text style={styles.cardSub}>{m.sub}</Text>
+              </TouchableOpacity>
+            </FadeIn>
           ))}
         </View>
       </RefreshScroll>
@@ -151,6 +154,9 @@ export default function HomeScreen({ navigation }) {
               ))}
             </View>
             <View style={styles.divider} />
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setMenu(false); navigation.navigate('Acessos'); }} accessibilityLabel="Gerenciar Acessos">
+              <Text style={styles.menuItemText}>Gerenciar Acessos</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={() => { setMenu(false); setChangingPassword(true); }}>
               <Text style={styles.menuItemText}>Alterar senha</Text>
             </TouchableOpacity>

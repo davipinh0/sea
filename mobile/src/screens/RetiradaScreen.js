@@ -9,6 +9,8 @@ import { Button, Card, ConfirmModal, Message, ui } from '../components/ui';
 import { apiError, formatQuantity, withdrawalActions } from '../utils/sea';
 import { colors, radii, screenStyles } from '../theme/styles';
 import RefreshScroll from '../components/RefreshScroll';
+import SuccessAnimation from '../components/SuccessAnimation';
+import { celebration, withdrawalCelebration } from '../utils/celebrate';
 
 // Pedidos de todos os locais do usuário. Cada etapa (avaliar, aceitar, marcar pronta) pede a
 // digital ou o PIN. A baixa no estoque só acontece quando o funcionário confirma no terminal.
@@ -25,6 +27,7 @@ const REFRESH_MS = 8000;
 export default function RetiradaScreen({ navigation }) {
   const [queue, setQueue] = useState(null);
   const [message, setMessage] = useState(null);
+  const [celebrate, setCelebrate] = useState(null);
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [reason, setReason] = useState('');
@@ -54,6 +57,8 @@ export default function RetiradaScreen({ navigation }) {
     try {
       await client.post(`/api/sea/retiradas/${withdrawal.withdrawal_id}/${action}`, body || {});
       setMessage({ type: 'ok', text: done });
+      const kind = withdrawalCelebration(action, body);
+      if (kind) setCelebrate(celebration(kind, `Retirada nº ${withdrawal.withdrawal_id}`));
       await load();
       return true;
     } catch (err) {
@@ -124,6 +129,7 @@ export default function RetiradaScreen({ navigation }) {
           placeholder="Motivo" placeholderTextColor={colors.textPlaceholder}
         />
       </ConfirmModal>
+      <SuccessAnimation event={celebrate} onDone={() => setCelebrate(null)} />
     </SafeAreaView>
   );
 }

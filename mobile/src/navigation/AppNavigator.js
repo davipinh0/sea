@@ -20,11 +20,15 @@ import EstoqueScreen from '../screens/EstoqueScreen';
 import OrdensScreen from '../screens/OrdensScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import HistoricoScreen from '../screens/HistoricoScreen';
+import AcessosScreen from '../screens/AcessosScreen';
 import { onNotificationTap, registerDevice, startPolling } from '../notifications';
 import AppLock from '../components/AppLock';
 import LoginApproval from '../components/LoginApproval';
 
 const Stack = createNativeStackNavigator();
+
+// Telas entram deslizando da direita; o login e a troca obrigatória de senha só aparecem.
+const SCREEN_OPTIONS = { headerShown: false, animation: 'slide_from_right', animationDuration: 280 };
 
 export default function AppNavigator() {
   const { user, isLoading, needsEnrollment } = useAuth();
@@ -80,13 +84,13 @@ export default function AppNavigator() {
   return (
     <>
     <NavigationContainer ref={navigation}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={SCREEN_OPTIONS}>
         {user ? (
           forced ? (
             <Stack.Screen
               name="ChangePassword"
               component={ChangePasswordScreen}
-              options={{ gestureEnabled: false }}
+              options={{ gestureEnabled: false, animation: 'fade' }}
             />
           ) : (
             <>
@@ -99,10 +103,11 @@ export default function AppNavigator() {
               <Stack.Screen name="Ordens" component={OrdensScreen} />
               <Stack.Screen name="Notificacoes" component={NotificacoesScreen} />
               <Stack.Screen name="Historico" component={HistoricoScreen} />
+              <Stack.Screen name="Acessos" component={AcessosScreen} options={{ animation: 'slide_from_bottom' }} />
             </>
           )
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'fade' }} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

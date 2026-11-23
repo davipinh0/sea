@@ -1,15 +1,79 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { readError } from '../utils/sea.js';
 
 // Confirmação de login no celular e os celulares que confirmam os logins do usuário.
+
+// Mesmos motivos da API (schemas/users.py, DEVICE_REMOVAL_REASONS).
+export const REMOVAL_REASONS = [
+  ['perdido', 'Celular perdido'],
+  ['roubado', 'Celular roubado ou furtado'],
+  ['troca', 'Troca de celular'],
+  ['defeito', 'Celular com defeito'],
+  ['desligamento', 'Desligamento ou afastamento do funcionário'],
+  ['funcao', 'Mudança de função ou de setor'],
+  ['suspeita', 'Suspeita de uso indevido'],
+  ['outro', 'Outro'],
+];
 
 function when(iso) {
   return iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-';
 }
 
+function RemovalForm({ count, onRemove, onCancel }) {
+  const [reasons, setReasons] = useState([]);
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function toggle(key) {
+    setError('');
+    setReasons((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+  }
+
+  async function submit() {
+    if (reasons.length === 0) { setError('Escolha pelo menos um motivo.'); return; }
+    if (reasons.includes('outro') && note.trim().length < 3) { setError('Explique o motivo em "Outro".'); return; }
+    setBusy(true);
+    setError(await onRemove(reasons, note.trim()) || '');
+    setBusy(false);
+  }
+
+  return (
+    <fieldset className="login-approval-confirm device-removal">
+      <legend>
+        Por que remover {count === 1 ? 'o celular' : `os ${count} celulares`} deste usuário? (pode marcar mais de um)
+      </legend>
+      <div className="device-removal-reasons">
+        {REMOVAL_REASONS.map(([key, label]) => (
+          <label key={key}>
+            <input type="checkbox" checked={reasons.includes(key)} onChange={() => toggle(key)} />
+            {label}
+          </label>
+        ))}
+      </div>
+      <label htmlFor="device-removal-note">
+        Observação{reasons.includes('outro') ? ' (obrigatória em "Outro")' : ' (opcional)'}
+      </label>
+      <textarea
+        id="device-removal-note" className="form-input" rows={2} maxLength={300} value={note}
+        onChange={(e) => { setNote(e.target.value); setError(''); }}
+      />
+      {error && <div className="form-error" role="alert">{error}</div>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn-sm btn-danger" onClick={submit} disabled={busy}>
+          {busy ? 'Removendo...' : 'Remover e salvar motivo'}
+        </button>
+        <button type="button" className="btn btn-sm" onClick={onCancel} disabled={busy}>Cancelar</button>
+      </div>
+    </fieldset>
+  );
+}
+
 export default function LoginApprovalField({ userId, enabled, onToggle }) {
   const [devices, setDevices] = useState(null);
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [lastRemoval, setLastRemoval] = useState(null);
+  const [removing, setRemoving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -17,20 +81,23 @@ export default function LoginApprovalField({ userId, enabled, onToggle }) {
     let alive = true;
     api.get(`/admin/users/${userId}/aparelhos`, { silentPermissionDenied: true }).then(async (res) => {
       const data = res?.ok ? await res.json() : { devices: [] };
-      if (alive) setDevices(data.devices || []);
+      if (!alive) return;
+      setDevices(data.devices || []);
+      setLastRemoval(data.last_removal || null);
     });
     return () => { alive = false; };
   }, [userId]);
 
-  async function removeDevices() {
-    const res = await api.delete(`/admin/users/${userId}/aparelhos`);
-    setConfirmRemove(false);
-    if (res?.ok) {
-      setDevices([]);
-      setMessage('Aparelhos removidos. O usuário volta a entrar só com a senha até ativar o bloqueio no app de novo.');
-    } else {
-      setMessage('Não foi possível remover os aparelhos.');
-    }
+  // Devolve a mensagem de erro, ou nada quando deu certo.
+  async function removeDevices(reasons, note) {
+    const res = await api.delete(`/admin/users/${userId}/aparelhos`, { body: JSON.stringify({ reasons, note }) });
+    if (!res?.ok) return readError(res, 'Não foi possível remover os aparelhos.');
+    const labels = REMOVAL_REASONS.filter(([key]) => reasons.includes(key)).map(([, label]) => label);
+    setRemoving(false);
+    setDevices([]);
+    setLastRemoval({ by: 'você', at: new Date().toISOString(), reasons: labels, note });
+    setMessage('Aparelhos removidos e motivo salvo no log. O usuário volta a entrar só com a senha até ativar o bloqueio no app de novo.');
+    return '';
   }
 
   const trusted = (devices || []).filter((d) => d.secure_lock);
@@ -55,19 +122,21 @@ export default function LoginApprovalField({ userId, enabled, onToggle }) {
               <span>{d.signed_in ? 'conectado' : 'fora do app'} · {when(d.updated_at)}</span>
             </div>
           ))}
-          {devices.length > 0 && (confirmRemove ? (
-            <div className="login-approval-confirm">
-              <span>Remover {devices.length === 1 ? 'o celular' : `os ${devices.length} celulares`} deste usuário?</span>
-              <button type="button" className="btn btn-sm btn-danger" onClick={removeDevices}>Remover</button>
-              <button type="button" className="btn btn-sm" onClick={() => setConfirmRemove(false)}>Manter</button>
-            </div>
+          {devices.length > 0 && (removing ? (
+            <RemovalForm count={devices.length} onRemove={removeDevices} onCancel={() => setRemoving(false)} />
           ) : (
-            <button type="button" className="btn btn-sm" onClick={() => setConfirmRemove(true)}>
-              Remover celulares (perdido ou trocado)
+            <button type="button" className="btn btn-sm" onClick={() => { setRemoving(true); setMessage(''); }}>
+              Remover celulares
             </button>
           ))}
           {enabled && devices.length > 0 && trusted.length === 0 && (
             <div className="settings-note">Nenhum celular com bloqueio ativo: o login segue só com a senha.</div>
+          )}
+          {lastRemoval && (
+            <div className="settings-note device-last-removal">
+              Última remoção: {when(lastRemoval.at)} por {lastRemoval.by}. Motivo: {lastRemoval.reasons.join(', ') || '-'}
+              {lastRemoval.note ? ` (${lastRemoval.note})` : ''}.
+            </div>
           )}
         </div>
       )}

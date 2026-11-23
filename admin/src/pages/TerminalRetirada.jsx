@@ -30,6 +30,16 @@ const looksLikeEmail = (value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim()
 const stockQuantity = (s, count) => count * (s.pack_weight_kg || 1);
 const maxCount = (s) => Math.floor(s.available / (s.pack_weight_kg || 1));
 
+// Círculo que se desenha e o check em seguida (CSS; parado para quem pede menos movimento).
+function SuccessCheck() {
+  return (
+    <svg className="success-check" viewBox="0 0 52 52" width="96" height="96" aria-hidden="true">
+      <circle className="success-check-circle" cx="26" cy="26" r="24" fill="none" />
+      <path className="success-check-mark" fill="none" d="M14 27l8 8 16-17" />
+    </svg>
+  );
+}
+
 function QtyPicker({ value, max, onChange, label, unit, step = 1 }) {
   return (
     <div className="terminal-qty" role="group" aria-label={label}>
@@ -395,7 +405,8 @@ export default function TerminalRetirada() {
 
         {step === 'done' && (
           <div className="terminal-card" style={{ textAlign: 'center', padding: 40 }}>
-            <div className="terminal-msg ok" style={{ fontSize: 26, fontWeight: 700 }}>Retirada concluída</div>
+            <SuccessCheck />
+            <div className="terminal-msg ok success-pop" style={{ fontSize: 26, fontWeight: 700 }}>Retirada concluída</div>
             <p style={{ fontSize: 18 }}>Entrega registrada para {byEmail ? email : (withdrawal?.delivered_to || employee?.full_name)} e baixa realizada no estoque.</p>
             <div className="terminal-actions" style={{ justifyContent: 'center' }}>
               <button type="button" className="terminal-btn" onClick={() => { clearRequest(); setStep('ot'); }}>Nova retirada</button>

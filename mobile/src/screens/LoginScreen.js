@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../auth/AuthContext';
 import client from '../api/client';
 import { approvalEndMessage } from '../utils/loginApproval';
 import ServerDialog from '../components/ServerDialog';
+import AppLogo from '../components/AppLogo';
 import { Button } from '../components/ui';
 import { colors, radii } from '../theme/styles';
 
@@ -83,7 +84,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Image source={require('../../assets/icon.png')} style={styles.logo} accessibilityRole="image" accessibilityLabel="SEA" />
+          <AppLogo />
           <Text style={styles.subtitle}>Sistema de Entrada e Armazenamento</Text>
 
           <TextInput
@@ -124,8 +125,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  // A logo do aplicativo (o mesmo ícone da tela inicial do celular).
-  logo: { width: 96, height: 96, borderRadius: 22, alignSelf: 'center' },
   subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 4, marginBottom: 32 },
   input: {
     minHeight: 52, paddingHorizontal: 14, marginBottom: 12, fontSize: 16, color: colors.textPrimary,

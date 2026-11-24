@@ -57,9 +57,18 @@ describe('Gerenciar Acessos', () => {
     const login = readFileSync(fileURLToPath(new URL('../../screens/LoginScreen.js', import.meta.url)), 'utf8');
     expect(login).toMatch(/Sistema de Entrada e Armazenamento/);
     expect(login).not.toMatch(/Expedição e Armazenamento/);
-    // A logo do aplicativo no lugar do texto "SEA".
-    expect(login).toMatch(/<Image source=\{require\('\.\.\/\.\.\/assets\/icon\.png'\)\}[^>]*accessibilityLabel="SEA"/);
-    expect(login).not.toMatch(/<Text style=\{styles\.logo\}>SEA<\/Text>/);
+  });
+
+  it('shows the app logo instead of the SEA text on the login and the lock screen', () => {
+    const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
+    const logo = read('../../components/AppLogo.js');
+    expect(logo).toMatch(/require\('\.\.\/\.\.\/assets\/icon\.png'\)/);
+    expect(logo).toMatch(/accessibilityLabel="SEA"/);
+    for (const file of ['../../screens/LoginScreen.js', '../../components/AppLock.js']) {
+      const src = read(file);
+      expect(src, file).toMatch(/<AppLogo \/>/);
+      expect(src, file).not.toMatch(/>SEA<\/Text>/);
+    }
   });
 });
 

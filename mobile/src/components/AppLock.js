@@ -6,6 +6,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../auth/AuthContext';
 import { biometricError, unlockMode } from '../auth/appLock';
 import { Button } from './ui';
+import AppLogo from './AppLogo';
 import { apiError } from '../utils/sea';
 import { unregisterDevice } from '../notifications';
 import { colors, radii } from '../theme/styles';
@@ -52,7 +53,7 @@ function Frame({ title, children }) {
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>SEA</Text>
+        <AppLogo />
         <Text style={styles.title}>{title}</Text>
         {children}
       </ScrollView>
@@ -218,7 +219,6 @@ function Unlock() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  logo: { fontSize: 44, fontWeight: '900', letterSpacing: 2, color: colors.copper, textAlign: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginTop: 8, marginBottom: 20 },
   text: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginBottom: 20, lineHeight: 21 },
   warning: { fontSize: 14, color: colors.textPrimary, marginBottom: 16, lineHeight: 20 },

@@ -378,9 +378,12 @@ OVERRIDE_SO_FULL_EDIT = "so-full-edit"
 # Quem pode baixar as listas do painel em CSV. O arquivo é montado no navegador com dados que o
 # usuário já vê; a permissão só controla os botões.
 OVERRIDE_EXPORT_CSV = "export-csv"
+# Quem pode excluir uma OT (o administrador sempre pode).
+OVERRIDE_OT_DELETE = "excluir-ot"
 ALL_OVERRIDE_KEYS = (
     OVERRIDE_SO_FULL_EDIT,
     OVERRIDE_EXPORT_CSV,
+    OVERRIDE_OT_DELETE,
 )
 
 # SO mutation audit actions (mig 062). Mirror the PO line

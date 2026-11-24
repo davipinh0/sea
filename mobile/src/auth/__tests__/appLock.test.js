@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  biometricError, identityError, isLockSuspended, sameUser, shouldLock, suspendLock, unlockMode, withoutLock,
+  authenticate, biometricError, identityError, isLockSuspended, sameUser, shouldLock, suspendLock, unlockMode, withoutLock,
 } from '../appLock';
 
 describe('shouldLock', () => {
@@ -92,5 +92,43 @@ describe('identityError', () => {
     expect(identityError({ success: false, error: 'passcode_not_set' })).toMatch(/PIN ou padrão/);
     expect(identityError({ success: false, error: 'lockout' })).toMatch(/Muitas tentativas/);
     expect(identityError(undefined)).toMatch(/Não foi possível/);
+  });
+});
+
+describe('authenticate', () => {
+  const OPTIONS = { promptMessage: 'Confirme que é você' };
+
+  it('regressão: um pedido de digital preso não faz o "SIM, SOU EU" parecer cancelado', async () => {
+    const localAuth = {
+      authenticateAsync: vi.fn()
+        .mockResolvedValueOnce({ success: false, error: 'app_cancel' })
+        .mockResolvedValueOnce({ success: true }),
+      cancelAuthenticate: vi.fn().mockResolvedValue(undefined),
+    };
+    const result = await authenticate(localAuth, OPTIONS, { retryDelayMs: 0 });
+    expect(result).toEqual({ success: true });
+    expect(localAuth.cancelAuthenticate).toHaveBeenCalledTimes(1);
+    expect(localAuth.authenticateAsync).toHaveBeenCalledTimes(2);
+    expect(localAuth.authenticateAsync).toHaveBeenLastCalledWith(OPTIONS);
+  });
+
+  it('não repete quando o usuário cancelou ou confirmou', async () => {
+    for (const answer of [{ success: true }, { success: false, error: 'user_cancel' }]) {
+      const localAuth = { authenticateAsync: vi.fn().mockResolvedValue(answer), cancelAuthenticate: vi.fn() };
+      expect(await authenticate(localAuth, OPTIONS, { retryDelayMs: 0 })).toEqual(answer);
+      expect(localAuth.authenticateAsync).toHaveBeenCalledTimes(1);
+      expect(localAuth.cancelAuthenticate).not.toHaveBeenCalled();
+    }
+  });
+
+  it('tenta só uma vez de novo e explica se ainda houver outro pedido aberto', async () => {
+    const localAuth = {
+      authenticateAsync: vi.fn().mockResolvedValue({ success: false, error: 'app_cancel' }),
+      cancelAuthenticate: vi.fn().mockRejectedValue(new Error('nada para cancelar')),
+    };
+    const result = await authenticate(localAuth, OPTIONS, { retryDelayMs: 0 });
+    expect(localAuth.authenticateAsync).toHaveBeenCalledTimes(2);
+    expect(biometricError(result)).toMatch(/Outra confirmação/);
+    expect(identityError(result)).toMatch(/Outra confirmação/);
   });
 });

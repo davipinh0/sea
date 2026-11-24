@@ -12,6 +12,8 @@ from middleware.auth_middleware import (
     require_admin_or_page_permission,
     require_any_page_permission,
     require_auth,
+    require_justified_change,
+    require_role,
 )
 from middleware.db import with_db
 from routes.admin import admin_bp
@@ -189,7 +191,7 @@ def get_item(item_id):
 
 @admin_bp.route("/items", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("items")
+@require_role("ADMIN")  # só o administrador cadastra material novo
 @validate_body(CreateItemRequest)
 @with_db
 def create_item(validated):
@@ -230,6 +232,7 @@ def create_item(validated):
 @admin_bp.route("/items/<int:item_id>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("items")
+@require_justified_change
 @validate_body(UpdateItemRequest)
 @with_db
 def update_item(item_id, validated):
@@ -269,6 +272,7 @@ def update_item(item_id, validated):
 @admin_bp.route("/items/<int:item_id>/archive", methods=["POST"])
 @require_auth
 @require_admin_or_page_permission("items")
+@require_justified_change
 @with_db
 def archive_item(item_id):
     existing = g.db.execute(text("SELECT item_id, is_active FROM items WHERE item_id = :iid"), {"iid": item_id}).fetchone()

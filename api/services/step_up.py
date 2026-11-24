@@ -20,10 +20,17 @@ PURPOSES = {
     "armazenagem": "Armazenagem",
     "retirada": "Retirada",
     "exclusao-usuario": "Exclusão de usuário",
+    "historico": "Histórico",
+    "aprovacao-retirada": "Aprovação de retirada",
+    "alteracao": "Alteração de dados",
 }
 # Liberação que vale para uma única ação: depois de usada, é preciso confirmar de novo.
-SINGLE_USE = {"exclusao-usuario"}
+SINGLE_USE = {"exclusao-usuario", "aprovacao-retirada"}
 WINDOW_MINUTES = 15
+# Liberação curta que não se renova com o uso: vale para salvar a alteração que a pediu (que pode
+# levar mais de um pedido, como os dados e as permissões de um usuário). O painel pede o celular
+# de novo a cada vez que salva.
+FIXED_WINDOW_SECONDS = {"alteracao": 120}
 
 
 def label(purpose: str) -> str:
@@ -33,15 +40,19 @@ def label(purpose: str) -> str:
 def seconds_left(db, jti, purpose: str) -> int:
     if not jti or not login_approval._uuid(jti):
         return 0
+    fixed = FIXED_WINDOW_SECONDS.get(purpose)
     value = db.execute(
         text(
             """
-            SELECT GREATEST(0, EXTRACT(EPOCH FROM
-                     last_used_at + make_interval(mins => :w) - NOW()))::int
+            SELECT GREATEST(0, EXTRACT(EPOCH FROM CASE
+                     WHEN CAST(:fixed AS int) IS NULL
+                       THEN last_used_at + make_interval(mins => :w)
+                     ELSE granted_at + make_interval(secs => CAST(:fixed AS int))
+                   END - NOW()))::int
             FROM sea_step_up WHERE jti = CAST(:j AS uuid) AND purpose = :p
             """
         ),
-        {"j": str(jti), "p": purpose, "w": WINDOW_MINUTES},
+        {"j": str(jti), "p": purpose, "w": WINDOW_MINUTES, "fixed": fixed},
     ).scalar()
     return int(value or 0)
 

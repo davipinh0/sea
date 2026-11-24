@@ -2,7 +2,7 @@
 
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import bcrypt
 from flask import Response, g, jsonify, request
@@ -15,10 +15,12 @@ from constants import (
     BIN_STAGING, ACTION_ADJUST,
     ALL_OVERRIDE_KEYS,
     ALL_PAGE_KEYS,
+    COMPANY_TIMEZONE,
 )
 from middleware.auth_middleware import (
     require_admin_or_page_permission,
     require_auth,
+    require_justified_change,
     require_role,
     require_step_up,
 )
@@ -164,6 +166,7 @@ def create_user(validated):
 @admin_bp.route("/users/<int:user_id>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("users")
+@require_justified_change
 @validate_body(UpdateUserRequest)
 @with_db
 def update_user(user_id, validated):
@@ -488,6 +491,7 @@ def get_user_permissions(user_id):
 @admin_bp.route("/users/<int:user_id>/permissions", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("users")
+@require_justified_change
 @validate_body(UpdateUserPagePermissionsRequest)
 @with_db
 def replace_user_permissions(user_id, validated):
@@ -573,6 +577,7 @@ def replace_user_permissions(user_id, validated):
 
 @admin_bp.route("/audit-log", methods=["GET"])
 @require_auth
+@require_step_up("historico")  # no painel, o histórico abre só depois da confirmação no celular
 @require_admin_or_page_permission("audit-log")
 @with_db
 def list_audit_log():
@@ -592,17 +597,26 @@ def list_audit_log():
     item_id_arg = request.args.get("item_id", type=int)
 
     if action_type:
-        where_clauses.append("al.action_type = :action_type")
-        params["action_type"] = action_type
+        # Ações com o mesmo nome na tela chegam juntas, separadas por vírgula.
+        where_clauses.append("al.action_type = ANY(:action_types)")
+        params["action_types"] = [a.strip() for a in action_type.split(",") if a.strip()][:20]
     if user_id:
-        where_clauses.append("al.user_id = :filter_user_id")
-        params["filter_user_id"] = user_id
-    if start_date:
-        where_clauses.append("al.created_at >= :start_date")
-        params["start_date"] = start_date
-    if end_date:
-        where_clauses.append("al.created_at <= :end_date")
-        params["end_date"] = end_date
+        # Parte do usuário ou do nome, sem diferença de maiúsculas.
+        where_clauses.append(
+            "(al.user_id ILIKE :filter_user OR EXISTS (SELECT 1 FROM users u "
+            "WHERE u.username = al.user_id AND u.full_name ILIKE :filter_user))"
+        )
+        params["filter_user"] = f"%{user_id.strip()}%"
+    # Datas do dia local da empresa (SEA_COMPANY_TIMEZONE), com o dia final inteiro.
+    for name, value, op in (("start_date", start_date, ">="), ("end_date", end_date, "<=")):
+        if not value:
+            continue
+        try:
+            params[name] = date.fromisoformat(value)
+        except ValueError:
+            return jsonify({"error": "Data inválida (use AAAA-MM-DD).", "user_facing": True}), 400
+        where_clauses.append(f"(al.created_at AT TIME ZONE :company_tz)::date {op} :{name}")
+        params["company_tz"] = COMPANY_TIMEZONE
     if item_id_arg:
         where_clauses.append(
             "((al.entity_type = 'ITEM' AND al.entity_id = :item_id_filter) "
@@ -910,6 +924,7 @@ def get_setting(setting_key):
 @admin_bp.route("/settings", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("settings")
+@require_justified_change
 @validate_body(UpdateSettingsRequest)
 @with_db
 def update_settings(validated):

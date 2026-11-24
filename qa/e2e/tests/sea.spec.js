@@ -163,3 +163,35 @@ test.describe('Usuários', () => {
     });
   });
 });
+
+test.describe('Alteração com motivo', () => {
+  test('salvar uma alteração pede o motivo e o celular, e o motivo vai para o histórico', async ({ page, request }) => {
+    const admin = await apiLogin(request, 'qa.admin');
+    const username = `qa.alterar.${Date.now()}`;
+    const created = await call(request, 'POST', '/api/admin/users', admin, {
+      username, password: 'Senha123', full_name: 'Nome Antigo (fictício)', role: 'USER', warehouse_ids: [1],
+      allowed_functions: ['receive'],
+    });
+    expect(created.status).toBe(201);
+    const reason = `Nome corrigido a pedido do RH ${Date.now()}`;
+
+    await uiLogin(page, 'qa.gestor');
+    await page.goto('/users');
+    await page.getByRole('row', { name: new RegExp(username.replace(/\./g, '\.')) }).getByLabel('Editar').click();
+    await page.locator('#user-full-name').fill('Nome Corrigido (fictício)');
+    await page.getByRole('button', { name: 'Salvar' }).click();
+
+    await expect(page.getByText('Motivo da alteração')).toBeVisible();
+    await page.getByLabel('Motivo', { exact: true }).fill(reason);
+    await page.getByRole('button', { name: 'Confirmar no celular' }).click();
+    await expect(page.getByText(/Confirme no app SEA do seu celular/)).toBeVisible();
+    await approveOnPhone(request, 'qa.gestor');
+    await expect(page.getByText('Motivo da alteração')).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByRole('row', { name: new RegExp(username.replace(/\./g, '\\.')) }))
+      .toContainText('Nome Corrigido (fictício)', { timeout: 15_000 });
+
+    const log = await call(request, 'GET', '/api/admin/audit-log?action_type=CHANGE_JUSTIFIED&user_id=qa.gestor', admin);
+    expect(log.status).toBe(200);
+    expect(log.body.entries.some((e) => JSON.stringify(e.details).includes(reason))).toBe(true);
+  });
+});

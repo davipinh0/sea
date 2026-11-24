@@ -69,8 +69,12 @@ class TestCatalogue:
         outsider = _user(client, conn, "sea.cat.2", ["retirada"], [WAREHOUSE])
         assert client.get("/api/sea/catalogo", headers=outsider).status_code == 403
 
+        # Quem cuida do cadastro altera e exclui; material novo, só o administrador cadastra.
         keeper = _user(client, conn, "sea.cat.3", ["material-catalog"], [WAREHOUSE])
-        assert _add(client, keeper, material_code="CAT-NOVO").status_code == 201
+        assert _add(client, keeper, material_code="CAT-NOVO").status_code == 403
+        assert _add(client, auth_headers, material_code="CAT-NOVO").status_code == 201
+        assert client.put("/api/sea/catalogo/CAT-NOVO", headers=keeper,
+                          json={"description": "Novo"}).status_code == 200
         assert client.delete("/api/sea/catalogo/CAT-NOVO", headers=keeper).status_code == 200
 
     def test_permission_is_offered_in_the_user_grants(self, client, auth_headers, sp12):

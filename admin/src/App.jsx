@@ -20,6 +20,7 @@ import ArmazenagemSP12 from './pages/ArmazenagemSP12.jsx';
 import PurchaseOrders from './pages/PurchaseOrders.jsx';
 import Retirada from './pages/Retirada.jsx';
 import ProcessGate from './components/ProcessGate.jsx';
+import ChangeConfirmDialog from './components/ChangeConfirmDialog.jsx';
 import TerminalRetirada from './pages/TerminalRetirada.jsx';
 import TerminalInicio from './pages/TerminalInicio.jsx';
 import Users from './pages/Users.jsx';
@@ -94,6 +95,7 @@ function page(element, fallbackMessage) {
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route path="/login" element={<Login />} />
       {/* Terminal em tela cheia, sem o menu do painel. Abre com o usuário do terminal ou um
@@ -115,7 +117,8 @@ export default function App() {
           <Route path="sp12" element={<EstoqueSP12 />} />
           <Route path="materiais" element={<Items />} />
           <Route path="enderecos" element={<Bins />} />
-          <Route path="historico" element={<AuditLog />} />
+          {/* Histórico de materiais e log de auditoria: só depois da confirmação no celular. */}
+          <Route path="historico" element={<ProcessGate purpose="historico" label="Histórico"><AuditLog /></ProcessGate>} />
         </Route>
 
         <Route path="/recebimento" element={page(<OnlyAtRecebimento><SectionTabs basePath="/recebimento" tabs={RECEBIMENTO_TABS} /></OnlyAtRecebimento>, 'Não foi possível carregar o recebimento.')}>
@@ -149,5 +152,8 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    {/* Motivo e celular antes de salvar uma alteração (api.js abre quando a API pede). */}
+    <ChangeConfirmDialog />
+    </>
   );
 }

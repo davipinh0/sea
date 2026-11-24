@@ -99,6 +99,8 @@ services:
       SEA_IDENTITY_PROVIDER: ${SEA_IDENTITY_PROVIDER:-local}
       # Onde o recebimento procura a OT (base = base do SAP dentro do SEA).
       SEA_OT_SOURCE: ${SEA_OT_SOURCE:-base}
+      # Fuso da empresa: datas dos filtros (ex.: histórico) são do dia local.
+      SEA_COMPANY_TIMEZONE: ${SEA_COMPANY_TIMEZONE:-America/Sao_Paulo}
     ports:
       # V-040: bind to loopback by default so a misconfigured public-cloud
       # host does not expose the API to the internet. Deployments that

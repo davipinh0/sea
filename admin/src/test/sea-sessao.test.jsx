@@ -8,7 +8,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth.jsx';
 import {
-  DUPLICATE_MESSAGE, IDLE_MESSAGE, TAB_KEY, askOtherTabs, hasTabSession, isDuplicateTab, listenOtherTabs,
+  ANOTHER_TAB_MESSAGE, DUPLICATE_MESSAGE, IDLE_MESSAGE, TAKEOVER_MESSAGE, announceTakeover, askOtherTabs, hasTabSession, isDuplicateTab, listenOtherTabs,
   markTabSession, tabId, watchIdle,
 } from '../utils/sessionGuard.js';
 
@@ -72,15 +72,32 @@ describe('opening the panel', () => {
     expect(calledLogout(fetchSpy)).toBe(false);
   });
 
-  it('a new tab keeps the session when another panel tab is open', async () => {
+  // Regressão (24/11/2026): uma aba nova com o link copiado entrava direto, com os processos já
+  // liberados no celular pela outra aba. O painel funciona em uma aba por vez.
+  it('a new tab is blocked while the panel is open in another tab, without ending it', async () => {
     const other = new BroadcastChannel('sea-auth');
     other.onmessage = (event) => { if (event.data?.type === 'who') other.postMessage({ type: 'alive' }); };
-    const fetchSpy = stubFetch(200);
+    try {
+      const fetchSpy = stubFetch(200);
+      renderPanel();
+      await waitFor(() => expect(screen.getByText('deslogado')).toBeInTheDocument());
+      expect(calledLogout(fetchSpy)).toBe(false);
+      expect(hasTabSession()).toBe(false);
+      expect(sessionStorage.getItem('login_flash_message')).toBe(ANOTHER_TAB_MESSAGE);
+    } finally {
+      other.close();
+    }
+  });
+
+  it('signing in on another tab signs this one out', async () => {
+    markTabSession();
+    stubFetch(200);
     renderPanel();
     await waitFor(() => expect(screen.getByText('logado:admin')).toBeInTheDocument());
-    expect(calledLogout(fetchSpy)).toBe(false);
-    expect(sessionStorage.getItem(TAB_KEY)).toMatch(/.{8,}/);
-    other.close();
+    announceTakeover();
+    await waitFor(() => expect(screen.getByText('deslogado')).toBeInTheDocument());
+    expect(hasTabSession()).toBe(false);
+    expect(sessionStorage.getItem('login_flash_message')).toBe(TAKEOVER_MESSAGE);
   });
 
   // Regressão: "Duplicar" no navegador copia o sessionStorage, e a cópia abria na mesma tela.

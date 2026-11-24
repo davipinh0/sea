@@ -5,13 +5,16 @@ locais do usuário.
 import base64
 from functools import wraps
 
+from constants import OVERRIDE_OT_DELETE
 from flask import Blueprint, g, jsonify, request
 from middleware.auth_middleware import (
     check_warehouse_access,
     require_admin_or_page_permission,
     require_auth,
+    require_justified_change,
     require_role,
     require_step_up,
+    step_up_denied,
     warehouse_scope_clause,
 )
 from middleware.db import with_db
@@ -911,6 +914,7 @@ def registrar_recebimento(validated):
             username=g.current_user["username"],
             source=validated.source,
             unrecognized=validated.unrecognized,
+            allow_new=g.current_user.get("role") == "ADMIN",
         )
     except sea.SeaError as exc:
         g.db.rollback()
@@ -1005,7 +1009,7 @@ def consultar_catalogo(code):
 
 @sea_bp.route("/catalogo", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission(CATALOG_PAGE)
+@require_role("ADMIN")
 @validate_body(CreateCatalogMaterialRequest)
 @with_db
 def criar_material_catalogo(validated):
@@ -1017,6 +1021,7 @@ def criar_material_catalogo(validated):
 @sea_bp.route("/catalogo/<path:code>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission(CATALOG_PAGE)
+@require_justified_change
 @validate_body(UpdateCatalogMaterialRequest)
 @with_db
 def alterar_material_catalogo(code, validated):
@@ -1027,6 +1032,7 @@ def alterar_material_catalogo(code, validated):
 @sea_bp.route("/catalogo/<path:code>", methods=["DELETE"])
 @require_auth
 @require_admin_or_page_permission(CATALOG_PAGE)
+@require_justified_change
 @with_db
 def excluir_material_catalogo(code):
     return _catalog_change(sap_base.delete_material, code.strip(), message="Material excluído")
@@ -1034,7 +1040,7 @@ def excluir_material_catalogo(code):
 
 @sea_bp.route("/sap/ots", methods=["POST"])
 @require_auth
-@require_any_page(*RECEIVING_PAGE_KEYS)
+@require_role("ADMIN")
 @validate_body(CreateBaseOtRequest)
 @with_db
 def criar_ot_na_base(validated):
@@ -1222,9 +1228,11 @@ def importar_base_sap(kind):
 
 @sea_bp.route("/ots/<int:po_id>", methods=["DELETE"])
 @require_auth
-@require_role("ADMIN")
+@require_admin_or_page_permission(OVERRIDE_OT_DELETE)
+@require_justified_change
 @with_db
 def excluir_ot(po_id):
+    """Só o administrador ou quem recebeu a permissão extra "Excluir OT"."""
     try:
         result = sea.delete_ot(g.db, po_id, g.current_user["username"])
     except sea.SeaError as exc:
@@ -1237,6 +1245,7 @@ def excluir_ot(po_id):
 @sea_bp.route("/materiais/<int:item_id>", methods=["DELETE"])
 @require_auth
 @require_role("ADMIN")
+@require_justified_change
 @with_db
 def excluir_material(item_id):
     try:
@@ -1262,6 +1271,7 @@ def _ot_change(fn, *args, message):
 @sea_bp.route("/ots/<int:po_id>/dados", methods=["PUT"])
 @require_auth
 @require_any_page(*RECEIVING_PAGE_KEYS)
+@require_justified_change
 @validate_body(UpdateOtDataRequest)
 @with_db
 def corrigir_ot(po_id, validated):
@@ -1272,6 +1282,7 @@ def corrigir_ot(po_id, validated):
 @sea_bp.route("/ots/<int:po_id>/materiais/<int:po_line_id>", methods=["PUT"])
 @require_auth
 @require_any_page(*RECEIVING_PAGE_KEYS)
+@require_justified_change
 @validate_body(UpdateOtMaterialRequest)
 @with_db
 def corrigir_material(po_id, po_line_id, validated):
@@ -1283,6 +1294,7 @@ def corrigir_material(po_id, po_line_id, validated):
 @sea_bp.route("/ots/<int:po_id>/materiais/<int:po_line_id>", methods=["DELETE"])
 @require_auth
 @require_any_page(*RECEIVING_PAGE_KEYS)
+@require_justified_change
 @with_db
 def remover_material(po_id, po_line_id):
     return _ot_change(sea.remove_ot_material, po_id, po_line_id,
@@ -1651,6 +1663,9 @@ def _transition(withdrawal_id, fn, *args, message, own=False, **kwargs):
     return jsonify({"message": message, "withdrawal": current[0] if current else None}), result
 
 
+APPROVAL_STEP_UP = "aprovacao-retirada"
+
+
 @sea_bp.route("/retiradas/<int:withdrawal_id>/avaliar", methods=["POST"])
 @require_auth
 @require_step_up("retirada")
@@ -1658,10 +1673,19 @@ def _transition(withdrawal_id, fn, *args, message, own=False, **kwargs):
 @validate_body(EvaluateWithdrawalRequest)
 @with_db
 def avaliar(withdrawal_id, validated):
+    # Aprovar no painel pede a confirmação no celular a cada retirada (vale para uma aprovação só).
+    if validated.approve:
+        denied = step_up_denied(APPROVAL_STEP_UP)
+        if denied is not None:
+            return denied
     resp, _ = _transition(
         withdrawal_id, sea.evaluate, g.current_user["username"], validated.approve,
         validated.note,
         message="Retirada aprovada" if validated.approve else "Retirada negada")
+    # Erro vem como (resposta, status); sucesso, só a resposta.
+    if validated.approve and not isinstance(resp, tuple):
+        step_up.revoke(g.db, g.current_user.get("jti"), APPROVAL_STEP_UP)
+        g.db.commit()
     notifications.dispatch(g.db)
     return resp
 

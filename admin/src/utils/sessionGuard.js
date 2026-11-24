@@ -10,6 +10,8 @@ export const TAB_KEY = 'sea_tab_session';
 export const FLASH_KEY = 'login_flash_message';
 export const IDLE_LIMIT_MS = 15 * 60 * 1000;
 export const IDLE_MESSAGE = 'Sua sessão foi encerrada por inatividade. Entre novamente.';
+export const ANOTHER_TAB_MESSAGE = 'O SEA já está aberto em outra aba. Continue nela; se entrar aqui, a outra aba será desconectada.';
+export const TAKEOVER_MESSAGE = 'O SEA foi aberto em outra aba e esta foi desconectada. O painel funciona em uma aba por vez.';
 export const DUPLICATE_MESSAGE = 'Esta aba é uma cópia de outra aba do painel e foi bloqueada. Continue na aba original ou entre novamente aqui.';
 const CHANNEL = 'sea-auth';
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'];
@@ -88,7 +90,7 @@ export function isDuplicateTab(timeoutMs = 400) {
   });
 }
 
-export function listenOtherTabs({ onLogout }) {
+export function listenOtherTabs({ onLogout, onTakeover = onLogout }) {
   const channel = openChannel();
   if (!channel) return () => {};
   channel.onmessage = (event) => {
@@ -97,8 +99,17 @@ export function listenOtherTabs({ onLogout }) {
       channel.postMessage({ type: 'owned', id: event.data.id });
     }
     if (event.data?.type === 'logout') onLogout();
+    if (event.data?.type === 'takeover' && hasTabSession()) onTakeover();
   };
   return () => channel.close();
+}
+
+// Esta aba entrou: as outras abas do painel são desconectadas (uma aba por vez).
+export function announceTakeover() {
+  const channel = openChannel();
+  if (!channel) return;
+  channel.postMessage({ type: 'takeover' });
+  channel.close();
 }
 
 export function announceLogout() {

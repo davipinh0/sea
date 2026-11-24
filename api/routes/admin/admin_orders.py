@@ -40,6 +40,7 @@ from middleware.auth_middleware import (
     has_override,
     require_admin_or_page_permission,
     require_auth,
+    require_justified_change,
     require_role,
     require_step_up,
 )
@@ -223,7 +224,7 @@ def get_purchase_order(po_id):
 
 @admin_bp.route("/purchase-orders", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("purchase-orders")
+@require_role("ADMIN")  # só o administrador cadastra OT nova
 @validate_body(CreatePurchaseOrderRequest)
 @with_db
 def create_purchase_order(validated):
@@ -318,6 +319,7 @@ def _emit_po_edit(db, *, po_id, po_external_id, po_number, warehouse_id,
 @admin_bp.route("/purchase-orders/<int:po_id>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("purchase-orders")
+@require_justified_change
 @validate_body(UpdatePurchaseOrderRequest)
 @with_db
 def update_purchase_order(po_id, validated):
@@ -430,7 +432,7 @@ def update_purchase_order(po_id, validated):
 
 @admin_bp.route("/purchase-orders/<int:po_id>/lines", methods=["POST"])
 @require_auth
-@require_admin_or_page_permission("purchase-orders")
+@require_role("ADMIN")  # material novo numa OT: só o administrador
 @validate_body(AddPOLineRequest)
 @with_db
 def add_purchase_order_line(po_id, validated):
@@ -534,6 +536,7 @@ def add_purchase_order_line(po_id, validated):
 @admin_bp.route("/purchase-orders/<int:po_id>/lines/<int:po_line_id>", methods=["PATCH"])
 @require_auth
 @require_admin_or_page_permission("purchase-orders")
+@require_justified_change
 @validate_body(UpdatePOLineRequest)
 @with_db
 def update_purchase_order_line(po_id, po_line_id, validated):
@@ -632,6 +635,7 @@ def update_purchase_order_line(po_id, po_line_id, validated):
 @admin_bp.route("/purchase-orders/<int:po_id>/lines/<int:po_line_id>", methods=["DELETE"])
 @require_auth
 @require_admin_or_page_permission("purchase-orders")
+@require_justified_change
 @with_db
 def delete_purchase_order_line(po_id, po_line_id):
     po = g.db.execute(

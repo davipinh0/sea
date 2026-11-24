@@ -11,7 +11,7 @@ import NovaOtModal from '../components/NovaOtModal.jsx';
 import { OtDetailModal, OtTypeTag } from '../components/sea.jsx';
 import { useAuth } from '../auth.jsx';
 import { readError } from '../utils/sea.js';
-import { canExportCsv } from '../utils/permissions.js';
+import { canDeleteOt, canExportCsv } from '../utils/permissions.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 
 const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
@@ -381,7 +381,7 @@ export default function PurchaseOrders() {
     { key: 'actions', label: '', render: (r) => (
       <div style={{ display: 'flex', gap: 4 }}>
         <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(r); }} aria-label="Editar" title="Editar">&#9998;</button>
-        {isAdmin && r.order_type && (
+        {canDeleteOt(user) && r.order_type && (
           <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleting(r); }} aria-label={`Excluir ordem ${r.po_number}`} title="Excluir">&#128465;</button>
         )}
       </div>
@@ -391,7 +391,7 @@ export default function PurchaseOrders() {
   return (
     <div>
       <PageHeader title="Ordens">
-        <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>Nova ordem</button>
+        {isAdmin && <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>Nova ordem</button>}
       </PageHeader>
       {deleteError && <div className="form-error" role="alert" style={{ marginBottom: 12 }}>{deleteError}</div>}
 
@@ -652,7 +652,7 @@ export default function PurchaseOrders() {
               <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nenhuma linha ainda.</p>
             )}
 
-            {!EDIT_LOCKED_STATUSES.has(editing.status) && (
+            {isAdmin && !EDIT_LOCKED_STATUSES.has(editing.status) && (
               <div style={{
                 marginTop: 12, padding: 12,
                 background: 'var(--surface)',

@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from './api.js';
 import { friendlyError } from './utils/friendlyError.js';
 import {
-  DUPLICATE_MESSAGE, IDLE_MESSAGE, announceLogout, askOtherTabs, clearTabSession, hasTabSession,
+  ANOTHER_TAB_MESSAGE, DUPLICATE_MESSAGE, IDLE_MESSAGE, TAKEOVER_MESSAGE, announceLogout, announceTakeover,
+  askOtherTabs, clearTabSession, hasTabSession,
   isDuplicateTab, listenOtherTabs, markTabSession, setLoginFlash, watchIdle,
 } from './utils/sessionGuard.js';
 import { isTerminalAccount } from './utils/permissions.js';
@@ -23,10 +24,11 @@ export function AuthProvider({ children }) {
     // role === 'ADMIN' guard would silently drop a valid USER session
     // and force them back to the login screen.
     //
-    // SEA (mig 093): the session belongs to the tab that signed in. A new
-    // tab, a reopened browser or a restored tab only keeps it when another
-    // open panel tab vouches for it; otherwise it is ended here. A tab duplicated by the browser
-    // goes to the login without ending the original tab's session.
+    // SEA (mig 093): the session belongs to the tab that signed in. The panel works in one tab at
+    // a time: a tab duplicated by the browser, or a new tab opened with a copied link while the
+    // panel is open in another tab, goes to the login without the session (and without the
+    // processes released on the phone) and without ending the other tab. With no other panel tab
+    // open, a reopened browser or a restored tab has its session ended here.
     let cancelled = false;
     (async () => {
       try {
@@ -39,7 +41,10 @@ export function AuthProvider({ children }) {
             setLoginFlash(DUPLICATE_MESSAGE);
             return;
           }
-        } else if (!(await askOtherTabs())) {
+        } else if (await askOtherTabs()) {
+          setLoginFlash(ANOTHER_TAB_MESSAGE);
+          return;
+        } else {
           await api.post('/auth/logout', {});
           return;
         }
@@ -67,6 +72,7 @@ export function AuthProvider({ children }) {
     if (!user) return undefined;
     const stopTabs = listenOtherTabs({
       onLogout: () => { clearTabSession(); setUser(null); },
+      onTakeover: () => { clearTabSession(); setLoginFlash(TAKEOVER_MESSAGE); setUser(null); },
     });
     // O usuário do terminal não sai por inatividade, porque o terminal fica esperando o próximo
     // funcionário.
@@ -113,6 +119,7 @@ export function AuthProvider({ children }) {
     const me = await api.get('/auth/me');
     const full = me && me.ok ? await me.json() : data.user;
     markTabSession();
+    announceTakeover();
     setUser(full);
     return full;
   }

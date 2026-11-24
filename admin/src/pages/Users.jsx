@@ -59,6 +59,7 @@ export const PAGE_GROUPS = [
     isOverride: true,
     pages: [
       { key: 'export-csv', label: 'Exportar CSV' },
+      { key: 'excluir-ot', label: 'Excluir OT' },
     ],
   },
 ];

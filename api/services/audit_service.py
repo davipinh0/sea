@@ -23,6 +23,10 @@ def write_audit_log(db, action_type, entity_type, entity_id, user_id, warehouse_
     proof = g.get("auth_proof") if has_request_context() else None
     if proof:
         details = {**(details or {}), "autenticacao": proof}
+    # Alteração feita no painel: o motivo informado por quem salvou (require_justified_change).
+    reason = g.get("change_reason") if has_request_context() else None
+    if reason:
+        details = {**(details or {}), "motivo": reason}
     result = db.execute(
         text(
             """

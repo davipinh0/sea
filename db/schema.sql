@@ -2511,3 +2511,23 @@ ALTER TABLE items DROP COLUMN IF EXISTS upc, DROP COLUMN IF EXISTS mpn;
 
 -- mig 101: índice do estoque pelo lote (o número da OT), usado em quase toda tela do SEA.
 CREATE INDEX IF NOT EXISTS ix_inventory_lot ON inventory (lot_number, item_id);
+
+-- mig 103: processos novos liberados pelo celular (histórico e aprovação de retirada).
+ALTER TABLE sea_login_challenges DROP CONSTRAINT IF EXISTS sea_login_challenges_purpose_check;
+ALTER TABLE sea_login_challenges ADD CONSTRAINT sea_login_challenges_purpose_check
+    CHECK (purpose IS NULL OR purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario',
+                                          'historico', 'aprovacao-retirada'));
+ALTER TABLE sea_step_up DROP CONSTRAINT IF EXISTS sea_step_up_purpose_check;
+ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
+    CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario',
+                       'historico', 'aprovacao-retirada'));
+
+-- mig 104: alteração no painel com motivo e confirmação no celular.
+ALTER TABLE sea_login_challenges DROP CONSTRAINT IF EXISTS sea_login_challenges_purpose_check;
+ALTER TABLE sea_login_challenges ADD CONSTRAINT sea_login_challenges_purpose_check
+    CHECK (purpose IS NULL OR purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario',
+                                          'historico', 'aprovacao-retirada', 'alteracao'));
+ALTER TABLE sea_step_up DROP CONSTRAINT IF EXISTS sea_step_up_purpose_check;
+ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
+    CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario',
+                       'historico', 'aprovacao-retirada', 'alteracao'));

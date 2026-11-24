@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { AppState, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import client, { setLogoutHandler, initApiUrl } from '../api/client';
-import { BIOMETRIC_USER_KEY, sameUser, shouldLock, withoutLock } from './appLock';
+import { BIOMETRIC_USER_KEY, authenticate, sameUser, shouldLock, withoutLock } from './appLock';
 import { clearIdentityConfirmed } from './identityProof';
 import { getDeviceToken } from '../notifications';
 import {
@@ -26,6 +26,11 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const appState = useRef(AppState.currentState);
   const [locked, setLocked] = useState(false);
+  // A tela de bloqueio pede a digital quando o app volta para a frente; esse aviso pode chegar logo
+  // depois de desbloquear. Sem esta conferência abria um pedido a mais, que ficava aberto e fazia o
+  // Android recusar o seguinte (o "SIM, SOU EU" do login no terminal).
+  const lockedRef = useRef(false);
+  useEffect(() => { lockedRef.current = locked; }, [locked]);
   const [needsEnrollment, setNeedsEnrollment] = useState(false);
   const lockEnabled = useRef(false);
 
@@ -132,7 +137,7 @@ export function AuthProvider({ children }) {
   };
 
   const enrollFingerprint = useCallback(async () => {
-    const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+    const result = await withoutLock(() => authenticate(LocalAuthentication, {
       promptMessage: 'Ativar o bloqueio do SEA',
       cancelLabel: 'Cancelar',
       disableDeviceFallback: false,
@@ -145,7 +150,8 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const unlockWithFingerprint = useCallback(async () => {
-    const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+    if (!lockedRef.current) return { success: true };
+    const result = await withoutLock(() => authenticate(LocalAuthentication, {
       promptMessage: 'Desbloquear o SEA',
       cancelLabel: 'Usar senha do SEA',
       // O PIN ou padrão do celular também destrava (celular sem digital, ou dedo que não é lido).

@@ -17,6 +17,9 @@ vi.mock('../api.js', () => ({
   },
 }));
 
+let currentUser = { username: 'admin', role: 'ADMIN' };
+vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
+
 import CadastroMateriais from '../pages/CadastroMateriais.jsx';
 import NovaOtSapModal from '../components/NovaOtSapModal.jsx';
 import { announceChange, useLiveRefresh } from '../utils/useLiveRefresh.js';
@@ -31,7 +34,15 @@ beforeEach(() => {
 
 describe('Cadastro de materiais', () => {
   beforeEach(() => {
+    currentUser = { username: 'admin', role: 'ADMIN' };
     apiGet.mockImplementation(() => ok({ materials: [WIRE], total: 1, page: 1, pages: 1 }));
+  });
+
+  it('only the administrator sees "Novo material"', async () => {
+    currentUser = { username: 'cadastro', role: 'USER', allowed_pages: ['material-catalog'] };
+    render(<CadastroMateriais />);
+    expect(await screen.findByText('Arame de solda')).toBeInTheDocument();
+    expect(screen.queryByText('Novo material')).toBeNull();
   });
 
   it('lists the catalogue with unit and box weight', async () => {

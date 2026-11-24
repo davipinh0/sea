@@ -48,12 +48,16 @@ const CATEGORY_TAG_CLASS = {
   success: 'tag-success',
 };
 
-const ACTION_OPTIONS = [
+// Só as ações que o SEA registra. Ações com o mesmo nome na tela viram uma opção só, que filtra
+// todas elas (antes só a primeira entrava no filtro e as outras sumiam).
+export const ACTION_OPTIONS = [
   { value: '', label: 'Todas as ações' },
-  // Só as ações que o SEA registra.
-  ...Object.keys(ACTION_LABELS)
-    .map((a) => ({ value: a, label: actionLabel(a) }))
-    .filter((o, i, all) => all.findIndex((x) => x.label === o.label) === i)
+  ...Object.values(Object.keys(ACTION_LABELS).reduce((groups, action) => {
+    const label = actionLabel(action);
+    (groups[label] ||= { label, actions: [] }).actions.push(action);
+    return groups;
+  }, {}))
+    .map((g) => ({ value: g.actions.join(','), label: g.label }))
     .sort((a, b) => a.label.localeCompare(b.label)),
 ];
 
@@ -443,7 +447,8 @@ function FullAuditLogView() {
           <label style={FILTER_LABEL_STYLE}>Usuário</label>
           <input
             className="form-input"
-            placeholder="username"
+            placeholder="usuário ou nome"
+            aria-label="Usuário ou nome"
             value={filters.user_id}
             onChange={(e) => updateFilter('user_id', e.target.value)}
           />

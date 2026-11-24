@@ -203,11 +203,18 @@ Limites conhecidos do protótipo:
   do local que guarda o material; separar é dos usuários daquele local, e confirmar ou cancelar
   é de quem solicitou.
 
-* **Cadastro de materiais** (Sistema, permissão própria; migração `088`): criar, alterar e excluir
-  os materiais consultados ao montar uma OT. Ao informar o código (na aba SAP > Nova OT ou no
+* **Cadastro de materiais** (Sistema, permissão própria; migração `088`): alterar e excluir os
+  materiais consultados ao montar uma OT; **material novo só o administrador cadastra**. Ao informar o código (na aba SAP > Nova OT ou no
   recebimento pela etiqueta) o SEA traz descrição, unidade e peso por caixa.
-* **Nova OT** (Recebimento > SAP): monta uma OT na base com materiais do cadastro; ela passa a ser
-  encontrada no recebimento como as que vêm do SAP.
+* **Nova OT** (Recebimento > SAP, só administrador): monta uma OT na base com materiais do
+  cadastro; ela passa a ser encontrada no recebimento como as que vêm do SAP.
+* **Só o administrador cria OT e material**: Nova OT, Nova ordem (e linha nova em Ordens), Novo
+  material (Estoque > Materiais e Cadastro de materiais) e, no recebimento pela etiqueta, uma OT ou
+  um material que ainda não existem. Os demais recebem pela base do SAP ou numa OT já cadastrada,
+  com materiais já cadastrados (a API responde `403` com `admin_only`).
+* **Excluir OT** (Recebimento > Ordens): só o administrador ou quem recebeu a permissão extra
+  **Excluir OT** (Usuários > Permissões extras, chave `excluir-ot`); para os demais o botão não
+  aparece e a API responde `403`.
 * **Prateleiras**: todas são `GRANDE`, que aceita material de qualquer tamanho; `PEQUENO` fica
   restrito a material pequeno.
 * **Atualização automática**: as telas do painel se atualizam após qualquer mudança feita nele e
@@ -302,6 +309,20 @@ painel", o usuário confirma com a digital/PIN e a tela abre. A liberação vale
 painel e termina após 15 minutos sem uso (aí o painel pede de novo). Sem celular cadastrado o
 processo fica bloqueado. A API exige a liberação nas rotas do processo (`403 step_up_required`);
 o app e o terminal (token Bearer) não passam por essa trava, porque o app pede a digital/PIN.
+Também pedem a confirmação (migração `103`): o **Histórico** (Estoque > Histórico: histórico de
+materiais e log de auditoria), com a mesma janela de 15 minutos, e **cada aprovação de retirada**
+no painel, que vale para uma aprovação só (negar não pede o celular).
+
+**Alteração com motivo** (migração `104`, `require_justified_change`): no painel, salvar uma
+alteração pede o **motivo** (de 10 a 500 caracteres) e a confirmação no app SEA do celular, a cada
+vez que se salva. Vale para materiais (editar, arquivar, excluir), cadastro de materiais (alterar,
+excluir), OTs e ordens (dados, materiais da OT, linhas, excluir a OT), usuários (dados e
+permissões), endereços, locais e configurações. Sem o motivo a API responde `428` com
+`change_confirmation_required`; o painel abre a janela "Motivo da alteração", espera o celular e
+manda de novo com o motivo no cabeçalho `X-SEA-Motivo`. A liberação vale 2 minutos, sem renovar
+com o uso (o suficiente para salvar dados e permissões de um usuário juntos). O motivo vai para o
+log de auditoria: no registro da própria alteração e num registro **Alteração com motivo**
+(`CHANGE_JUSTIFIED`) com a rota. O app e o terminal (Bearer) não passam por essa janela.
 
 **Últimas movimentações e Histórico** (migração `094`): as movimentações do Painel aparecem só
 para administradores e quem tem a permissão **Histórico**. **Ocultar** recolhe a lista neste
@@ -347,6 +368,10 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   desbloqueio. Janelas de permissão do próprio app (câmera, notificações) não bloqueiam.
 - Desbloqueio pela digital ou pela senha da conta (conferida no servidor; senha errada mantém o
   bloqueio sem encerrar a sessão). "Sair da conta" encerra a sessão.
+- O Android recusa (`app_cancel`) um pedido de digital feito enquanto outro está aberto ou preso,
+  por exemplo o da tela de bloqueio ao abrir o app pela notificação de um login no terminal. Todo
+  pedido de digital passa por `authenticate` (`appLock.js`), que encerra o pedido antigo e tenta
+  de novo uma vez; a tela de bloqueio não pede a digital se o app já foi desbloqueado.
 - A sessão continua expirando em 8 horas; depois disso o login volta a ser com senha.
 
 **Login confirmado no celular** (migração `092`, `api/services/login_approval.py`):
@@ -381,9 +406,14 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   encerra a sessão no servidor: uma cópia do cookie ou do token deixa de valer na hora. Vale também
   para o terminal de retirada e para o app.
 - O cookie do painel é de sessão do navegador: fechar o navegador apaga o cookie.
-- A sessão pertence à aba que fez o login. Uma aba nova, o navegador reaberto ou uma aba
-  restaurada só continua logada se outra aba do painel estiver aberta; senão a sessão é encerrada
-  e aparece o login. Sair em uma aba tira todas as abas do painel.
+- A sessão pertence à aba que fez o login e o painel funciona **em uma aba por vez**. Uma aba
+  duplicada pelo navegador ou uma aba nova com o link copiado vai para o login ("O SEA já está
+  aberto em outra aba"), sem a sessão nem os processos liberados no celular, e sem derrubar a
+  outra. Entrar nessa aba desconecta a anterior. Navegador reaberto ou aba restaurada sem outra
+  aba aberta: a sessão é encerrada e aparece o login. Sair em uma aba tira todas as abas do painel.
+- Filtro do Histórico: ações com o mesmo nome entram juntas; o usuário aceita parte do usuário ou
+  do nome; as datas são do dia local da empresa (`SEA_COMPANY_TIMEZONE`, padrão
+  `America/Sao_Paulo`), com o dia final inteiro.
 - Inatividade: 15 minutos sem usar mouse/teclado no painel encerram a sessão ("Sua sessão foi
   encerrada por inatividade"). O servidor também encerra a sessão do painel que fica 15 minutos sem
   nenhuma requisição (por exemplo, navegador fechado); ajuste com `SEA_WEB_IDLE_MINUTES`.

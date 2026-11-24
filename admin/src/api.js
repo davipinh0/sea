@@ -1,4 +1,5 @@
 import { IDLE_MESSAGE, setLoginFlash } from './utils/sessionGuard.js';
+import { confirmChange, reasonHeader } from './utils/changeConfirm.js';
 
 const API_BASE = '/api';
 
@@ -16,7 +17,7 @@ async function apiFetch(path, options = {}) {
   // fetches (sidebar badges, navshell settings probes). Without it
   // every USER landing on Dashboard would see the modal fire on
   // page mount before they did anything explicit.
-  const { silentPermissionDenied = false, ...fetchOptions } = options;
+  const { silentPermissionDenied = false, justified = false, ...fetchOptions } = options;
   const headers = {
     'Content-Type': 'application/json',
     ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
@@ -34,6 +35,22 @@ async function apiFetch(path, options = {}) {
     } catch { /* non-JSON 401 */ }
     window.location.href = '/login';
     return;
+  }
+  // Alteração no painel: a API pede o motivo e a confirmação no celular. A janela do motivo
+  // pergunta, espera o celular e o pedido vai de novo, uma vez, com o motivo. Se a pessoa desiste,
+  // quem chamou recebe a resposta 428 e mostra a mensagem dela.
+  if (res.status === 428 && !justified) {
+    const peek = await res.clone().json().catch(() => ({}));
+    if (peek?.change_confirmation_required) {
+      const reason = await confirmChange({ method, path });
+      if (reason) {
+        return apiFetch(path, {
+          ...options,
+          justified: true,
+          headers: { ...(options.headers || {}), ...reasonHeader(reason) },
+        });
+      }
+    }
   }
   // P6.1: surface page-permission rejections via a window event so
   // Layout can render a "Permissions Error" modal wherever the user

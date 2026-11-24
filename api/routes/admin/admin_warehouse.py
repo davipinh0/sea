@@ -11,6 +11,7 @@ from middleware.auth_middleware import (
     require_admin_or_page_permission,
     require_any_page_permission,
     require_auth,
+    require_justified_change,
 )
 from middleware.db import with_db
 from routes.admin import VALID_BIN_TYPES, VALID_ZONE_TYPES, admin_bp
@@ -110,6 +111,7 @@ def create_warehouse(validated):
 @admin_bp.route("/warehouses/<int:warehouse_id>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("warehouses")
+@require_justified_change
 @validate_body(UpdateWarehouseRequest)
 @with_db
 def update_warehouse(warehouse_id, validated):
@@ -454,6 +456,7 @@ def create_bin(validated):
 @admin_bp.route("/bins/<int:bin_id>", methods=["PUT"])
 @require_auth
 @require_admin_or_page_permission("bins")
+@require_justified_change
 @validate_body(UpdateBinRequest)
 @with_db
 def update_bin(bin_id, validated):
@@ -496,6 +499,7 @@ def update_bin(bin_id, validated):
 @admin_bp.route("/bins/<int:bin_id>", methods=["DELETE"])
 @require_auth
 @require_admin_or_page_permission("bins")
+@require_justified_change
 @with_db
 def delete_bin(bin_id):
     existing = g.db.execute(text("SELECT bin_id, bin_code FROM bins WHERE bin_id = :bid"), {"bid": bin_id}).fetchone()

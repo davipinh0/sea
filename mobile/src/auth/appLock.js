@@ -34,6 +34,23 @@ export async function withoutLock(fn, releaseDelayMs = 700) {
   }
 }
 
+// O Android recusa com 'app_cancel', sem abrir nada, um pedido de digital feito enquanto outro
+// ainda está aberto ou ficou preso (por exemplo o da tela de bloqueio, ao abrir o app pela
+// notificação do login no terminal). O usuário via "Confirmação cancelada" sem ter cancelado.
+// Aqui o pedido antigo é encerrado e o novo é feito de novo, uma vez.
+export async function authenticate(localAuth, options, { retryDelayMs = 400 } = {}) {
+  const result = await localAuth.authenticateAsync(options);
+  if (result?.error !== 'app_cancel') return result;
+  try {
+    await localAuth.cancelAuthenticate();
+  } catch {
+    // Sem pedido para encerrar: tenta de novo mesmo assim.
+  }
+  // O aviso anterior leva um instante para fechar antes de o novo poder abrir.
+  await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  return localAuth.authenticateAsync(options);
+}
+
 export function shouldLock(nextState, { enabled }) {
   return !!enabled && nextState === 'background' && !isLockSuspended();
 }
@@ -59,8 +76,9 @@ export function biometricError(result) {
   switch (result.error) {
     case 'user_cancel':
     case 'system_cancel':
-    case 'app_cancel':
       return null;
+    case 'app_cancel':
+      return 'Outra confirmação do celular estava aberta. Toque de novo para confirmar.';
     case 'lockout':
       return 'Muitas tentativas com a digital. Aguarde ou use a senha.';
     case 'not_enrolled':
@@ -77,7 +95,6 @@ export function identityError(result) {
   switch (result?.error) {
     case 'user_cancel':
     case 'system_cancel':
-    case 'app_cancel':
       return 'Confirmação cancelada. Confirme com a digital ou o PIN do celular para continuar.';
     case 'passcode_not_set':
     case 'not_enrolled':

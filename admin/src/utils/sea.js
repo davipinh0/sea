@@ -56,6 +56,7 @@ export const OT_MATERIAL_FIELDS = [
 
 export const ACTION_LABELS = {
   RECEIVE: 'Recebimento',
+  CHANGE_JUSTIFIED: 'Alteração com motivo (confirmada no celular)',
   USER_PHOTO: 'Foto do usuário',
   LOGIN_APPROVAL_REQUESTED: 'Login aguardando o celular',
   LOGIN_APPROVED: 'Login confirmado no celular',
@@ -110,6 +111,7 @@ export const ENTITY_LABELS = {
   USER: 'Usuário',
   user: 'Usuário',
   SETTING: 'Configuração',
+  PAINEL: 'Painel',
 };
 
 const WORDS = {

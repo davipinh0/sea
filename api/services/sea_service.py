@@ -253,7 +253,7 @@ def material_conflict(db, po_id, material_code, lot_number):
 
 
 def register_ot_materials(db, *, warehouse_id, header, materials, username,
-                          source="ETIQUETA", unrecognized=()):
+                          source="ETIQUETA", unrecognized=(), allow_new=True):
     """Registra uma etiqueta: cria a OT se for nova e adiciona cada material.
     O recebedor nunca vem de quem chama: é o usuário que registra a entrega.
     Nada é sobrescrito. Campos vazios do cabeçalho são preenchidos; um valor que diverge do
@@ -288,6 +288,12 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
 
     divergences = []
     created = po is None
+    # Só o administrador cadastra OT ou material novos; os demais recebem o que já existe (base do
+    # SAP ou OT já cadastrada).
+    if created and not allow_new:
+        raise SeaError(
+            f"A OT {code} não está cadastrada. Só o administrador cadastra OT nova: receba pela "
+            "base do SAP ou peça ao administrador.", status=403, admin_only=True)
     if created:
         if not header.get("service_order_type"):
             raise SeaError(
@@ -369,6 +375,10 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
         item = db.execute(find_item, {"sku": sku}).fetchone()
         pack = pack_weight(m.get("uom"), m.get("pack_weight_kg"))
         item_id = None
+        if item is None and not allow_new:
+            raise SeaError(
+                f"O material {sku} não está cadastrado. Só o administrador cadastra material novo.",
+                status=403, admin_only=True, material_code=sku)
         if item is None:
             if not m.get("description"):
                 raise SeaError(

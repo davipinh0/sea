@@ -47,10 +47,21 @@ test('aba duplicada é bloqueada e a original continua', async ({ page, context 
   await copy.close();
 });
 
-test('aba nova com o painel aberto em outra continua valendo (regra anterior)', async ({ page, context }) => {
+// Regressão (24/11/2026): o link copiado numa aba nova entrava direto, com os processos já liberados
+// no celular pela outra aba. Agora o painel funciona em uma aba por vez.
+test('link copiado para outra aba não entra; a aba original continua', async ({ page, context }) => {
   await uiLogin(page, 'qa.admin');
+  await page.goto('/users');
+  await expect(page.getByRole('button', { name: 'Novo usuário' })).toBeVisible();
+
   const other = await context.newPage();
   await other.goto('/users');
-  await expect(other.getByRole('button', { name: 'Novo usuário' })).toBeVisible();
+  await expect(other).toHaveURL(/\/login$/);
+  await expect(other.getByText(/já está aberto em outra aba/)).toBeVisible();
+  await expect(other.getByRole('button', { name: 'Novo usuário' })).toHaveCount(0);
+  await other.screenshot({ path: 'relatorio/aba-nova-bloqueada.png' });
   await other.close();
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Novo usuário' })).toBeVisible();
 });

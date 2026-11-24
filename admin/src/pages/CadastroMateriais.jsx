@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
 import { readError } from '../utils/sea.js';
@@ -11,6 +12,8 @@ const UNITS = ['PC', 'KG', 'PAR'];
 const EMPTY = { material_code: '', description: '', uom: '', pack_weight_kg: '' };
 
 export default function CadastroMateriais() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -68,7 +71,8 @@ export default function CadastroMateriais() {
   return (
     <div>
       <PageHeader title="Cadastro de materiais">
-        <button type="button" className="btn btn-primary" onClick={() => { setFormError(''); setForm({ ...EMPTY, editing: null }); }}>Novo material</button>
+        {/* Só o administrador cadastra material novo. */}
+        {isAdmin && <button type="button" className="btn btn-primary" onClick={() => { setFormError(''); setForm({ ...EMPTY, editing: null }); }}>Novo material</button>}
       </PageHeader>
       <p className="settings-note">
         Materiais consultados ao montar uma OT: ao informar o código, o SEA traz a descrição, a unidade e o peso por caixa daqui.

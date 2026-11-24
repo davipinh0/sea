@@ -190,7 +190,7 @@ export default function Items() {
   return (
     <div>
       <PageHeader title="Materiais">
-        <button className="btn btn-primary" onClick={openCreate}>Novo material</button>
+        {isAdmin && <button className="btn btn-primary" onClick={openCreate}>Novo material</button>}
       </PageHeader>
       {listError && <div className="form-error" role="alert" style={{ marginBottom: 12 }}>{listError}</div>}
       <div className="filter-bar">

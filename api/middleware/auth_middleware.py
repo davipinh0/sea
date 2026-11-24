@@ -8,8 +8,9 @@ import os
 from datetime import datetime, timezone
 from functools import wraps
 from typing import Optional
+from urllib.parse import unquote
 
-from flask import g, jsonify, request
+from flask import g, jsonify, make_response, request
 from sqlalchemy import text
 
 from services.auth_service import decode_token
@@ -195,40 +196,120 @@ AUTH_PROOF_APP = "Digital/PIN no app"
 AUTH_PROOF_PHONE = "Liberado no celular (painel web)"
 
 
-def require_step_up(purpose):
-    """No painel (cookie), o processo precisa estar liberado no celular. Usar depois de
-    @require_auth. Clientes Bearer passam: o app pede a digital/PIN e o terminal só faz pedidos.
+def step_up_denied(purpose):
+    """Resposta 403 se o processo não está liberado no celular; None se pode seguir. No painel
+    (cookie) exige a liberação; clientes Bearer passam (o app pede a digital/PIN e o terminal só faz
+    pedidos). Usar depois de @require_auth.
     """
+    if getattr(g, "auth_source", None) != "cookie":
+        # O app confirma a digital/PIN no celular e avisa neste cabeçalho; vai para o log (a
+        # API não tem como conferir a trava do celular).
+        if request.headers.get(IDENTITY_HEADER) == IDENTITY_APP:
+            g.auth_proof = AUTH_PROOF_APP
+        return None
+    import models.database as _db
+    from services import step_up
+    db = _db.SessionLocal()
+    try:
+        released = step_up.use(db, g.current_user.get("jti"), purpose)
+        db.commit()
+    finally:
+        db.close()
+    if not released:
+        label = step_up.label(purpose)
+        return jsonify({
+            "error": f"Confirme no app SEA do seu celular para usar {label} no painel.",
+            "step_up_required": purpose,
+            "user_facing": True,
+        }), 403
+    g.auth_proof = AUTH_PROOF_PHONE
+    return None
+
+
+def require_step_up(purpose):
+    """Decorador de step_up_denied para a rota inteira."""
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if getattr(g, "auth_source", None) != "cookie":
-                # O app confirma a digital/PIN no celular e avisa neste cabeçalho; vai para o log (a
-                # API não tem como conferir a trava do celular).
-                if request.headers.get(IDENTITY_HEADER) == IDENTITY_APP:
-                    g.auth_proof = AUTH_PROOF_APP
-                return f(*args, **kwargs)
-            import models.database as _db
-            from services import step_up
-            db = _db.SessionLocal()
-            try:
-                released = step_up.use(db, g.current_user.get("jti"), purpose)
-                db.commit()
-            finally:
-                db.close()
-            if not released:
-                label = step_up.label(purpose)
-                return jsonify({
-                    "error": f"Confirme no app SEA do seu celular para usar {label} no painel.",
-                    "step_up_required": purpose,
-                    "user_facing": True,
-                }), 403
-            g.auth_proof = AUTH_PROOF_PHONE
+            denied = step_up_denied(purpose)
+            if denied is not None:
+                return denied
             return f(*args, **kwargs)
 
         return decorated
 
     return decorator
+
+
+CHANGE_PURPOSE = "alteracao"
+# O motivo vai neste cabeçalho (codificado com encodeURIComponent, por causa dos acentos): o corpo
+# de cada rota é validado contra o próprio esquema, que não aceita campos a mais.
+CHANGE_REASON_HEADER = "X-SEA-Motivo"
+CHANGE_REASON_MIN = 10
+CHANGE_REASON_MAX = 500
+ACTION_CHANGE_JUSTIFIED = "CHANGE_JUSTIFIED"
+# Qual registro a rota alterou, pelo nome do parâmetro da URL (o primeiro que aparecer).
+_CHANGED_ENTITY = (
+    ("po_id", "PO"), ("item_id", "ITEM"), ("user_id", "USER"), ("bin_id", "BIN"),
+    ("warehouse_id", "WAREHOUSE"),
+)
+
+
+def _log_justified_change(route_kwargs):
+    """Um registro por alteração salva no painel, com o motivo (write_audit_log o acrescenta) e
+    a rota. Nem toda rota grava a própria alteração no log; este registro garante o motivo.
+    """
+    import models.database as _db
+    from services.audit_service import write_audit_log
+
+    entity_type, entity_id = "PAINEL", 0
+    for key, kind in _CHANGED_ENTITY:
+        if isinstance(route_kwargs.get(key), int):
+            entity_type, entity_id = kind, route_kwargs[key]
+            break
+    details = {"rota": f"{request.method} {request.path}"}
+    if route_kwargs.get("code"):
+        details["codigo"] = str(route_kwargs["code"])[:128]
+    db = _db.SessionLocal()
+    try:
+        write_audit_log(db, ACTION_CHANGE_JUSTIFIED, entity_type, entity_id,
+                        g.current_user["username"], None, details)
+        db.commit()
+    finally:
+        db.close()
+
+
+def require_justified_change(f):
+    """Alteração feita no painel: quem salva informa o motivo e confirma no app SEA do celular.
+    O motivo vai para o log de auditoria da alteração. Clientes Bearer (app, terminal) passam,
+    como em step_up_denied. Usar depois de @require_auth e antes de @validate_body.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if getattr(g, "auth_source", None) == "cookie":
+            try:
+                reason = unquote(request.headers.get(CHANGE_REASON_HEADER, ""), errors="strict")
+            except UnicodeDecodeError:
+                reason = ""
+            reason = " ".join(reason.split())
+            if len(reason) < CHANGE_REASON_MIN:
+                return jsonify({
+                    "error": "Para salvar, informe o motivo da alteração (pelo menos "
+                             f"{CHANGE_REASON_MIN} caracteres) e confirme no app SEA do seu "
+                             "celular.",
+                    "change_confirmation_required": CHANGE_PURPOSE,
+                    "user_facing": True,
+                }), 428
+            g.change_reason = reason[:CHANGE_REASON_MAX]
+        denied = step_up_denied(CHANGE_PURPOSE)
+        if denied is not None:
+            return denied
+        response = make_response(f(*args, **kwargs))
+        if g.get("change_reason") and response.status_code < 400:
+            _log_justified_change(kwargs)
+        return response
+
+    return decorated
 
 
 def check_warehouse_access(warehouse_id):

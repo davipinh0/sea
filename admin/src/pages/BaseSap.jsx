@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import { OtTypeTag } from '../components/sea.jsx';
 import NovaOtSapModal from '../components/NovaOtSapModal.jsx';
@@ -9,6 +10,8 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 // Só leitura: a base é carregada em Importação de dados e, no futuro, pela integração com o SAP.
 
 export default function BaseSap() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
@@ -34,7 +37,8 @@ export default function BaseSap() {
   return (
     <div>
       <PageHeader title="SAP">
-        <button type="button" className="btn btn-primary" onClick={() => { setMessage(''); setCreating(true); }}>Nova OT</button>
+        {/* Só o administrador cadastra OT nova. */}
+        {isAdmin && <button type="button" className="btn btn-primary" onClick={() => { setMessage(''); setCreating(true); }}>Nova OT</button>}
       </PageHeader>
       {message && <div className="tag tag-success" role="status" style={{ display: 'block', padding: 10, marginBottom: 12 }}>{message}</div>}
       {creating && (

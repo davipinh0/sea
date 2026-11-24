@@ -3,7 +3,7 @@ import { AppState, Modal, StyleSheet, Text, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import client from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { biometricError, withoutLock } from '../auth/appLock';
+import { authenticate, biometricError, withoutLock } from '../auth/appLock';
 import { getDeviceToken, onLoginApprovalPush } from '../notifications';
 import { apiError } from '../utils/sea';
 import { approvalSummary } from '../utils/loginApproval';
@@ -47,7 +47,7 @@ export default function LoginApproval() {
     setBusy(true);
     try {
       if (approve) {
-        const result = await withoutLock(() => LocalAuthentication.authenticateAsync({
+        const result = await withoutLock(() => authenticate(LocalAuthentication, {
           promptMessage: 'Confirme que é você',
           cancelLabel: 'Cancelar',
           disableDeviceFallback: false,

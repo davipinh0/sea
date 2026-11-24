@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import { releaseOnPhone } from '../utils/phoneRelease.js';
 import { canSee } from '../utils/permissions.js';
 import PageHeader from '../components/PageHeader.jsx';
 import StatusTag from '../components/StatusTag.jsx';
@@ -42,6 +43,8 @@ export default function Retirada() {
   const [detail, setDetail] = useState(null);
   const [denying, setDenying] = useState(null);
   const [note, setNote] = useState('');
+  // Aprovação esperando a confirmação no celular: { id, left } (segundos restantes).
+  const [approving, setApproving] = useState(null);
   const { user } = useAuth();
   const canEvaluate = canSee(user, 'retirada-avaliar');
   const canDo = canSee(user, 'retirada-fazer');
@@ -78,6 +81,23 @@ export default function Retirada() {
     load();
   }
 
+  // Aprovar no painel pede a confirmação no celular a cada retirada.
+  async function approve(w) {
+    setError(''); setMessage('');
+    setApproving({ id: w.withdrawal_id, left: null });
+    try {
+      await releaseOnPhone('aprovacao-retirada', {
+        onWaiting: (left) => setApproving({ id: w.withdrawal_id, left }),
+      });
+    } catch (err) {
+      setApproving(null);
+      setError(err.message);
+      return;
+    }
+    setApproving(null);
+    await step(w, 'avaliar', { approve: true });
+  }
+
   async function confirmDeny() {
     const clean = note.trim();
     if (!clean) return;
@@ -109,6 +129,12 @@ export default function Retirada() {
 
       {message && <div className="tag tag-success" style={{ display: 'block', padding: 12, marginBottom: 12 }}>{message}</div>}
       {error && <div className="form-error">{error}</div>}
+      {approving && (
+        <div className="tag tag-warning" role="status" style={{ display: 'block', padding: 12, marginBottom: 12 }}>
+          Confirme no app SEA do seu celular a aprovação da retirada nº {approving.id}
+          {approving.left != null ? ` (tempo restante: ${approving.left} s)` : ''}.
+        </div>
+      )}
       {rows.length === 0 && (
         <p className="settings-note">
           {view === 'open' ? 'Nenhuma solicitação em andamento. As solicitações feitas no terminal aparecem aqui automaticamente.' : 'Nenhuma retirada entregue, negada ou cancelada.'}
@@ -149,7 +175,7 @@ export default function Retirada() {
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               {w.status === 'REQUESTED' && canEvaluate && (
                 <>
-                  <button type="button" className="btn btn-primary" disabled={busy === w.withdrawal_id} onClick={() => step(w, 'avaliar', { approve: true })}>Aprovar</button>
+                  <button type="button" className="btn btn-primary" disabled={busy === w.withdrawal_id || approving !== null} onClick={() => approve(w)}>Aprovar</button>
                   <button type="button" className="btn btn-danger" disabled={busy === w.withdrawal_id} onClick={() => { setNote(''); setDenying(w); }}>Negar</button>
                 </>
               )}

@@ -23,6 +23,8 @@ let warehouseList = [];
 let currentWarehouse = { warehouse_id: 7, warehouse_code: 'Recebimento' };
 vi.mock('../warehouse.jsx', () => ({ useWarehouse: () => ({ warehouseId: 7, warehouses: warehouseList, warehouse: currentWarehouse }) }));
 vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
+const releaseOnPhone = vi.fn(() => Promise.resolve());
+vi.mock('../utils/phoneRelease.js', () => ({ releaseOnPhone: (...a) => releaseOnPhone(...a) }));
 // O terminal tem sessão própria; as chamadas dele passam pelos mesmos mocks, marcadas com o token
 // usado.
 const terminalLogin = vi.fn();
@@ -761,8 +763,11 @@ describe('Retirada avaliada antes de ser feita (mig 096)', () => {
     apiGet.mockImplementation(() => ok({ withdrawals: [request('REQUESTED')] }));
     apiPost.mockImplementation(() => ok({ message: 'ok' }));
     render(<MemoryRouter><Retirada /></MemoryRouter>);
+    releaseOnPhone.mockReset().mockImplementation(() => Promise.resolve());
     fireEvent.click(await screen.findByText('Aprovar'));
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/9/avaliar', { approve: true }));
+    // Cada aprovação no painel passa pelo celular antes.
+    expect(releaseOnPhone).toHaveBeenCalledWith('aprovacao-retirada', expect.any(Object));
 
     fireEvent.click(screen.getByText('Negar'));
     const deny = screen.getByText('Negar retirada');
@@ -771,6 +776,17 @@ describe('Retirada avaliada antes de ser feita (mig 096)', () => {
     fireEvent.click(deny);
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/sea/retiradas/9/avaliar', { approve: false, note: 'sem urgência' }));
     expect(screen.queryByText('Aceitar e separar')).toBeNull();
+  });
+
+  it('a refusal on the phone does not approve', async () => {
+    currentUser = { username: 'avaliador', role: 'USER', allowed_pages: ['retirada-avaliar'] };
+    apiGet.mockImplementation(() => ok({ withdrawals: [request('REQUESTED')] }));
+    apiPost.mockReset().mockImplementation(() => ok({ message: 'ok' }));
+    releaseOnPhone.mockReset().mockImplementation(() => Promise.reject(new Error('A liberação foi negada no celular.')));
+    render(<MemoryRouter><Retirada /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Aprovar'));
+    expect(await screen.findByText('A liberação foi negada no celular.')).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalledWith('/sea/retiradas/9/avaliar', expect.anything());
   });
 
   it('who does withdrawals accepts an approved request; others only wait', async () => {

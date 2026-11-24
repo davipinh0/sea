@@ -5,7 +5,10 @@ function pad(n) {
 }
 
 // Processos do painel liberados pelo celular.
-export const PROCESS_LABELS = { recebimento: 'Recebimento', armazenagem: 'Armazenagem', retirada: 'Retirada', 'exclusao-usuario': 'Exclusão de usuário' };
+export const PROCESS_LABELS = {
+  recebimento: 'Recebimento', armazenagem: 'Armazenagem', retirada: 'Retirada',
+  'exclusao-usuario': 'Exclusão de usuário', historico: 'Histórico', 'aprovacao-retirada': 'Aprovação de retirada',
+};
 
 export function approvalSummary(pending, now = new Date()) {
   const created = pending.created_at ? new Date(pending.created_at) : null;

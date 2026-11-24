@@ -364,28 +364,33 @@ def register_ot_materials(db, *, warehouse_id, header, materials, username,
                 "Confira a etiqueta: o SEA mantém um registro por material em cada OT.",
                 status=409, duplicate=True, material_code=sku,
             )
-        item = db.execute(
-            text("SELECT item_id, item_name, uom, pack_weight_kg FROM items WHERE sku = :sku"),
-            {"sku": sku},
-        ).fetchone()
+        find_item = text(
+            "SELECT item_id, item_name, uom, pack_weight_kg FROM items WHERE sku = :sku")
+        item = db.execute(find_item, {"sku": sku}).fetchone()
         pack = pack_weight(m.get("uom"), m.get("pack_weight_kg"))
+        item_id = None
         if item is None:
             if not m.get("description"):
                 raise SeaError(
                     f"Informe a descrição do material {sku}: ele ainda não está cadastrado.",
                     status=400, field="description", material_code=sku,
                 )
+            # Outra OT com o mesmo material novo pode estar sendo registrada neste instante: quem
+            # chegar depois usa o cadastro que a outra criou (antes virava erro 500).
             item_id = db.execute(
                 text(
                     """
                     INSERT INTO items (sku, item_name, uom, pack_weight_kg, external_id)
-                    VALUES (:sku, :name, :uom, :pack, :ext) RETURNING item_id
+                    VALUES (:sku, :name, :uom, :pack, :ext)
+                    ON CONFLICT (sku) DO NOTHING RETURNING item_id
                     """
                 ),
                 {"sku": sku, "name": m["description"], "uom": m.get("uom"), "pack": pack,
                  "ext": str(uuid.uuid4())},
             ).scalar()
-        else:
+            if item_id is None:
+                item = db.execute(find_item, {"sku": sku}).fetchone()
+        if item is not None:
             item_id = item.item_id
             if m.get("description") and not _same(item.item_name, m["description"]):
                 divergences.append({

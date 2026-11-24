@@ -1,0 +1,1549 @@
+{
+ "empresa": "Siderúrgica Aurora S.A. (fictícia)",
+ "inicio": "2026-11-24T01:40:54",
+ "duracao_min": 4.4,
+ "ambiente": "local (Docker): API com 4 processos gunicorn, PostgreSQL 16, banco sea_carga",
+ "porte": {
+  "materiais": 3000,
+  "ordens": 1500,
+  "ots": 1200,
+  "recebedores": 25,
+  "avaliadores": 10,
+  "almoxarifes": 20,
+  "solicitantes": 60,
+  "consultores": 15,
+  "linhas de OT": 4198
+ },
+ "implantacao": {
+  "ordens": {
+   "linhas": 1500,
+   "segundos": 0.4
+  },
+  "materiais": {
+   "linhas": 3000,
+   "segundos": 0.9
+  },
+  "reservas": {
+   "linhas": 4198,
+   "segundos": 5.0
+  }
+ },
+ "dia": {
+  "segundos": 35.2,
+  "segundos_recebimento_e_armazenagem": 33.5,
+  "contagem": {
+   "OTs recebidas": 800,
+   "materiais armazenados": 2827,
+   "retiradas pedidas": 550,
+   "pedido recusado (saldo tomado por outro)": 154,
+   "ordem sem saldo no terminal": 159,
+   "retiradas entregues": 490,
+   "retiradas concluídas": 550,
+   "retiradas canceladas": 24,
+   "retiradas negadas": 36
+  }
+ },
+ "metricas_dia": [
+  {
+   "rota": "GET /admin/audit-log",
+   "n": 104,
+   "erros_servidor": 0,
+   "status": {
+    "200": 104
+   },
+   "p50": 114.9,
+   "p95": 256.0,
+   "p99": 303.1,
+   "max": 313.7,
+   "falhas": []
+  },
+  {
+   "rota": "GET /armazenagem/destinos",
+   "n": 2,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2
+   },
+   "p50": 4.3,
+   "p95": 4.3,
+   "p99": 4.3,
+   "max": 4.3,
+   "falhas": []
+  },
+  {
+   "rota": "GET /armazenagem/pendentes",
+   "n": 801,
+   "erros_servidor": 0,
+   "status": {
+    "200": 801
+   },
+   "p50": 80.9,
+   "p95": 248.4,
+   "p99": 302.2,
+   "max": 324.6,
+   "falhas": []
+  },
+  {
+   "rota": "GET /materiais?q",
+   "n": 122,
+   "erros_servidor": 0,
+   "status": {
+    "200": 122
+   },
+   "p50": 126.0,
+   "p95": 258.6,
+   "p99": 305.9,
+   "max": 311.2,
+   "falhas": []
+  },
+  {
+   "rota": "GET /notificacoes",
+   "n": 898,
+   "erros_servidor": 0,
+   "status": {
+    "200": 898
+   },
+   "p50": 80.1,
+   "p95": 263.0,
+   "p99": 305.4,
+   "max": 313.4,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ordens (lista)",
+   "n": 119,
+   "erros_servidor": 0,
+   "status": {
+    "200": 119
+   },
+   "p50": 132.0,
+   "p95": 274.3,
+   "p99": 292.3,
+   "max": 312.5,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ordens/{n} (terminal)",
+   "n": 865,
+   "erros_servidor": 0,
+   "status": {
+    "200": 865
+   },
+   "p50": 252.7,
+   "p95": 308.7,
+   "p99": 324.5,
+   "max": 327.8,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ots (lista)",
+   "n": 124,
+   "erros_servidor": 0,
+   "status": {
+    "200": 124
+   },
+   "p50": 135.6,
+   "p95": 275.0,
+   "p99": 310.1,
+   "max": 312.9,
+   "falhas": []
+  },
+  {
+   "rota": "GET /painel",
+   "n": 140,
+   "erros_servidor": 0,
+   "status": {
+    "200": 140
+   },
+   "p50": 125.2,
+   "p95": 286.1,
+   "p99": 307.9,
+   "max": 316.6,
+   "falhas": []
+  },
+  {
+   "rota": "GET /recebimentos/areas",
+   "n": 2,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2
+   },
+   "p50": 5.7,
+   "p95": 5.7,
+   "p99": 5.7,
+   "max": 5.7,
+   "falhas": []
+  },
+  {
+   "rota": "GET /receiving/po/{ot}",
+   "n": 801,
+   "erros_servidor": 0,
+   "status": {
+    "200": 801
+   },
+   "p50": 78.5,
+   "p95": 255.3,
+   "p99": 293.2,
+   "max": 325.3,
+   "falhas": []
+  },
+  {
+   "rota": "GET /retiradas?status",
+   "n": 550,
+   "erros_servidor": 0,
+   "status": {
+    "200": 550
+   },
+   "p50": 155.8,
+   "p95": 291.5,
+   "p99": 322.3,
+   "max": 340.4,
+   "falhas": []
+  },
+  {
+   "rota": "POST /auth/login",
+   "n": 130,
+   "erros_servidor": 0,
+   "status": {
+    "200": 130
+   },
+   "p50": 811.2,
+   "p95": 824.4,
+   "p99": 828.8,
+   "max": 831.2,
+   "falhas": []
+  },
+  {
+   "rota": "POST /putaway/confirm",
+   "n": 2827,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2827
+   },
+   "p50": 86.1,
+   "p95": 258.2,
+   "p99": 295.9,
+   "max": 331.1,
+   "falhas": []
+  },
+  {
+   "rota": "POST /putaway/confirm (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1,
+    "400": 9
+   },
+   "p50": 22.5,
+   "p95": 28.3,
+   "p99": 28.3,
+   "max": 28.3,
+   "falhas": []
+  },
+  {
+   "rota": "POST /recebimentos/base",
+   "n": 800,
+   "erros_servidor": 0,
+   "status": {
+    "201": 800
+   },
+   "p50": 84.6,
+   "p95": 255.2,
+   "p99": 299.1,
+   "max": 327.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /recebimentos/base (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "201": 1,
+    "409": 9
+   },
+   "p50": 18.3,
+   "p95": 23.8,
+   "p99": 23.8,
+   "max": 23.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /receiving/receive",
+   "n": 1031,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1031
+   },
+   "p50": 98.2,
+   "p95": 265.3,
+   "p99": 305.5,
+   "max": 343.5,
+   "falhas": []
+  },
+  {
+   "rota": "POST /receiving/receive (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1,
+    "400": 9
+   },
+   "p50": 22.0,
+   "p95": 30.0,
+   "p99": 30.0,
+   "max": 30.0,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas",
+   "n": 705,
+   "erros_servidor": 0,
+   "status": {
+    "201": 551,
+    "409": 154
+   },
+   "p50": 264.7,
+   "p95": 318.2,
+   "p99": 331.4,
+   "max": 333.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas (confronto)",
+   "n": 30,
+   "erros_servidor": 0,
+   "status": {
+    "201": 13,
+    "409": 17
+   },
+   "p50": 66.0,
+   "p95": 80.7,
+   "p99": 86.7,
+   "max": 86.7,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/avaliar",
+   "n": 551,
+   "erros_servidor": 0,
+   "status": {
+    "200": 551
+   },
+   "p50": 142.8,
+   "p95": 275.9,
+   "p99": 299.8,
+   "max": 308.7,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/cancelar",
+   "n": 24,
+   "erros_servidor": 0,
+   "status": {
+    "200": 24
+   },
+   "p50": 149.0,
+   "p95": 272.5,
+   "p99": 289.5,
+   "max": 289.5,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/entregar",
+   "n": 490,
+   "erros_servidor": 0,
+   "status": {
+    "200": 490
+   },
+   "p50": 148.7,
+   "p95": 278.6,
+   "p99": 306.4,
+   "max": 317.4,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/entregar (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "409": 9,
+    "200": 1
+   },
+   "p50": 14.4,
+   "p95": 17.8,
+   "p99": 17.8,
+   "max": 17.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/pronta",
+   "n": 515,
+   "erros_servidor": 0,
+   "status": {
+    "200": 515
+   },
+   "p50": 143.4,
+   "p95": 279.3,
+   "p99": 302.8,
+   "max": 312.5,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/separar",
+   "n": 514,
+   "erros_servidor": 0,
+   "status": {
+    "200": 514
+   },
+   "p50": 149.3,
+   "p95": 279.3,
+   "p99": 312.5,
+   "max": 322.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/separar (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "409": 9,
+    "200": 1
+   },
+   "p50": 17.1,
+   "p95": 22.6,
+   "p99": 22.6,
+   "max": 22.6,
+   "falhas": []
+  }
+ ],
+ "confrontos": [
+  {
+   "caso": "30 pessoas pedem a última unidade ao mesmo tempo",
+   "esperado": "13 pedidos aceitos (o saldo), 17 recusados",
+   "obtido": "13 aceitos, 17 recusados, outros: []",
+   "ok": true
+  },
+  {
+   "caso": "10 almoxarifes aceitam a mesma retirada ao mesmo tempo",
+   "esperado": "1 aceita, 9 recusadas",
+   "obtido": "1 aceitas, 9 recusadas",
+   "ok": true
+  },
+  {
+   "caso": "Entrega confirmada 10 vezes ao mesmo tempo",
+   "esperado": "1 confirmada; estoque baixa 1 unidade",
+   "obtido": "1 confirmadas; estoque 27 → 26",
+   "ok": true
+  },
+  {
+   "caso": "10 recebedores registram a mesma OT ao mesmo tempo",
+   "esperado": "1 cadastro, 9 recusados",
+   "obtido": "1 cadastros pela API, 9 recusados; 1 no banco",
+   "ok": true
+  },
+  {
+   "caso": "10 pessoas recebem o mesmo material inteiro ao mesmo tempo",
+   "esperado": "recebido = 5 (o previsto), 9 recusados",
+   "obtido": "1 aceitos; recebido no banco = 5",
+   "ok": true
+  },
+  {
+   "caso": "10 pessoas armazenam o mesmo material ao mesmo tempo",
+   "esperado": "1 armazenagem; total do material continua 5",
+   "obtido": "1 aceitas; total no estoque = 5",
+   "ok": true
+  }
+ ],
+ "escalada": [
+  {
+   "usuarios_simultaneos": 5,
+   "requisicoes": 9698,
+   "req_por_segundo": 322.9,
+   "erros_servidor_pct": 0.0,
+   "p50": 10.7,
+   "p95": 55.1,
+   "p99": 93.6,
+   "max": 158.5,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1051,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1051
+     },
+     "p50": 7.4,
+     "p95": 12.8,
+     "p99": 18.6,
+     "max": 30.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 833,
+     "erros_servidor": 0,
+     "status": {
+      "200": 833
+     },
+     "p50": 7.8,
+     "p95": 13.5,
+     "p99": 18.1,
+     "max": 25.1,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 599,
+     "erros_servidor": 0,
+     "status": {
+      "200": 599
+     },
+     "p50": 72.7,
+     "p95": 132.7,
+     "p99": 146.8,
+     "max": 158.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3795,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1969,
+      "429": 1826
+     },
+     "p50": 8.8,
+     "p95": 14.9,
+     "p99": 19.8,
+     "max": 48.2,
+     "falhas": [
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      }
+     ]
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 878,
+     "erros_servidor": 0,
+     "status": {
+      "200": 878
+     },
+     "p50": 30.9,
+     "p95": 60.7,
+     "p99": 76.2,
+     "max": 103.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1282,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1282
+     },
+     "p50": 12.3,
+     "p95": 18.2,
+     "p99": 21.8,
+     "max": 49.3,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 630,
+     "erros_servidor": 0,
+     "status": {
+      "201": 630
+     },
+     "p50": 14.0,
+     "p95": 20.2,
+     "p99": 24.2,
+     "max": 52.9,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 630,
+     "erros_servidor": 0,
+     "status": {
+      "200": 630
+     },
+     "p50": 12.1,
+     "p95": 17.8,
+     "p99": 20.3,
+     "max": 32.2,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 10,
+   "requisicoes": 9798,
+   "req_por_segundo": 326.1,
+   "erros_servidor_pct": 0.0,
+   "p50": 25.6,
+   "p95": 65.3,
+   "p99": 125.3,
+   "max": 219.8,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1082,
+     "erros_servidor": 0,
+     "status": {
+      "200": 927,
+      "429": 155
+     },
+     "p50": 20.6,
+     "p95": 37.6,
+     "p99": 54.2,
+     "max": 143.8,
+     "falhas": [
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      }
+     ]
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 849,
+     "erros_servidor": 0,
+     "status": {
+      "200": 849
+     },
+     "p50": 20.7,
+     "p95": 38.2,
+     "p99": 53.1,
+     "max": 73.7,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 598,
+     "erros_servidor": 0,
+     "status": {
+      "200": 598
+     },
+     "p50": 91.0,
+     "p95": 149.0,
+     "p99": 180.7,
+     "max": 219.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3663,
+     "erros_servidor": 0,
+     "status": {
+      "200": 2457,
+      "429": 1206
+     },
+     "p50": 23.0,
+     "p95": 40.3,
+     "p99": 53.5,
+     "max": 144.5,
+     "falhas": [
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      }
+     ]
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 853,
+     "erros_servidor": 0,
+     "status": {
+      "200": 853
+     },
+     "p50": 43.4,
+     "p95": 64.9,
+     "p99": 94.1,
+     "max": 175.3,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1221,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1221
+     },
+     "p50": 25.8,
+     "p95": 43.3,
+     "p99": 59.2,
+     "max": 161.5,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 766,
+     "erros_servidor": 0,
+     "status": {
+      "201": 766
+     },
+     "p50": 28.2,
+     "p95": 45.7,
+     "p99": 58.7,
+     "max": 73.6,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 766,
+     "erros_servidor": 0,
+     "status": {
+      "200": 766
+     },
+     "p50": 26.7,
+     "p95": 44.4,
+     "p99": 60.3,
+     "max": 88.8,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 25,
+   "requisicoes": 10401,
+   "req_por_segundo": 344.7,
+   "erros_servidor_pct": 0.0,
+   "p50": 66.1,
+   "p95": 122.3,
+   "p99": 172.9,
+   "max": 261.1,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1187,
+     "erros_servidor": 0,
+     "status": {
+      "429": 1,
+      "200": 1186
+     },
+     "p50": 60.8,
+     "p95": 101.7,
+     "p99": 129.8,
+     "max": 180.4,
+     "falhas": [
+      {
+       "status": 429,
+       "detalhe": null
+      }
+     ]
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 892,
+     "erros_servidor": 0,
+     "status": {
+      "200": 892
+     },
+     "p50": 60.5,
+     "p95": 101.9,
+     "p99": 122.0,
+     "max": 148.2,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 635,
+     "erros_servidor": 0,
+     "status": {
+      "200": 635
+     },
+     "p50": 127.9,
+     "p95": 203.2,
+     "p99": 232.9,
+     "max": 261.1,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 4035,
+     "erros_servidor": 0,
+     "status": {
+      "429": 1755,
+      "200": 2280
+     },
+     "p50": 61.6,
+     "p95": 101.5,
+     "p99": 122.6,
+     "max": 176.7,
+     "falhas": [
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      },
+      {
+       "status": 429,
+       "detalhe": null
+      }
+     ]
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 807,
+     "erros_servidor": 0,
+     "status": {
+      "200": 807
+     },
+     "p50": 83.8,
+     "p95": 123.3,
+     "p99": 141.9,
+     "max": 191.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1351,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1351
+     },
+     "p50": 65.5,
+     "p95": 107.4,
+     "p99": 127.3,
+     "max": 184.0,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 747,
+     "erros_servidor": 0,
+     "status": {
+      "201": 747
+     },
+     "p50": 68.7,
+     "p95": 111.8,
+     "p99": 139.8,
+     "max": 184.1,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 747,
+     "erros_servidor": 0,
+     "status": {
+      "200": 747
+     },
+     "p50": 66.2,
+     "p95": 103.4,
+     "p99": 127.2,
+     "max": 181.1,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 50,
+   "requisicoes": 9386,
+   "req_por_segundo": 309.6,
+   "erros_servidor_pct": 0.0,
+   "p50": 155.0,
+   "p95": 219.0,
+   "p99": 260.9,
+   "max": 368.4,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 971,
+     "erros_servidor": 0,
+     "status": {
+      "200": 971
+     },
+     "p50": 148.1,
+     "p95": 205.8,
+     "p99": 231.2,
+     "max": 260.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 720,
+     "erros_servidor": 0,
+     "status": {
+      "200": 720
+     },
+     "p50": 148.5,
+     "p95": 204.0,
+     "p99": 225.2,
+     "max": 239.0,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 537,
+     "erros_servidor": 0,
+     "status": {
+      "200": 537
+     },
+     "p50": 212.0,
+     "p95": 289.3,
+     "p99": 317.8,
+     "max": 368.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3218,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3218
+     },
+     "p50": 150.8,
+     "p95": 207.8,
+     "p99": 229.8,
+     "max": 264.7,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 802,
+     "erros_servidor": 0,
+     "status": {
+      "200": 802
+     },
+     "p50": 168.2,
+     "p95": 226.7,
+     "p99": 252.6,
+     "max": 273.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1090,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1090
+     },
+     "p50": 151.6,
+     "p95": 208.7,
+     "p99": 231.6,
+     "max": 268.6,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1024,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1024
+     },
+     "p50": 157.9,
+     "p95": 211.4,
+     "p99": 228.8,
+     "max": 243.0,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1024,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1024
+     },
+     "p50": 154.1,
+     "p95": 210.3,
+     "p99": 225.0,
+     "max": 258.1,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 100,
+   "requisicoes": 10039,
+   "req_por_segundo": 327.9,
+   "erros_servidor_pct": 0.0,
+   "p50": 298.4,
+   "p95": 381.9,
+   "p99": 417.8,
+   "max": 519.9,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1026,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1026
+     },
+     "p50": 291.6,
+     "p95": 367.6,
+     "p99": 395.5,
+     "max": 416.0,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 729,
+     "erros_servidor": 0,
+     "status": {
+      "200": 729
+     },
+     "p50": 292.4,
+     "p95": 369.6,
+     "p99": 391.3,
+     "max": 407.9,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 504,
+     "erros_servidor": 0,
+     "status": {
+      "200": 504
+     },
+     "p50": 356.5,
+     "p95": 453.4,
+     "p99": 488.0,
+     "max": 519.9,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3557,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3557
+     },
+     "p50": 294.3,
+     "p95": 371.6,
+     "p99": 399.5,
+     "max": 440.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 817,
+     "erros_servidor": 0,
+     "status": {
+      "200": 817
+     },
+     "p50": 314.3,
+     "p95": 398.1,
+     "p99": 426.5,
+     "max": 456.6,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1170,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1170
+     },
+     "p50": 295.1,
+     "p95": 372.7,
+     "p99": 399.7,
+     "max": 449.6,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1118,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1118
+     },
+     "p50": 300.7,
+     "p95": 370.4,
+     "p99": 398.4,
+     "max": 427.2,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1118,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1118
+     },
+     "p50": 296.1,
+     "p95": 372.4,
+     "p99": 406.9,
+     "max": 445.8,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 200,
+   "requisicoes": 9414,
+   "req_por_segundo": 302.1,
+   "erros_servidor_pct": 0.0,
+   "p50": 647.3,
+   "p95": 796.4,
+   "p99": 858.1,
+   "max": 1004.1,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 997,
+     "erros_servidor": 0,
+     "status": {
+      "200": 997
+     },
+     "p50": 640.4,
+     "p95": 780.5,
+     "p99": 848.4,
+     "max": 911.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 763,
+     "erros_servidor": 0,
+     "status": {
+      "200": 763
+     },
+     "p50": 642.4,
+     "p95": 785.8,
+     "p99": 861.5,
+     "max": 915.1,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 547,
+     "erros_servidor": 0,
+     "status": {
+      "200": 547
+     },
+     "p50": 708.2,
+     "p95": 841.7,
+     "p99": 919.1,
+     "max": 1004.1,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3268,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3268
+     },
+     "p50": 645.0,
+     "p95": 784.8,
+     "p99": 851.3,
+     "max": 910.7,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 707,
+     "erros_servidor": 0,
+     "status": {
+      "200": 707
+     },
+     "p50": 662.9,
+     "p95": 814.5,
+     "p99": 881.1,
+     "max": 917.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1077,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1077
+     },
+     "p50": 644.0,
+     "p95": 780.4,
+     "p99": 850.1,
+     "max": 913.8,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1028,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1027,
+      "409": 1
+     },
+     "p50": 642.3,
+     "p95": 778.9,
+     "p99": 856.5,
+     "max": 944.7,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1027,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1027
+     },
+     "p50": 638.8,
+     "p95": 784.5,
+     "p99": 842.0,
+     "max": 908.6,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 400,
+   "requisicoes": 10158,
+   "req_por_segundo": 313.8,
+   "erros_servidor_pct": 0.0,
+   "p50": 1260.2,
+   "p95": 1440.3,
+   "p99": 1506.0,
+   "max": 1621.6,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1022,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1022
+     },
+     "p50": 1257.1,
+     "p95": 1447.1,
+     "p99": 1497.7,
+     "max": 1524.2,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 779,
+     "erros_servidor": 0,
+     "status": {
+      "200": 779
+     },
+     "p50": 1245.4,
+     "p95": 1429.9,
+     "p99": 1493.4,
+     "max": 1509.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 530,
+     "erros_servidor": 0,
+     "status": {
+      "200": 530
+     },
+     "p50": 1317.8,
+     "p95": 1502.1,
+     "p99": 1565.3,
+     "max": 1621.6,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3559,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3559
+     },
+     "p50": 1252.2,
+     "p95": 1434.6,
+     "p99": 1504.3,
+     "max": 1530.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 773,
+     "erros_servidor": 0,
+     "status": {
+      "200": 773
+     },
+     "p50": 1276.3,
+     "p95": 1461.8,
+     "p99": 1521.0,
+     "max": 1551.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1105,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1105
+     },
+     "p50": 1255.1,
+     "p95": 1426.6,
+     "p99": 1497.3,
+     "max": 1523.4,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1195,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1195
+     },
+     "p50": 1260.1,
+     "p95": 1427.7,
+     "p99": 1505.3,
+     "max": 1527.8,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1195,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1195
+     },
+     "p50": 1256.8,
+     "p95": 1422.5,
+     "p99": 1497.1,
+     "max": 1527.4,
+     "falhas": []
+    }
+   ]
+  }
+ ],
+ "capacidade": {
+  "usuarios_simultaneos": 200,
+  "requisicoes": 9414,
+  "req_por_segundo": 302.1,
+  "erros_servidor_pct": 0.0,
+  "p50": 647.3,
+  "p95": 796.4,
+  "p99": 858.1,
+  "max": 1004.1,
+  "rotas": [
+   {
+    "rota": "GET /armazenagem/pendentes",
+    "n": 997,
+    "erros_servidor": 0,
+    "status": {
+     "200": 997
+    },
+    "p50": 640.4,
+    "p95": 780.5,
+    "p99": 848.4,
+    "max": 911.4,
+    "falhas": []
+   },
+   {
+    "rota": "GET /notificacoes",
+    "n": 763,
+    "erros_servidor": 0,
+    "status": {
+     "200": 763
+    },
+    "p50": 642.4,
+    "p95": 785.8,
+    "p99": 861.5,
+    "max": 915.1,
+    "falhas": []
+   },
+   {
+    "rota": "GET /ordens (lista)",
+    "n": 547,
+    "erros_servidor": 0,
+    "status": {
+     "200": 547
+    },
+    "p50": 708.2,
+    "p95": 841.7,
+    "p99": 919.1,
+    "max": 1004.1,
+    "falhas": []
+   },
+   {
+    "rota": "GET /ordens/{n} (terminal)",
+    "n": 3268,
+    "erros_servidor": 0,
+    "status": {
+     "200": 3268
+    },
+    "p50": 645.0,
+    "p95": 784.8,
+    "p99": 851.3,
+    "max": 910.7,
+    "falhas": []
+   },
+   {
+    "rota": "GET /ots (lista)",
+    "n": 707,
+    "erros_servidor": 0,
+    "status": {
+     "200": 707
+    },
+    "p50": 662.9,
+    "p95": 814.5,
+    "p99": 881.1,
+    "max": 917.8,
+    "falhas": []
+   },
+   {
+    "rota": "GET /painel",
+    "n": 1077,
+    "erros_servidor": 0,
+    "status": {
+     "200": 1077
+    },
+    "p50": 644.0,
+    "p95": 780.4,
+    "p99": 850.1,
+    "max": 913.8,
+    "falhas": []
+   },
+   {
+    "rota": "POST /retiradas",
+    "n": 1028,
+    "erros_servidor": 0,
+    "status": {
+     "201": 1027,
+     "409": 1
+    },
+    "p50": 642.3,
+    "p95": 778.9,
+    "p99": 856.5,
+    "max": 944.7,
+    "falhas": []
+   },
+   {
+    "rota": "POST /retiradas/{id}/cancelar",
+    "n": 1027,
+    "erros_servidor": 0,
+    "status": {
+     "200": 1027
+    },
+    "p50": 638.8,
+    "p95": 784.5,
+    "p99": 842.0,
+    "max": 908.6,
+    "falhas": []
+   }
+  ]
+ },
+ "emails": {
+  "ENVIADO": 9442,
+  "PENDENTE": 1
+ },
+ "invariantes": [
+  {
+   "regra": "Estoque nunca negativo nem reservado além do que existe",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Reserva do estoque = soma das retiradas em andamento",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Nada some nem aparece: recebido = em estoque + entregue",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Recebido na linha da OT = soma dos recebimentos",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Nunca recebido além do previsto na OT",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Uma OT da base do SAP vira um único cadastro",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Cada retirada entregue tem uma única entrega no log",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Retirada entregue tem data e quem recebeu",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Corrente de hashes do log de auditoria íntegra",
+   "violacoes": 0,
+   "exemplos": []
+  }
+ ],
+ "banco": {
+  "materiais na base do SAP": 3004,
+  "ordens na base do SAP": 1503,
+  "linhas de OT na base do SAP": 4202,
+  "OTs cadastradas no SEA": 801,
+  "recebimentos": 3645,
+  "linhas de estoque com saldo": 2755,
+  "retiradas": 7071,
+  "retiradas entregues": 491,
+  "notificações": 9443,
+  "registros no log de auditoria": 22951,
+  "sessões abertas": 131
+ },
+ "erros_servidor_no_dia": 0,
+ "aprovado": true
+}

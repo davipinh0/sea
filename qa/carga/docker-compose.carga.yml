@@ -1,0 +1,42 @@
+# Ambiente da simulação de carga: uma cópia da API e do worker de e-mail ligada ao banco sea_carga.
+# Não toca no banco de desenvolvimento, no de testes nem em produção. E-mail vai para o Mailpit
+# local (não entrega para fora) e o push no celular fica desligado.
+# Caminhos relativos à raiz do projeto (o primeiro -f). Uso: veja qa/carga/README.md.
+services:
+  api-carga:
+    extends:
+      file: docker-compose.yml
+      service: api
+    container_name: sea-api-carga
+    ports: !reset []
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sea}:${POSTGRES_PASSWORD:-sea}@db:5432/sea_carga
+      # Fila própria (banco 5 do Redis): o worker do desenvolvimento nunca pega estas tarefas.
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/5
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/5
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/5
+      SEA_SMTP_HOST: mailpit
+      SEA_SMTP_PORT: "1025"
+      SEA_SMTP_USER: ""
+      SEA_SMTP_PASSWORD: ""
+      SEA_SMTP_FROM: sea-carga@sea.local
+      SEA_SMTP_SECURITY: none
+      SEA_PUSH: ""
+
+  celery-carga:
+    extends:
+      file: docker-compose.yml
+      service: celery-worker
+    container_name: sea-celery-carga
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sea}:${POSTGRES_PASSWORD:-sea}@db:5432/sea_carga
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/5
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/5
+      SEA_SMTP_HOST: mailpit
+      SEA_SMTP_PORT: "1025"
+      SEA_SMTP_USER: ""
+      SEA_SMTP_PASSWORD: ""
+      SEA_SMTP_FROM: sea-carga@sea.local
+      SEA_SMTP_SECURITY: none
+      SEA_PUSH: ""

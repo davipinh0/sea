@@ -2508,3 +2508,6 @@ ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
 DROP INDEX IF EXISTS ix_items_upc;
 DROP INDEX IF EXISTS ix_items_mpn;
 ALTER TABLE items DROP COLUMN IF EXISTS upc, DROP COLUMN IF EXISTS mpn;
+
+-- mig 101: índice do estoque pelo lote (o número da OT), usado em quase toda tela do SEA.
+CREATE INDEX IF NOT EXISTS ix_inventory_lot ON inventory (lot_number, item_id);

@@ -1,0 +1,876 @@
+{
+ "empresa": "Siderúrgica Aurora S.A. (fictícia)",
+ "inicio": "2026-11-24T01:45:40",
+ "duracao_min": 2.6,
+ "ambiente": "local (Docker): API com 4 processos gunicorn, PostgreSQL 16, banco sea_carga",
+ "porte": {
+  "materiais": 3000,
+  "ordens": 1500,
+  "ots": 1200,
+  "recebedores": 25,
+  "avaliadores": 10,
+  "almoxarifes": 20,
+  "solicitantes": 60,
+  "consultores": 15,
+  "linhas de OT": 4198
+ },
+ "implantacao": {
+  "ordens": {
+   "linhas": 1500,
+   "segundos": 0.3
+  },
+  "materiais": {
+   "linhas": 3000,
+   "segundos": 0.9
+  },
+  "reservas": {
+   "linhas": 4198,
+   "segundos": 4.9
+  }
+ },
+ "dia": {
+  "segundos": 35.2,
+  "segundos_recebimento_e_armazenagem": 33.9,
+  "contagem": {
+   "OTs recebidas": 800,
+   "materiais armazenados": 2827,
+   "retiradas pedidas": 543,
+   "pedido recusado (saldo tomado por outro)": 172,
+   "retiradas negadas": 42,
+   "retiradas concluídas": 543,
+   "ordem sem saldo no terminal": 150,
+   "retiradas entregues": 475,
+   "retiradas canceladas": 26
+  }
+ },
+ "metricas_dia": [
+  {
+   "rota": "GET /admin/audit-log",
+   "n": 111,
+   "erros_servidor": 0,
+   "status": {
+    "200": 111
+   },
+   "p50": 126.1,
+   "p95": 311.9,
+   "p99": 320.7,
+   "max": 330.1,
+   "falhas": []
+  },
+  {
+   "rota": "GET /armazenagem/destinos",
+   "n": 2,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2
+   },
+   "p50": 4.5,
+   "p95": 4.5,
+   "p99": 4.5,
+   "max": 4.5,
+   "falhas": []
+  },
+  {
+   "rota": "GET /armazenagem/pendentes",
+   "n": 801,
+   "erros_servidor": 0,
+   "status": {
+    "200": 801
+   },
+   "p50": 84.0,
+   "p95": 259.0,
+   "p99": 301.1,
+   "max": 333.7,
+   "falhas": []
+  },
+  {
+   "rota": "GET /materiais?q",
+   "n": 114,
+   "erros_servidor": 0,
+   "status": {
+    "200": 114
+   },
+   "p50": 117.9,
+   "p95": 280.6,
+   "p99": 316.6,
+   "max": 354.5,
+   "falhas": []
+  },
+  {
+   "rota": "GET /notificacoes",
+   "n": 934,
+   "erros_servidor": 0,
+   "status": {
+    "200": 934
+   },
+   "p50": 84.6,
+   "p95": 263.7,
+   "p99": 305.2,
+   "max": 353.1,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ordens (lista)",
+   "n": 137,
+   "erros_servidor": 0,
+   "status": {
+    "200": 137
+   },
+   "p50": 140.2,
+   "p95": 290.3,
+   "p99": 305.2,
+   "max": 350.1,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ordens/{n} (terminal)",
+   "n": 867,
+   "erros_servidor": 0,
+   "status": {
+    "200": 867
+   },
+   "p50": 262.8,
+   "p95": 312.8,
+   "p99": 351.6,
+   "max": 356.4,
+   "falhas": []
+  },
+  {
+   "rota": "GET /ots (lista)",
+   "n": 110,
+   "erros_servidor": 0,
+   "status": {
+    "200": 110
+   },
+   "p50": 133.9,
+   "p95": 284.5,
+   "p99": 306.5,
+   "max": 336.2,
+   "falhas": []
+  },
+  {
+   "rota": "GET /painel",
+   "n": 103,
+   "erros_servidor": 0,
+   "status": {
+    "200": 103
+   },
+   "p50": 117.0,
+   "p95": 273.7,
+   "p99": 306.4,
+   "max": 328.8,
+   "falhas": []
+  },
+  {
+   "rota": "GET /recebimentos/areas",
+   "n": 2,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2
+   },
+   "p50": 5.9,
+   "p95": 5.9,
+   "p99": 5.9,
+   "max": 5.9,
+   "falhas": []
+  },
+  {
+   "rota": "GET /receiving/po/{ot}",
+   "n": 801,
+   "erros_servidor": 0,
+   "status": {
+    "200": 801
+   },
+   "p50": 83.6,
+   "p95": 246.8,
+   "p99": 296.7,
+   "max": 339.7,
+   "falhas": []
+  },
+  {
+   "rota": "GET /retiradas?status",
+   "n": 543,
+   "erros_servidor": 0,
+   "status": {
+    "200": 543
+   },
+   "p50": 153.9,
+   "p95": 300.1,
+   "p99": 339.8,
+   "max": 365.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /auth/login",
+   "n": 130,
+   "erros_servidor": 0,
+   "status": {
+    "200": 130
+   },
+   "p50": 799.8,
+   "p95": 817.2,
+   "p99": 820.5,
+   "max": 821.4,
+   "falhas": []
+  },
+  {
+   "rota": "POST /putaway/confirm",
+   "n": 2827,
+   "erros_servidor": 0,
+   "status": {
+    "200": 2827
+   },
+   "p50": 90.2,
+   "p95": 265.7,
+   "p99": 309.7,
+   "max": 363.1,
+   "falhas": []
+  },
+  {
+   "rota": "POST /putaway/confirm (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1,
+    "400": 9
+   },
+   "p50": 20.7,
+   "p95": 26.8,
+   "p99": 26.8,
+   "max": 26.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /recebimentos/base",
+   "n": 800,
+   "erros_servidor": 0,
+   "status": {
+    "201": 800
+   },
+   "p50": 89.5,
+   "p95": 262.5,
+   "p99": 313.5,
+   "max": 359.6,
+   "falhas": []
+  },
+  {
+   "rota": "POST /recebimentos/base (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "201": 1,
+    "409": 9
+   },
+   "p50": 17.5,
+   "p95": 20.1,
+   "p99": 20.1,
+   "max": 20.1,
+   "falhas": []
+  },
+  {
+   "rota": "POST /receiving/receive",
+   "n": 1007,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1007
+   },
+   "p50": 103.6,
+   "p95": 279.1,
+   "p99": 316.5,
+   "max": 357.6,
+   "falhas": []
+  },
+  {
+   "rota": "POST /receiving/receive (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "200": 1,
+    "400": 9
+   },
+   "p50": 19.7,
+   "p95": 26.7,
+   "p99": 26.7,
+   "max": 26.7,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas",
+   "n": 716,
+   "erros_servidor": 0,
+   "status": {
+    "201": 544,
+    "409": 172
+   },
+   "p50": 269.4,
+   "p95": 329.2,
+   "p99": 355.4,
+   "max": 362.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas (confronto)",
+   "n": 30,
+   "erros_servidor": 0,
+   "status": {
+    "201": 5,
+    "409": 25
+   },
+   "p50": 47.8,
+   "p95": 58.8,
+   "p99": 62.9,
+   "max": 62.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/avaliar",
+   "n": 544,
+   "erros_servidor": 0,
+   "status": {
+    "200": 544
+   },
+   "p50": 143.2,
+   "p95": 286.5,
+   "p99": 314.9,
+   "max": 332.3,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/cancelar",
+   "n": 26,
+   "erros_servidor": 0,
+   "status": {
+    "200": 26
+   },
+   "p50": 152.3,
+   "p95": 250.1,
+   "p99": 312.6,
+   "max": 312.6,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/entregar",
+   "n": 475,
+   "erros_servidor": 0,
+   "status": {
+    "200": 475
+   },
+   "p50": 146.9,
+   "p95": 291.8,
+   "p99": 318.6,
+   "max": 335.8,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/entregar (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "409": 9,
+    "200": 1
+   },
+   "p50": 24.8,
+   "p95": 27.9,
+   "p99": 27.9,
+   "max": 27.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/pronta",
+   "n": 502,
+   "erros_servidor": 0,
+   "status": {
+    "200": 502
+   },
+   "p50": 143.3,
+   "p95": 290.3,
+   "p99": 315.4,
+   "max": 334.3,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/separar",
+   "n": 501,
+   "erros_servidor": 0,
+   "status": {
+    "200": 501
+   },
+   "p50": 147.7,
+   "p95": 291.1,
+   "p99": 320.1,
+   "max": 347.9,
+   "falhas": []
+  },
+  {
+   "rota": "POST /retiradas/{id}/separar (confronto)",
+   "n": 10,
+   "erros_servidor": 0,
+   "status": {
+    "409": 9,
+    "200": 1
+   },
+   "p50": 17.3,
+   "p95": 19.5,
+   "p99": 19.5,
+   "max": 19.5,
+   "falhas": []
+  }
+ ],
+ "confrontos": [
+  {
+   "caso": "30 pessoas pedem a última unidade ao mesmo tempo",
+   "esperado": "5 pedidos aceitos (o saldo), 25 recusados",
+   "obtido": "5 aceitos, 25 recusados, outros: []",
+   "ok": true
+  },
+  {
+   "caso": "10 almoxarifes aceitam a mesma retirada ao mesmo tempo",
+   "esperado": "1 aceita, 9 recusadas",
+   "obtido": "1 aceitas, 9 recusadas",
+   "ok": true
+  },
+  {
+   "caso": "Entrega confirmada 10 vezes ao mesmo tempo",
+   "esperado": "1 confirmada; estoque baixa 1 unidade",
+   "obtido": "1 confirmadas; estoque 27 → 26",
+   "ok": true
+  },
+  {
+   "caso": "10 recebedores registram a mesma OT ao mesmo tempo",
+   "esperado": "1 cadastro, 9 recusados",
+   "obtido": "1 cadastros pela API, 9 recusados; 1 no banco",
+   "ok": true
+  },
+  {
+   "caso": "10 pessoas recebem o mesmo material inteiro ao mesmo tempo",
+   "esperado": "recebido = 5 (o previsto), 9 recusados",
+   "obtido": "1 aceitos; recebido no banco = 5",
+   "ok": true
+  },
+  {
+   "caso": "10 pessoas armazenam o mesmo material ao mesmo tempo",
+   "esperado": "1 armazenagem; total do material continua 5",
+   "obtido": "1 aceitas; total no estoque = 5",
+   "ok": true
+  }
+ ],
+ "escalada": [
+  {
+   "usuarios_simultaneos": 400,
+   "requisicoes": 9847,
+   "req_por_segundo": 305.5,
+   "erros_servidor_pct": 0.0,
+   "p50": 1288.5,
+   "p95": 1469.0,
+   "p99": 1502.2,
+   "max": 1608.6,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 992,
+     "erros_servidor": 0,
+     "status": {
+      "200": 992
+     },
+     "p50": 1275.3,
+     "p95": 1448.0,
+     "p99": 1489.6,
+     "max": 1507.4,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 744,
+     "erros_servidor": 0,
+     "status": {
+      "200": 744
+     },
+     "p50": 1284.3,
+     "p95": 1453.7,
+     "p99": 1489.0,
+     "max": 1517.9,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 524,
+     "erros_servidor": 0,
+     "status": {
+      "200": 524
+     },
+     "p50": 1345.5,
+     "p95": 1522.8,
+     "p99": 1568.0,
+     "max": 1608.6,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3410,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3410
+     },
+     "p50": 1285.3,
+     "p95": 1462.6,
+     "p99": 1489.1,
+     "max": 1521.3,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 800,
+     "erros_servidor": 0,
+     "status": {
+      "200": 800
+     },
+     "p50": 1306.0,
+     "p95": 1489.4,
+     "p99": 1525.8,
+     "max": 1543.2,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1161,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1161
+     },
+     "p50": 1283.4,
+     "p95": 1469.7,
+     "p99": 1488.2,
+     "max": 1515.1,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1109,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1107,
+      "409": 2
+     },
+     "p50": 1294.8,
+     "p95": 1465.5,
+     "p99": 1494.8,
+     "max": 1526.7,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1107,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1107
+     },
+     "p50": 1271.0,
+     "p95": 1465.7,
+     "p99": 1491.8,
+     "max": 1525.4,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 800,
+   "requisicoes": 10714,
+   "req_por_segundo": 308.3,
+   "erros_servidor_pct": 0.0,
+   "p50": 2546.6,
+   "p95": 2819.5,
+   "p99": 2870.8,
+   "max": 2994.6,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1046,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1046
+     },
+     "p50": 2542.0,
+     "p95": 2805.5,
+     "p99": 2861.8,
+     "max": 2883.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 829,
+     "erros_servidor": 0,
+     "status": {
+      "200": 829
+     },
+     "p50": 2536.3,
+     "p95": 2806.1,
+     "p99": 2862.5,
+     "max": 2888.5,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 598,
+     "erros_servidor": 0,
+     "status": {
+      "200": 598
+     },
+     "p50": 2614.9,
+     "p95": 2878.7,
+     "p99": 2958.5,
+     "max": 2994.6,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 3729,
+     "erros_servidor": 0,
+     "status": {
+      "200": 3729
+     },
+     "p50": 2540.8,
+     "p95": 2810.4,
+     "p99": 2862.0,
+     "max": 2900.9,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 853,
+     "erros_servidor": 0,
+     "status": {
+      "200": 853
+     },
+     "p50": 2559.1,
+     "p95": 2825.9,
+     "p99": 2879.6,
+     "max": 2912.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1263,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1263
+     },
+     "p50": 2541.1,
+     "p95": 2815.8,
+     "p99": 2866.3,
+     "max": 2933.2,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1198,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1198
+     },
+     "p50": 2556.7,
+     "p95": 2812.7,
+     "p99": 2870.8,
+     "max": 2938.6,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1198,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1198
+     },
+     "p50": 2517.7,
+     "p95": 2824.0,
+     "p99": 2870.8,
+     "max": 2929.4,
+     "falhas": []
+    }
+   ]
+  },
+  {
+   "usuarios_simultaneos": 1600,
+   "requisicoes": 12693,
+   "req_por_segundo": 319.9,
+   "erros_servidor_pct": 0.0,
+   "p50": 4929.9,
+   "p95": 5213.2,
+   "p99": 5276.0,
+   "max": 5376.8,
+   "rotas": [
+    {
+     "rota": "GET /armazenagem/pendentes",
+     "n": 1314,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1314
+     },
+     "p50": 4917.8,
+     "p95": 5201.6,
+     "p99": 5266.8,
+     "max": 5311.3,
+     "falhas": []
+    },
+    {
+     "rota": "GET /notificacoes",
+     "n": 1038,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1038
+     },
+     "p50": 4938.2,
+     "p95": 5212.6,
+     "p99": 5270.4,
+     "max": 5284.9,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens (lista)",
+     "n": 688,
+     "erros_servidor": 0,
+     "status": {
+      "200": 688
+     },
+     "p50": 4975.2,
+     "p95": 5275.9,
+     "p99": 5345.9,
+     "max": 5376.8,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ordens/{n} (terminal)",
+     "n": 4387,
+     "erros_servidor": 0,
+     "status": {
+      "200": 4387
+     },
+     "p50": 4928.1,
+     "p95": 5209.9,
+     "p99": 5273.0,
+     "max": 5317.2,
+     "falhas": []
+    },
+    {
+     "rota": "GET /ots (lista)",
+     "n": 911,
+     "erros_servidor": 0,
+     "status": {
+      "200": 911
+     },
+     "p50": 4918.9,
+     "p95": 5217.7,
+     "p99": 5287.1,
+     "max": 5337.2,
+     "falhas": []
+    },
+    {
+     "rota": "GET /painel",
+     "n": 1489,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1489
+     },
+     "p50": 4922.7,
+     "p95": 5205.1,
+     "p99": 5269.5,
+     "max": 5304.4,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas",
+     "n": 1434,
+     "erros_servidor": 0,
+     "status": {
+      "201": 1432,
+      "409": 2
+     },
+     "p50": 4942.3,
+     "p95": 5210.6,
+     "p99": 5265.4,
+     "max": 5298.9,
+     "falhas": []
+    },
+    {
+     "rota": "POST /retiradas/{id}/cancelar",
+     "n": 1432,
+     "erros_servidor": 0,
+     "status": {
+      "200": 1432
+     },
+     "p50": 4916.2,
+     "p95": 5210.5,
+     "p99": 5270.9,
+     "max": 5316.0,
+     "falhas": []
+    }
+   ]
+  }
+ ],
+ "capacidade": null,
+ "emails": {
+  "ENVIADO": 6610,
+  "PENDENTE": 13
+ },
+ "invariantes": [
+  {
+   "regra": "Estoque nunca negativo nem reservado além do que existe",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Reserva do estoque = soma das retiradas em andamento",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Nada some nem aparece: recebido = em estoque + entregue",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Recebido na linha da OT = soma dos recebimentos",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Nunca recebido além do previsto na OT",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Uma OT da base do SAP vira um único cadastro",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Cada retirada entregue tem uma única entrega no log",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Retirada entregue tem data e quem recebeu",
+   "violacoes": 0,
+   "exemplos": []
+  },
+  {
+   "regra": "Corrente de hashes do log de auditoria íntegra",
+   "violacoes": 0,
+   "exemplos": []
+  }
+ ],
+ "banco": {
+  "materiais na base do SAP": 3004,
+  "ordens na base do SAP": 1503,
+  "linhas de OT na base do SAP": 4202,
+  "OTs cadastradas no SEA": 801,
+  "recebimentos": 3572,
+  "linhas de estoque com saldo": 2751,
+  "retiradas": 4286,
+  "retiradas entregues": 476,
+  "notificações": 6623,
+  "registros no log de auditoria": 17277,
+  "sessões abertas": 131
+ },
+ "erros_servidor_no_dia": 0,
+ "aprovado": true
+}

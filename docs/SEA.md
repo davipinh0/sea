@@ -469,6 +469,13 @@ docker run --rm -v "$PWD/mobile:/app" -v sea_mobile_nm:/app/node_modules -w /app
 Testes específicos do SEA: `api/tests/test_sea.py`, `api/tests/test_sea_etiqueta.py`,
 `api/tests/test_sea_notificacoes.py` e `admin/src/test/sea.test.jsx`.
 
+**Simulação de carga** (`qa/carga`, `sh qa/carga/rodar.sh`): um dia de uma usina fictícia de grande
+porte (3.000 materiais, 1.200 OTs, 130 funcionários) num banco isolado (`sea_carga`), com confrontos
+de concorrência, escalada até o limite e conferência do banco no fim. Os relatórios ficam em
+`qa/carga/resultados/`. Foi ela que achou o erro 500 ao registrar ao mesmo tempo duas OTs com o mesmo
+material novo e a falta do índice do estoque pelo lote (migração `101`). Os demais testes de QA
+(Postman, Playwright) estão em `qa/README.md`.
+
 ## Hospedagem no Azure
 
 Uma VM Linux (Ubuntu 24.04, 2 vCPU, 4 GB) roda o mesmo `docker compose` do ambiente local.

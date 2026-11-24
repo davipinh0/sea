@@ -307,3 +307,68 @@ class TestV030_InventoryLock:
         cur.execute("DELETE FROM items WHERE item_id = %s", (item_id,))
         cur.close()
         clean.close()
+
+
+class TestNewMaterialInTwoOts:
+    """Simulação de carga (qa/carga): duas OTs registradas ao mesmo tempo com o mesmo material
+    novo davam erro 500 (código de material duplicado) na segunda. Agora a segunda espera a
+    primeira e usa o cadastro que ela criou.
+    """
+
+    def test_second_ot_reuses_the_material_created_by_the_first(self):
+        from services import sea_service as sea
+        from sqlalchemy import create_engine
+
+        sku = "RACE-MAT-NOVO"
+        first = _make_conn()
+        cur = first.cursor()
+        cur.execute("SELECT warehouse_id FROM warehouses ORDER BY warehouse_id LIMIT 1")
+        warehouse_id = cur.fetchone()[0]
+        # A primeira OT já inseriu o material e ainda não confirmou.
+        cur.execute(
+            "INSERT INTO items (sku, item_name, external_id) VALUES (%s, 'Peça nova', "
+            "gen_random_uuid()) RETURNING item_id", (sku,))
+        first_item = cur.fetchone()[0]
+
+        engine = create_engine(os.environ["DATABASE_URL"])
+        outcome = {}
+
+        def second_ot():
+            with engine.connect() as db:
+                try:
+                    result = sea.register_ot_materials(
+                        db, warehouse_id=warehouse_id, username="admin",
+                        header={"ot_code": "OT-RACE-MAT-2", "service_order_type": "PM11"},
+                        materials=[{"material_code": sku, "description": "Peça nova",
+                                    "quantity": 1}])
+                    db.commit()
+                    outcome["po_id"] = result["po_id"]
+                except Exception as exc:  # o que importa é registrar e mostrar a falha
+                    outcome["error"] = repr(exc)
+
+        worker = threading.Thread(target=second_ot)
+        worker.start()
+        worker.join(timeout=1)
+        assert worker.is_alive(), "a segunda OT deveria esperar o cadastro da primeira"
+        first.commit()
+        worker.join(timeout=10)
+
+        check = _make_conn()
+        check.autocommit = True
+        c = check.cursor()
+        try:
+            assert "error" not in outcome, outcome.get("error")
+            c.execute("SELECT item_id FROM purchase_order_lines WHERE po_id = %s",
+                      (outcome["po_id"],))
+            assert c.fetchone()[0] == first_item
+            c.execute("SELECT COUNT(*) FROM items WHERE sku = %s", (sku,))
+            assert c.fetchone()[0] == 1
+        finally:
+            c.execute("DELETE FROM purchase_order_lines WHERE po_id IN "
+                      "(SELECT po_id FROM purchase_orders WHERE po_number = 'OT-RACE-MAT-2')")
+            c.execute("DELETE FROM purchase_orders WHERE po_number = 'OT-RACE-MAT-2'")
+            c.execute("DELETE FROM items WHERE sku = %s", (sku,))
+            c.close()
+            check.close()
+            first.close()
+            engine.dispose()

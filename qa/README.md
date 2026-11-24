@@ -44,16 +44,19 @@ com confirmação no celular, XSS guardado (texto com HTML nunca roda) e acessib
 Antes de rodar depois de mudar o painel: `docker compose build admin && docker compose up -d admin`
 (o contêiner serve o build, não o código).
 
-## 4. Concorrência
+## 4. Simulação de carga e concorrência (empresa de grande porte)
 
 ```sh
-docker compose exec -T api python - < qa/concorrencia.py
+sh qa/carga/rodar.sh
 ```
 
-Dispara requisições em paralelo contra a API local, com conexões reais: 30 pedidos disputando 10
-unidades, 10 confirmações de entrega ao mesmo tempo, dois almoxarifes aceitando a mesma retirada e
-armazenagens simultâneas do mesmo material. Confere que nunca se reserva além do saldo, nunca se
-baixa duas vezes e o estoque nunca fica negativo.
+Simula um dia de uma usina fictícia de grande porte num ambiente isolado (banco `sea_carga`):
+implantação da base do SAP, 800 OTs recebidas e armazenadas, 500 retiradas do terminal até a entrega,
+consultas do painel o tempo todo, confrontos (muitas pessoas disputando a última unidade, a mesma
+retirada, a mesma OT, a mesma entrega) e uma escalada de 5 a 400 usuários simultâneos até o limite.
+No fim confere o banco (estoque nunca negativo, nada some, uma entrega um registro, log íntegro) e
+grava o relatório em `qa/carga/resultados/`. Detalhes em `qa/carga/README.md`. Substitui o antigo
+`qa/concorrencia.py`, cujos quatro casos estão nos confrontos.
 
 ## 5. Outras verificações feitas no QA
 

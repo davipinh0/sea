@@ -25,7 +25,7 @@ function resultRoute(r) {
   switch (r.type) {
     case 'item': return `/estoque/materiais?q=${q}`;
     case 'bin': return `/estoque/enderecos?q=${q}`;
-    case 'po': return `/expedicao/ots?q=${q}`;
+    case 'po': return `/recebimento/ots?q=${q}`;
     default: return '/';
   }
 }

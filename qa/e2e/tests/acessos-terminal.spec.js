@@ -48,7 +48,7 @@ test('terminal avisa quando a ordem ainda não foi recebida', async ({ page, req
   await page.getByLabel('Ordem').fill(ordem);
   await page.getByRole('button', { name: 'Consultar ordem' }).click();
 
-  await expect(page.getByText(/Aguardando Recebimento: os materiais desta ordem ainda não chegaram/)).toBeVisible();
+  await expect(page.getByText(/Aguardando Recebimento: os materiais desta ordem ainda não foram recebidos/)).toBeVisible();
   await expect(page.getByText('Filtro QA (fictício)')).toBeVisible();
   await expect(page.getByText(/previsto: 4 PC · recebido: 0 PC/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Solicitar retirada' })).toHaveCount(0);

@@ -9,7 +9,7 @@ export const ACCESS_GROUPS = [
     { key: 'bins', label: 'Endereços' },
     { key: 'audit-log', label: 'Histórico' },
   ] },
-  { label: 'Expedição', items: [
+  { label: 'Recebimento', items: [
     { key: 'receiving', label: 'Recebimento de ordem' },
     { key: 'putaway', label: 'Armazenagem' },
     { key: 'purchase-orders', label: 'Ordens' },

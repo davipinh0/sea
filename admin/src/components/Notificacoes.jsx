@@ -23,7 +23,7 @@ const KIND_TARGET = {
   RETIRADA_SOLICITADA: '/retirada',
   RETIRADA_APROVADA: '/retirada',
   RETIRADA_CANCELADA: '/retirada',
-  RECEBIMENTO: '/expedicao/armazenagem',
+  RECEBIMENTO: '/recebimento/armazenagem',
   ARMAZENAGEM_CONCLUIDA: '/estoque/sp12',
 };
 

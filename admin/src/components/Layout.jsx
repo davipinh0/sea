@@ -8,13 +8,13 @@ import { reloadIfNewVersion } from '../utils/newVersion.js';
 
 const PERM_POPUP_COOLDOWN_MS = 5000;
 
-const SECTIONS = ['/estoque', '/expedicao'];
+const SECTIONS = ['/estoque', '/recebimento'];
 
 const PAGE_LABELS = {
   inventory: 'Estoque > Visão Geral', items: 'Estoque > Materiais', bins: 'Estoque > Endereços',
   zones: 'Estoque > Endereços', 'audit-log': 'Estoque > Histórico',
-  receiving: 'Expedição > Recebimento de Ordem', putaway: 'Expedição > Armazenagem',
-  'purchase-orders': 'Expedição > Ordens', retirada: 'Retirada', 'retirada-avaliar': 'Retirada',
+  receiving: 'Recebimento > Recebimento de Ordem', putaway: 'Recebimento > Armazenagem',
+  'purchase-orders': 'Recebimento > Ordens', retirada: 'Retirada', 'retirada-avaliar': 'Retirada',
   'retirada-fazer': 'Retirada', users: 'Sistema > Usuários',
   settings: 'Sistema > Configurações', imports: 'Sistema > Importação de dados',
   'material-catalog': 'Sistema > Cadastro de materiais',

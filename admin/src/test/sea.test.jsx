@@ -20,7 +20,7 @@ vi.mock('../api.js', () => ({
   },
 }));
 let warehouseList = [];
-let currentWarehouse = { warehouse_id: 7, warehouse_code: 'Expedição' };
+let currentWarehouse = { warehouse_id: 7, warehouse_code: 'Recebimento' };
 vi.mock('../warehouse.jsx', () => ({ useWarehouse: () => ({ warehouseId: 7, warehouses: warehouseList, warehouse: currentWarehouse }) }));
 vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser }) }));
 // O terminal tem sessão própria; as chamadas dele passam pelos mesmos mocks, marcadas com o token
@@ -358,13 +358,13 @@ describe('Retirada: cancelamento', () => {
 });
 
 describe('Armazenagem entre locais', () => {
-  it('offers the shelves of the other locations for material received in the Expedição', async () => {
+  it('offers the shelves of the other locations for material received in the Recebimento', async () => {
     currentUser = { username: 'almoxarife', role: 'USER', allowed_pages: ['putaway'] };
     warehouseList = [
-      { warehouse_id: 7, warehouse_code: 'Expedição', warehouse_name: 'Área da Expedição' },
+      { warehouse_id: 7, warehouse_code: 'Recebimento', warehouse_name: 'Área de Recebimento' },
       { warehouse_id: 8, warehouse_code: 'SP12', warehouse_name: 'Setor SP12' },
     ];
-    const staged = { inventory_id: 40, item_id: 3, sku: 'MAT-1', item_name: 'Parafuso', quantity: 20, bin_id: 1, bin_code: 'EXPEDICAO', lot_number: '100000001', ot: '100000001', order_number: '2000000011', order_type: 'PM12', warehouse_id: 7, warehouse_code: 'Expedição' };
+    const staged = { inventory_id: 40, item_id: 3, sku: 'MAT-1', item_name: 'Parafuso', quantity: 20, bin_id: 1, bin_code: 'EXPEDICAO', lot_number: '100000001', ot: '100000001', order_number: '2000000011', order_type: 'PM12', warehouse_id: 7, warehouse_code: 'Recebimento' };
     apiGet.mockImplementation((path) => {
       if (path === '/sea/armazenagem/pendentes') return ok({ pending_items: [staged] });
       if (path === '/sea/armazenagem/destinos') {
@@ -380,7 +380,7 @@ describe('Armazenagem entre locais', () => {
     apiPost.mockImplementation(() => ok({ quantity: 20, item: 'MAT-1', to_bin: 'A0' }));
 
     render(<MemoryRouter><ArmazenagemSP12 /></MemoryRouter>);
-    expect(await screen.findByText('Expedição · EXPEDICAO')).toBeInTheDocument();
+    expect(await screen.findByText('Recebimento · EXPEDICAO')).toBeInTheDocument();
     const select = screen.getByLabelText('Endereço de destino de MAT-1');
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toEqual(['Escolha…', 'A0', 'A3', 'SOLDA']);
@@ -447,7 +447,7 @@ describe('Notificações clicáveis', () => {
 
   it.each([
     ['RETIRADA_SOLICITADA', '/retirada'],
-    ['RECEBIMENTO', '/expedicao/armazenagem'],
+    ['RECEBIMENTO', '/recebimento/armazenagem'],
     ['ARMAZENAGEM_CONCLUIDA', '/estoque/sp12'],
   ])('%s opens %s', async (kind, target) => {
     currentUser = { username: 'admin', role: 'ADMIN' };
@@ -668,14 +668,14 @@ describe('Navegação SEA', () => {
     currentUser = { role: 'ADMIN', allowed_pages: null };
     apiGet.mockImplementation(() => ok({}));
     render(<MemoryRouter><Sidebar /></MemoryRouter>);
-    for (const label of ['Painel', 'Estoque', 'Expedição', 'Retirada', 'Usuários', 'Configurações', 'Importação de dados']) {
+    for (const label of ['Painel', 'Estoque', 'Recebimento', 'Retirada', 'Usuários', 'Configurações', 'Importação de dados']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.queryByText('Pedidos de venda')).toBeNull();
     expect(screen.queryByText('Webhooks')).toBeNull();
   });
 
-  it('offers Expedição only while the Expedição location is selected', () => {
+  it('offers Recebimento only while the Recebimento location is selected', () => {
     currentUser = { role: 'ADMIN', allowed_pages: null };
     apiGet.mockImplementation(() => ok({}));
     currentWarehouse = { warehouse_id: 8, warehouse_code: 'SP12' };
@@ -683,9 +683,9 @@ describe('Navegação SEA', () => {
       render(<MemoryRouter><Sidebar /></MemoryRouter>);
       expect(screen.getByText('Estoque')).toBeInTheDocument();
       expect(screen.getByText('Retirada')).toBeInTheDocument();
-      expect(screen.queryByText('Expedição')).toBeNull();
+      expect(screen.queryByText('Recebimento')).toBeNull();
     } finally {
-      currentWarehouse = { warehouse_id: 7, warehouse_code: 'Expedição' };
+      currentWarehouse = { warehouse_id: 7, warehouse_code: 'Recebimento' };
     }
   });
 });

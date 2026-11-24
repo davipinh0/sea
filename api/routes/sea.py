@@ -1354,7 +1354,7 @@ def pendentes_de_armazenagem():
 @require_any_page("putaway", "receiving", *TRANSFER_PAGE_KEYS)
 @with_db
 def destinos():
-    """Endereços de todos os locais do usuário: a ordem recebida na Expedição é guardada no SP12 ou
+    """Endereços de todos os locais do usuário: a ordem recebida no Recebimento é guardada no SP12 ou
     no SP13.
     """
     scope_clause, scope_params = warehouse_scope_clause("b.warehouse_id")

@@ -114,22 +114,22 @@ ON CONFLICT DO NOTHING;
 UPDATE users SET warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'SP12')
 WHERE username = 'admin';
 
--- --- Locais: Expedição, SP12 e SP13. Requer a migração 084 (users.email).
+-- --- Locais: Recebimento, SP12 e SP13. Requer a migração 084 (users.email).
 
--- O armazém padrão vira a Expedição, com um único endereço.
-UPDATE warehouses SET warehouse_code = 'Expedição', warehouse_name = 'Área da Expedição'
+-- O armazém padrão vira o Recebimento, com um único endereço.
+UPDATE warehouses SET warehouse_code = 'Recebimento', warehouse_name = 'Área de Recebimento'
 WHERE warehouse_code = 'WH-01';
 
-UPDATE bins SET bin_code = 'EXPEDICAO', bin_barcode = 'EXPEDICAO',
-       description = 'Área da Expedição (endereço único)'
+UPDATE bins SET bin_code = 'RECEBIMENTO', bin_barcode = 'RECEBIMENTO',
+       description = 'Área de Recebimento (endereço único)'
 WHERE bin_code = 'RECV-01'
-  AND warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'Expedição');
+  AND warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'Recebimento');
 
-UPDATE zones SET zone_name = 'Área da Expedição'
+UPDATE zones SET zone_name = 'Área de Recebimento'
 WHERE zone_code = 'RCV' AND zone_name = 'Receiving'
-  AND warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'Expedição');
+  AND warehouse_id = (SELECT warehouse_id FROM warehouses WHERE warehouse_code = 'Recebimento');
 
--- Os outros endereços de exemplo saem da Expedição: apagados se nunca usados; inativos se já têm
+-- Os outros endereços de exemplo saem do Recebimento: apagados se nunca usados; inativos se já têm
 -- histórico.
 DO $$
 DECLARE
@@ -137,7 +137,7 @@ DECLARE
 BEGIN
     FOR b IN
         SELECT x.bin_id FROM bins x JOIN warehouses w ON w.warehouse_id = x.warehouse_id
-        WHERE w.warehouse_code = 'Expedição' AND x.bin_code IN ('PICK-01', 'BULK-01')
+        WHERE w.warehouse_code = 'Recebimento' AND x.bin_code IN ('PICK-01', 'BULK-01')
     LOOP
         BEGIN
             DELETE FROM bins WHERE bin_id = b.bin_id;
@@ -149,7 +149,7 @@ END $$;
 
 DELETE FROM zones z
 USING warehouses w
-WHERE w.warehouse_id = z.warehouse_id AND w.warehouse_code = 'Expedição'
+WHERE w.warehouse_id = z.warehouse_id AND w.warehouse_code = 'Recebimento'
   AND z.zone_code IN ('PICK', 'STAGE')
   AND NOT EXISTS (SELECT 1 FROM bins x WHERE x.zone_id = z.zone_id);
 
@@ -193,7 +193,7 @@ ON CONFLICT DO NOTHING;
 UPDATE users u
 SET warehouse_ids = ARRAY(
         SELECT w.warehouse_id FROM warehouses w
-        WHERE w.warehouse_code IN ('SP12', 'Expedição', 'SP13')
+        WHERE w.warehouse_code IN ('SP12', 'Recebimento', 'SP13')
         ORDER BY (w.warehouse_code = 'SP12') DESC, w.warehouse_id)
 WHERE u.username IN ('almoxarife', 'retirada');
 

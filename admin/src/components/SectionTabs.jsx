@@ -2,7 +2,7 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { canSee } from '../utils/permissions.js';
 
-// Abas de uma seção (Estoque, Expedição). Cada aba depende de uma permissão; a API confere de novo.
+// Abas de uma seção (Estoque, Recebimento). Cada aba depende de uma permissão; a API confere de novo.
 export default function SectionTabs({ basePath, tabs, emptyMessage }) {
   const { user } = useAuth();
   const location = useLocation();

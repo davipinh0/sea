@@ -5,7 +5,7 @@ import Layout from './components/Layout.jsx';
 import SectionTabs from './components/SectionTabs.jsx';
 import { canSee, isTerminalAccount, TERMINAL_PAGE } from './utils/permissions.js';
 import { useWarehouse } from './warehouse.jsx';
-import { EXPEDICAO_CODE } from './utils/sea.js';
+import { RECEBIMENTO_CODE } from './utils/sea.js';
 import Login from './pages/Login.jsx';
 import ChangePassword from './pages/ChangePassword.jsx';
 import MeusAcessos from './pages/MeusAcessos.jsx';
@@ -35,8 +35,8 @@ const ESTOQUE_TABS = [
   { to: 'historico', label: 'Histórico', pageKey: 'audit-log' },
 ];
 
-const EXPEDICAO_TABS = [
-  { to: 'recebimento', label: 'Recebimento de Ordem', pageKey: 'receiving' },
+const RECEBIMENTO_TABS = [
+  { to: 'ordem', label: 'Recebimento de Ordem', pageKey: 'receiving' },
   { to: 'armazenagem', label: 'Armazenagem', pageKey: 'putaway' },
   { to: 'ots', label: 'Ordens', pageKey: 'purchase-orders' },
   { to: 'base-sap', label: 'SAP', pageKey: 'receiving' },
@@ -73,10 +73,10 @@ function RetiradaPage() {
 }
 
 // Página aberta pela URL sem permissão volta ao Painel (a API recusaria de qualquer jeito). A
-// Expedição só existe no local Expedição.
-function OnlyAtExpedicao({ children }) {
+// Recebimento só existe no local Recebimento.
+function OnlyAtRecebimento({ children }) {
   const { warehouse } = useWarehouse();
-  if (warehouse && warehouse.warehouse_code !== EXPEDICAO_CODE) return <Navigate to="/" replace />;
+  if (warehouse && warehouse.warehouse_code !== RECEBIMENTO_CODE) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -118,8 +118,8 @@ export default function App() {
           <Route path="historico" element={<AuditLog />} />
         </Route>
 
-        <Route path="/expedicao" element={page(<OnlyAtExpedicao><SectionTabs basePath="/expedicao" tabs={EXPEDICAO_TABS} /></OnlyAtExpedicao>, 'Não foi possível carregar a expedição.')}>
-          <Route path="recebimento" element={<ProcessGate purpose="recebimento" label="Recebimento"><RecebimentoOT /></ProcessGate>} />
+        <Route path="/recebimento" element={page(<OnlyAtRecebimento><SectionTabs basePath="/recebimento" tabs={RECEBIMENTO_TABS} /></OnlyAtRecebimento>, 'Não foi possível carregar o recebimento.')}>
+          <Route path="ordem" element={<ProcessGate purpose="recebimento" label="Recebimento"><RecebimentoOT /></ProcessGate>} />
           <Route path="armazenagem" element={<ProcessGate purpose="armazenagem" label="Armazenagem"><ArmazenagemSP12 /></ProcessGate>} />
           <Route path="ots" element={<PurchaseOrders />} />
           <Route path="base-sap" element={<BaseSap />} />
@@ -137,9 +137,15 @@ export default function App() {
         <Route path="/items" element={<Navigate to="/estoque/materiais" replace />} />
         <Route path="/bins" element={<Navigate to="/estoque/enderecos" replace />} />
         <Route path="/audit-log" element={<Navigate to="/estoque/historico" replace />} />
-        <Route path="/receiving" element={<Navigate to="/expedicao/recebimento" replace />} />
-        <Route path="/putaway" element={<Navigate to="/expedicao/armazenagem" replace />} />
-        <Route path="/purchase-orders" element={<Navigate to="/expedicao/ots" replace />} />
+        <Route path="/receiving" element={<Navigate to="/recebimento/ordem" replace />} />
+        {/* Endereços antigos: a seção se chamava Expedição. */}
+        <Route path="/expedicao" element={<Navigate to="/recebimento" replace />} />
+        <Route path="/expedicao/recebimento" element={<Navigate to="/recebimento/ordem" replace />} />
+        <Route path="/expedicao/armazenagem" element={<Navigate to="/recebimento/armazenagem" replace />} />
+        <Route path="/expedicao/ots" element={<Navigate to="/recebimento/ots" replace />} />
+        <Route path="/expedicao/base-sap" element={<Navigate to="/recebimento/base-sap" replace />} />
+        <Route path="/putaway" element={<Navigate to="/recebimento/armazenagem" replace />} />
+        <Route path="/purchase-orders" element={<Navigate to="/recebimento/ots" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

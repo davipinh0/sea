@@ -352,7 +352,7 @@ def confirm_putaway(validated):
     if not ok:
         return denied
 
-    # A ordem recebida num local (Expedição) é guardada em outro (SP12, SP13). Só estoque de OT do
+    # A ordem recebida num local (Recebimento) é guardada em outro (SP12, SP13). Só estoque de OT do
     # SEA muda de local aqui, e o usuário precisa ter acesso aos dois. O movimento fica registrado
     # no destino.
     warehouse_id = to_bin.warehouse_id

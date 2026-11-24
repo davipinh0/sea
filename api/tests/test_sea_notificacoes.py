@@ -122,7 +122,7 @@ class TestEmail:
             "SEA - Solicitação de Retirada",
             "SEA - Retirada Aprovada",
             "SEA - Retirada Cancelada",
-            "SEA - Recebimento de Materiais na Expedição",
+            "SEA - Recebimento de Materiais",
             "SEA - Conclusão de Armazenamento",
         }
         assert {m["To"] for _, m in sent} == {"adm@empresa.example"}

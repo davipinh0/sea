@@ -2,7 +2,7 @@
 
 Etapas:
   1. Implantação: a base do SAP da empresa entra pela importação do painel e os funcionários entram.
-  2. Dia de operação (comprimido): recebedores recebem as OTs na Expedição e armazenam no SP12/SP13,
+  2. Dia de operação (comprimido): recebedores recebem as OTs no Recebimento e armazenam no SP12/SP13,
      solicitantes pedem material pelo terminal, avaliadores aprovam ou negam, almoxarifes separam
      e o solicitante confirma a entrega; consultores olham painel, ordens e histórico o tempo todo.
   3. Confrontos: muitas pessoas disputando a mesma coisa no mesmo instante (último material, mesma
@@ -38,7 +38,7 @@ import invariantes  # noqa: E402
 
 API = os.environ.get("CARGA_API", "http://sea-api-carga:5000")
 APP = {"X-SEA-Identidade": "digital-pin"}  # o app avisa que confirmou a digital/PIN
-EXPEDICAO = "Expedição"
+RECEBIMENTO = "Recebimento"
 RESULTADOS = Path(__file__).parent / "resultados"
 
 
@@ -203,7 +203,7 @@ class Dia:
         c = self.p["recebedor"][0]
         _, corpo = c.chamar(
             "GET",
-            f"/api/sea/recebimentos/areas?warehouse_id={self.locais[EXPEDICAO]}",
+            f"/api/sea/recebimentos/areas?warehouse_id={self.locais[RECEBIMENTO]}",
             "GET /recebimentos/areas",
         )
         self.area = corpo["bins"][0]["bin_id"]
@@ -220,7 +220,7 @@ class Dia:
                 "POST",
                 "/api/sea/recebimentos/base",
                 "POST /recebimentos/base",
-                {"warehouse_id": self.locais[EXPEDICAO], "ot_code": ot},
+                {"warehouse_id": self.locais[RECEBIMENTO], "ot_code": ot},
             )
             if status != 201:
                 self._conta("ot não registrada")
@@ -629,7 +629,7 @@ def confrontos(por_papel, dados, locais, ordens, metricas, db):
                         "POST",
                         "/api/sea/recebimentos/base",
                         "POST /recebimentos/base (confronto)",
-                        {"warehouse_id": locais[EXPEDICAO], "ot_code": livre},
+                        {"warehouse_id": locais[RECEBIMENTO], "ot_code": livre},
                         esperado=(201, 409),
                     )[0]
                 )
@@ -652,7 +652,7 @@ def confrontos(por_papel, dados, locais, ordens, metricas, db):
         ln = corpo["lines"][0]
         area = receb[0].chamar(
             "GET",
-            f"/api/sea/recebimentos/areas?warehouse_id={locais[EXPEDICAO]}",
+            f"/api/sea/recebimentos/areas?warehouse_id={locais[RECEBIMENTO]}",
             "GET /recebimentos/areas",
         )[1]["bins"][0]["bin_id"]
         st = ao_mesmo_tempo(

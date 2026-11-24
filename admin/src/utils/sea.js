@@ -32,7 +32,7 @@ export const OT_HEADER_FIELDS = [
 
 export const OT_HEADER_FORM = OT_HEADER_FIELDS.filter((f) => !f.readOnly);
 
-export const EXPEDICAO_CODE = 'Expedição';
+export const RECEBIMENTO_CODE = 'Recebimento';
 
 // Material em KG com peso de caixa é contado em caixas: 36 KG em caixas de 18 KG = "2 cx (36 KG)".
 export function formatQuantity(quantity, uom, packWeightKg) {
@@ -193,7 +193,7 @@ export function orderSituationMessage(order) {
     case 'RETIRADA':
       return `Esta ordem já foi retirada${order.withdrawn_at ? ` em ${formatDateTime(order.withdrawn_at)}` : ''}. Todos os materiais dela estão esgotados.`;
     case 'AGUARDANDO_RECEBIMENTO':
-      return 'Aguardando Recebimento: os materiais desta ordem ainda não chegaram à expedição.';
+      return 'Aguardando Recebimento: os materiais desta ordem ainda não foram recebidos.';
     case 'AGUARDANDO_ARMAZENAMENTO':
       return 'Aguardando Armazenamento: os materiais chegaram e ainda estão sendo guardados. Tente de novo mais tarde.';
     case 'EM_RETIRADA':

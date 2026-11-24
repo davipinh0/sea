@@ -57,7 +57,7 @@ test.describe('Permissões no menu', () => {
 test.describe('Processos liberados pelo celular', () => {
   test('Recebimento só abre depois da confirmação no celular', async ({ page, request }) => {
     await uiLogin(page, 'qa.oper');
-    await page.goto('/expedicao/recebimento');
+    await page.goto('/recebimento/ordem');
     await page.getByRole('button', { name: 'Enviar para o celular' }).click();
     await expect(page.getByText(/SIM, SOU EU/)).toBeVisible();
     await approveOnPhone(request, 'qa.oper');

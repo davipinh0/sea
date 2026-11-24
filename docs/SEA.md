@@ -43,19 +43,19 @@ docker exec -i sea-db psql -U sea -d sea -v ON_ERROR_STOP=1 < db/seed-sea.sql
 | Usuário | Uso | Senha inicial |
 |---|---|---|
 | `admin` | administração | `admin` em instalação nova (troca obrigatória) |
-| `almoxarife` | Expedição, Estoque, Retirada (painel e app) | `Sea@2026` (troca obrigatória) |
+| `almoxarife` | Recebimento, Estoque, Retirada (painel e app) | `Sea@2026` (troca obrigatória) |
 | `retirada` (ou `retirada@sea.example`) | funcionário de teste do terminal de retirada: solicita e confirma a retirada | `Sea@2026` |
 
 ### Locais
 
 | Local (seletor da barra superior) | Endereços |
 |---|---|
-| `Expedição - Área da Expedição` | endereço único `EXPEDICAO` |
+| `Recebimento - Área de Recebimento` | endereço único `RECEBIMENTO` |
 | `SP12 - Setor SP12 - Almoxarifado` | recebimento `SP12-RECEB` e prateleiras A0–C3 |
 | `SP13 - Setor SP13 - Almoxarifado` | recebimento `SP13-RECEB` e endereço geral `SP13` (até a migração `090`, "Solda - Contêiner de Solda") |
 
 O material é recebido em um local e pode ser armazenado em outro: uma ordem recebida na
-Expedição é armazenada nas prateleiras do SP12 ou no SP13. **Expedição >
+Recebimento é armazenada nas prateleiras do SP12 ou no SP13. **Recebimento >
 Armazenagem** lista o que aguarda em todos os locais e oferece os endereços de todos eles
 (agrupados por local). O estoque da ordem é localizado pelo número da OT em qualquer local;
 a retirada entra na fila do local onde o material está armazenado. Os materiais de uma ordem
@@ -67,7 +67,7 @@ podem ficar em endereços e locais diferentes.
 |---|---|
 | Painel | Indicadores do SP12 e últimas movimentações |
 | Estoque | Visão Geral (mapa de endereços, ordens PM11/PM12), Materiais (um por material de cada ordem), Endereços, Histórico |
-| Expedição | Recebimento de Ordem (código de barras da OT), Armazenagem, Ordens |
+| Recebimento | Recebimento de Ordem (código de barras da OT), Armazenagem, Ordens |
 | Retirada | Fila do almoxarife, histórico (entregues e canceladas) e terminal touchscreen |
 | Sistema | Usuários (com e-mail), Configurações, Importação de dados |
 
@@ -133,7 +133,7 @@ A etiqueta que acompanha o material é registrada sobre as tabelas do SEA (migra
 | Armazenamento | `inventory` | endereço + OT (`lot_number` do estoque = número da OT) |
 | Movimentações | `item_receipts`, `bin_transfers`, `withdrawals`, `audit_log` | consultadas juntas por material em `GET /api/sea/ots/<OT>` |
 
-Fluxo em **Expedição > Recebimento**:
+Fluxo em **Recebimento > Recebimento de Ordem**:
 
 1. Leia o código de barras da OT. Se a OT não existir, o SEA oferece **Iniciar novo recebimento**.
 2. Cole o texto da etiqueta e clique em **Interpretar etiqueta**: o formulário é preenchido.
@@ -162,10 +162,10 @@ Limites conhecidos do protótipo:
 
 ## Menu por local e exclusões
 
-* A seção **Expedição** (recebimento, armazenagem, ordens, SAP) só aparece no menu com o local
-  `Expedição` selecionado na barra superior; com SP12 ou SP13 selecionado ela não é
+* A seção **Recebimento** (recebimento, armazenagem, ordens, SAP) só aparece no menu com o local
+  `Recebimento` selecionado na barra superior; com SP12 ou SP13 selecionado ela não é
   oferecida, e o endereço `/expedicao` volta para o Painel.
-* **Excluir ordem** (Expedição > Ordens) e **excluir material** (Estoque > Materiais) são ações do
+* **Excluir ordem** (Recebimento > Ordens) e **excluir material** (Estoque > Materiais) são ações do
   administrador, com confirmação. A ordem é excluída com seus recebimentos, o estoque que veio
   dela, as movimentações e as retiradas; os materiais continuam no cadastro. O material é excluído
   do cadastro, das ordens, do estoque e das movimentações; uma ordem que fica sem materiais é
@@ -206,7 +206,7 @@ Limites conhecidos do protótipo:
 * **Cadastro de materiais** (Sistema, permissão própria; migração `088`): criar, alterar e excluir
   os materiais consultados ao montar uma OT. Ao informar o código (na aba SAP > Nova OT ou no
   recebimento pela etiqueta) o SEA traz descrição, unidade e peso por caixa.
-* **Nova OT** (Expedição > SAP): monta uma OT na base com materiais do cadastro; ela passa a ser
+* **Nova OT** (Recebimento > SAP): monta uma OT na base com materiais do cadastro; ela passa a ser
   encontrada no recebimento como as que vêm do SAP.
 * **Prateleiras**: todas são `GRANDE`, que aceita material de qualquer tamanho; `PEQUENO` fica
   restrito a material pequeno.
@@ -250,7 +250,7 @@ Uma OT traz materiais de várias ordens: a ordem fica gravada em cada material d
 **Carga da base.** Em Sistema > Importação de dados há três importações (CSV ou JSON, com modelo
 para baixar), nesta ordem: ordens, materiais, OTs / reservas (uma linha por material). Uma linha
 já existente é atualizada; linhas com erro são listadas e as demais entram. A base é consultada
-em Expedição > SAP. O banco de exemplo traz as OTs fictícias `1000000101` e `1000000102`.
+em Recebimento > SAP. O banco de exemplo traz as OTs fictícias `1000000101` e `1000000102`.
 
 | Endpoint | Função |
 |---|---|
@@ -283,8 +283,8 @@ app fechado no iPhone usam a chave APNs, que o EAS cria na mesma etapa.
 
 | Módulo | O que faz | Quem vê |
 |---|---|---|
-| Receber | lê a OT; se ela está só na base do SAP, mostra os materiais e registra a entrega; recebe parcial ou integral | local Expedição; permissão Recebimento (ou módulo "Receber") |
-| Armazenar | lista o que aguarda em todos os locais e guarda em qualquer prateleira (sugestão, lista ou código do endereço) | local Expedição; permissão Armazenagem (ou módulo "Armazenagem") |
+| Receber | lê a OT; se ela está só na base do SAP, mostra os materiais e registra a entrega; recebe parcial ou integral | local Recebimento; permissão Recebimento (ou módulo "Receber") |
+| Armazenar | lista o que aguarda em todos os locais e guarda em qualquer prateleira (sugestão, lista ou código do endereço) | local Recebimento; permissão Armazenagem (ou módulo "Armazenagem") |
 | Retirada | avaliar (aprovar/negar), aceitar e separar, pronta para entrega, cancelar com motivo | Solicitar, Avaliar ou Fazer retirada |
 | Histórico | movimentações do local e log completo do SEA | admin ou permissão Histórico |
 | Transferir | busca o material e move entre endereços ou locais | permissão Materiais, Visão Geral ou Armazenagem |
@@ -426,7 +426,7 @@ celular com o Expo Go); `npx eas-cli login`, `npx eas-cli init` e `npm run build
 | Solicitação de retirada | uma retirada é solicitada no terminal (avisa quem avalia) | `SEA - Solicitação de Retirada` |
 | Retirada aprovada | o avaliador aprova (avisa quem faz a retirada) | `SEA - Retirada Aprovada` |
 | Retirada cancelada | o solicitante cancela uma retirada já aceita (avisa só quem aceitou) | `SEA - Retirada Cancelada` |
-| Recebimento de materiais | materiais de uma ordem são recebidos | `SEA - Recebimento de Materiais na Expedição` |
+| Recebimento de materiais | materiais de uma ordem são recebidos | `SEA - Recebimento de Materiais` |
 | Conclusão de armazenamento | não resta material da ordem na área de recebimento | `SEA - Conclusão de Armazenamento` |
 
 Cada evento grava uma linha em `sea_notifications` (migração `084`), aparece no sino do painel

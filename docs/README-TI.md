@@ -10,7 +10,7 @@ O SEA controla o caminho do material desde a chegada até a entrega a quem pediu
 
 ```
 Chegada da OT  →  Recebimento  →  Armazenagem  →  Pedido de retirada  →  Avaliação  →  Separação  →  Entrega
- (Expedição)       (app/painel)    (SP12/SP13)      (terminal)            (avaliador)    (almoxarife)   (baixa)
+ (Recebimento)       (app/painel)    (SP12/SP13)      (terminal)            (avaliador)    (almoxarife)   (baixa)
 ```
 
 Ele roda em três frentes:
@@ -43,9 +43,9 @@ O protótipo está publicado no Azure e funciona do começo ao fim, mas só com 
 ## 3. Como foi desenvolvido
 
 - **Base de código aberto:** o SEA parte do **Sentry WMS**, um sistema de armazém de código aberto (licença Apache 2.0, autor hightower-systems). A licença permite uso comercial e modificação, desde que se mantenham os avisos de autoria (arquivos `LICENSE` e `NOTICE`).
-- **Adaptação:** a base foi adaptada ao processo da Expedição:
+- **Adaptação:** a base foi adaptada ao processo do Recebimento:
   - OTs com ordens PM11/PM12;
-  - os locais Expedição, SP12 e SP13;
+  - os locais Recebimento, SP12 e SP13;
   - base do SAP e retirada com avaliação;
   - app próprio e terminal de retirada.
 - **Ferramentas:** o painel foi feito em React, servido pelo Nginx; a API foi feita em Python com Flask, tendo o PostgreSQL como banco de dados. Foi usada IA para aplicar correções em algumas linhas e arquivos e para os testes. Nenhuma mudança é publicada sem passar pelos testes automatizados.
@@ -176,7 +176,7 @@ O site não divulga preços nem diz se há representante no Brasil; isso precisa
 |---|---|---|---|---|
 | O que resolve | Fluxo inteiro: OT → recebimento → endereço → retirada aprovada → baixa | Entrega automática do item ao funcionário, no ponto de uso | Armazém completo, multi-site | Registro manual |
 | Hardware | Celular Android comum, PC com tela de toque, impressora de etiquetas | Máquinas próprias (investimento alto por máquina) | Coletores, impressoras | Nenhum |
-| Aderência ao processo da Expedição (OT, PM11/PM12, SP12/SP13) | Feito para ele | Genérico (catálogo de itens) | Configurável, com projeto de implantação | Total, mas sem controle |
+| Aderência ao processo do Recebimento (OT, PM11/PM12, SP12/SP13) | Feito para ele | Genérico (catálogo de itens) | Configurável, com projeto de implantação | Total, mas sem controle |
 | Fluxo de aprovação da retirada | Sim (avaliador, separador, confirmação de quem pediu) | Acesso controlado por crachá; aprovação depende do produto | Configurável | Não |
 | Integração SAP | Ponto pronto; falta implementar | Normalmente por projeto | Nativa (EWM) | Não |
 | Onde ficam os dados | Servidor escolhido pela empresa (Azure da Ternium) | Nuvem do fornecedor | SAP da empresa | Arquivos locais |
@@ -218,7 +218,7 @@ A título de comparação, uma única máquina de dispensação automática ou u
 ## 9. Pontos positivos e negativos
 
 ### Positivos
-- **Feito para o processo da Expedição:** OT, PM11/PM12, SP12/SP13, aprovação da retirada.
+- **Feito para o processo do Recebimento:** OT, PM11/PM12, SP12/SP13, aprovação da retirada.
 - **Custo baixo:** sem licença e com infraestrutura de algumas dezenas de dólares por mês.
 - **Rastreabilidade completa:** log à prova de alteração, com quem fez, quando, em qual ordem e se confirmou a identidade.
 - **Segurança acima do comum** para um sistema interno: dois fatores pelo celular, sessões encerráveis, confirmação por digital/PIN, criptografia em trânsito e nas credenciais.
@@ -275,7 +275,7 @@ A título de comparação, uma única máquina de dispensação automática ou u
 - **Ambiente:** uma conta Azure ou um servidor da empresa, e um domínio ou subdomínio.
 - **Integrações:** acesso para integrar login corporativo, e-mail e SAP.
 - **Governança:** um responsável técnico na TI para dividir manutenção e operação.
-- **Piloto:** apoio para a Expedição e os almoxarifados SP12/SP13.
+- **Piloto:** apoio para o Recebimento e os almoxarifados SP12/SP13.
 
 ---
 

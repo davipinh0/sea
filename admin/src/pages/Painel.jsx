@@ -94,8 +94,8 @@ export default function Painel() {
         <>
           <div className="section-title">Recebimento e armazenagem</div>
           <div className="sea-kpis">
-            <Kpi to="/expedicao/recebimento" value={count('PM11', ['OPEN', 'PARTIAL']) + count('PM12', ['OPEN', 'PARTIAL'])} label="Ordens a receber" />
-            <Kpi to="/expedicao/armazenagem" value={data.staging_units} label={`Unidades aguardando armazenagem (${data.staging_ots} ordem(ns))`} alert={data.staging_units > 0} />
+            <Kpi to="/recebimento/ordem" value={count('PM11', ['OPEN', 'PARTIAL']) + count('PM12', ['OPEN', 'PARTIAL'])} label="Ordens a receber" />
+            <Kpi to="/recebimento/armazenagem" value={data.staging_units} label={`Unidades aguardando armazenagem (${data.staging_ots} ordem(ns))`} alert={data.staging_units > 0} />
             <Kpi to="/estoque/sp12" value={data.stored_units} label="Unidades armazenadas" />
             <Kpi to="/estoque/sp12" value={`${data.occupied_bins}/${data.storage_bins}`} label="Endereços ocupados" />
           </div>

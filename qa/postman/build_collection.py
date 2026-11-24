@@ -178,7 +178,7 @@ flow = [
 const m = pm.response.json().integration.data.materials[0];
 pm.test('traz lote e peso da caixa', () => {{ pm.expect(m.lot_number).to.eql('LQA-1'); pm.expect(m.pack_weight_kg).to.eql(18); }});
 """),
-    req("Registrar a entrega (Expedição)", "POST", "/api/sea/recebimentos/base", token="t_oper",
+    req("Registrar a entrega (Recebimento)", "POST", "/api/sea/recebimentos/base", token="t_oper",
         body='{"warehouse_id": {{expedicao_id}}, "ot_code": "{{ot}}"}',
         tests=f"{status(201)}\npm.collectionVariables.set('po_id', pm.response.json().po_id);"),
     req("Registrar de novo é recusado", "POST", "/api/sea/recebimentos/base", token="t_oper",

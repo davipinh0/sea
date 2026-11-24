@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
-  EXPEDICAO_CODE, apiError, formatQuantity, groupByLocation, orderName, parseQuantity, quantityProblem, visibleModules,
+  RECEBIMENTO_CODE, apiError, formatQuantity, groupByLocation, orderName, parseQuantity, quantityProblem, visibleModules,
 } from '../sea';
 
 const keys = (me, code) => visibleModules(me, code).map((m) => m.key);
 
 describe('visibleModules', () => {
-  it('shows everything to an administrator at the Expedição location', () => {
-    expect(keys({ role: 'ADMIN' }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens', 'historico']);
+  it('shows everything to an administrator at the Recebimento location', () => {
+    expect(keys({ role: 'ADMIN' }, RECEBIMENTO_CODE)).toEqual(['receive', 'putaway', 'retirada', 'transfer', 'estoque', 'ordens', 'historico']);
   });
 
-  it('offers receiving and storage only at the Expedição location', () => {
+  it('offers receiving and storage only at the Recebimento location', () => {
     expect(keys({ role: 'ADMIN' }, 'SP12')).toEqual(['retirada', 'transfer', 'estoque', 'ordens', 'historico']);
     expect(keys({ role: 'ADMIN' }, 'Solda')).not.toContain('receive');
   });
@@ -23,19 +23,19 @@ describe('visibleModules', () => {
 
   it('follows the page permissions of the user', () => {
     const me = { role: 'USER', allowed_pages: ['retirada'], allowed_functions: [] };
-    expect(keys(me, EXPEDICAO_CODE)).toEqual(['retirada', 'ordens']);
+    expect(keys(me, RECEBIMENTO_CODE)).toEqual(['retirada', 'ordens']);
     expect(keys({ role: 'USER', allowed_pages: ['inventory'] }, 'SP12')).toEqual(['transfer', 'estoque', 'ordens']);
-    expect(keys({ role: 'USER', allowed_pages: ['receiving', 'putaway'] }, EXPEDICAO_CODE)).toEqual(['receive', 'putaway', 'transfer', 'ordens']);
+    expect(keys({ role: 'USER', allowed_pages: ['receiving', 'putaway'] }, RECEBIMENTO_CODE)).toEqual(['receive', 'putaway', 'transfer', 'ordens']);
   });
 
   it('still honours the mobile functions granted to a user', () => {
     const me = { role: 'USER', allowed_pages: [], allowed_functions: ['receive'] };
-    expect(keys(me, EXPEDICAO_CODE)).toEqual(['receive']);
+    expect(keys(me, RECEBIMENTO_CODE)).toEqual(['receive']);
     expect(keys(me, 'SP12')).toEqual([]);
   });
 
   it('shows nothing without a user', () => {
-    expect(visibleModules(null, EXPEDICAO_CODE)).toEqual([]);
+    expect(visibleModules(null, RECEBIMENTO_CODE)).toEqual([]);
   });
 });
 

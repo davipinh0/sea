@@ -1568,7 +1568,7 @@
      ]
     },
     {
-     "name": "Registrar a entrega (Expedição)",
+     "name": "Registrar a entrega (Recebimento)",
      "request": {
       "method": "POST",
       "header": [

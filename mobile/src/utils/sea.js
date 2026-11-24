@@ -1,7 +1,7 @@
 // Só funções puras, testadas sem o React Native.
 
-// Recebimento e armazenagem só aparecem com o local Expedição selecionado, como no painel.
-export const EXPEDICAO_CODE = 'Expedição';
+// Recebimento e armazenagem só aparecem com o local Recebimento selecionado, como no painel.
+export const RECEBIMENTO_CODE = 'Recebimento';
 
 // Material em KG com peso de caixa é contado em caixas: 36 KG em caixas de 18 KG = "2 cx (36 KG)".
 export function formatQuantity(quantity, uom, packWeightKg) {
@@ -22,8 +22,8 @@ export function orderName(row) {
 // Um módulo aparece para o administrador, para quem tem uma das permissões dele ou, nos dois
 // módulos originais, a função de celular correspondente. ``onlyAt`` limita a um local.
 export const MODULES = [
-  { key: 'receive', label: 'RECEBER', sub: 'Recebimento de ordem', screen: 'Receber', accent: 'red', fn: 'receive', pages: ['receiving'], onlyAt: EXPEDICAO_CODE },
-  { key: 'putaway', label: 'ARMAZENAR', sub: 'Guardar o que foi recebido', screen: 'Armazenar', accent: 'copper', fn: 'putaway', pages: ['putaway'], onlyAt: EXPEDICAO_CODE },
+  { key: 'receive', label: 'RECEBER', sub: 'Recebimento de ordem', screen: 'Receber', accent: 'red', fn: 'receive', pages: ['receiving'], onlyAt: RECEBIMENTO_CODE },
+  { key: 'putaway', label: 'ARMAZENAR', sub: 'Guardar o que foi recebido', screen: 'Armazenar', accent: 'copper', fn: 'putaway', pages: ['putaway'], onlyAt: RECEBIMENTO_CODE },
   { key: 'retirada', label: 'RETIRADA', sub: 'Fila de solicitações', screen: 'Retirada', accent: 'red', pages: ['retirada', 'retirada-avaliar', 'retirada-fazer'] },
   { key: 'transfer', label: 'TRANSFERIR', sub: 'Entre endereços e locais', screen: 'Transferir', accent: 'gray', pages: ['items', 'inventory', 'putaway'] },
   { key: 'estoque', label: 'ESTOQUE', sub: 'O que há em cada endereço', screen: 'Estoque', accent: 'copper', pages: ['inventory'] },

@@ -36,7 +36,7 @@ describe('Gerenciar Acessos', () => {
     const on = modules.filter((m) => m.granted).map((m) => m.label);
     // Mesma regra da tela inicial (visibleModules): ORDENS pede uma página, não a função.
     expect(on).toEqual(['RECEBER', 'RETIRADA']);
-    expect(modules.find((m) => m.label === 'RECEBER').sub).toMatch(/só no local Expedição/);
+    expect(modules.find((m) => m.label === 'RECEBER').sub).toMatch(/só no local Recebimento/);
     expect(appModules(null)).toEqual([]);
   });
 

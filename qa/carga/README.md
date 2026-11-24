@@ -2,7 +2,7 @@
 
 Simula um dia de operação de uma usina **fictícia** ("Siderúrgica Aurora S.A."), no porte de uma
 siderúrgica, mineradora ou indústria de bebidas de grande porte, usando o SEA do jeito que ele foi
-projetado: base do SAP importada pelo painel, OTs recebidas na Expedição, armazenadas no SP12/SP13,
+projetado: base do SAP importada pelo painel, OTs recebidas no Recebimento, armazenadas no SP12/SP13,
 pedidas no terminal, avaliadas, separadas e entregues. Depois leva o sistema ao limite e confere o
 banco. Todos os nomes, códigos e funcionários são inventados (semente fixa: cada execução é
 comparável com a anterior).

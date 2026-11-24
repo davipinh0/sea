@@ -29,7 +29,7 @@ const session = (id, device, extra = {}) => ({
   started_at: '2026-11-23T10:00:00Z', last_seen_at: '2026-11-23T11:00:00Z', current: false, ...extra,
 });
 const MINE = {
-  all_locations: false, locations: [{ code: 'Expedição', name: 'Expedição' }],
+  all_locations: false, locations: [{ code: 'Recebimento', name: 'Recebimento' }],
   login_approval: true, devices: [{ device: 'SM-A155M', ending: 'aaa111', secure_lock: true, signed_in: true, updated_at: '2026-11-23T09:00:00Z' }],
   sessions: [
     session('aaaaaaaaaaaaaaaa', 'Chrome no Windows', { current: true }),

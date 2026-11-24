@@ -29,7 +29,7 @@ export const PAGE_GROUPS = [
     ],
   },
   {
-    label: 'Expedição',
+    label: 'Recebimento',
     pages: [
       { key: 'receiving', label: 'Recebimento de Ordem' },
       { key: 'putaway', label: 'Armazenagem' },

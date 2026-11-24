@@ -6,7 +6,7 @@ só área de recebimento e endereço desligado são recusados.
 dá a baixa (quantity_on_hand). Nada é apagado. Toda transição trava as linhas e confere o status
 atual, então clique duplo, repetição ou dois terminais ao mesmo tempo nunca baixam duas vezes nem
 deixam o estoque negativo.
-O estoque de uma ordem é achado pelo lote em qualquer local: a ordem recebida na Expedição pode
+O estoque de uma ordem é achado pelo lote em qualquer local: a ordem recebida no Recebimento pode
 estar guardada no SP12 ou no SP13.
 As funções lançam SeaError; quem chama faz o commit.
 """
@@ -1125,7 +1125,7 @@ def transfer_stock(db, *, inventory_id, to_bin_id, quantity, username, reason=No
     if src.bin_type in STAGING_TYPES:
         raise SeaError(
             f"{src.sku} ainda está na área de recebimento ({src.bin_code}); "
-            "use Expedição > Armazenagem para armazená-lo.",
+            "use Recebimento > Armazenagem para armazená-lo.",
             status=409,
         )
     if dest.bin_id == src.bin_id:

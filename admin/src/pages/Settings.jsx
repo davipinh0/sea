@@ -127,7 +127,7 @@ export default function Settings() {
       </div>
 
       <div className="settings-section">
-        <h3>Recebimento (Expedição)</h3>
+        <h3>Recebimento</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
           <label htmlFor="default-bin" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>Área de recebimento padrão</label>
           <select

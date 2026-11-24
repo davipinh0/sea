@@ -31,7 +31,7 @@ SUBJECTS = {
     KIND_WITHDRAWAL_REQUESTED: "SEA - Solicitação de Retirada",
     KIND_WITHDRAWAL_APPROVED: "SEA - Retirada Aprovada",
     KIND_WITHDRAWAL_CANCELLED: "SEA - Retirada Cancelada",
-    KIND_RECEIPT: "SEA - Recebimento de Materiais na Expedição",
+    KIND_RECEIPT: "SEA - Recebimento de Materiais",
     KIND_STORAGE_DONE: "SEA - Conclusão de Armazenamento",
 }
 

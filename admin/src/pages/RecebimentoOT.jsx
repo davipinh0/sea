@@ -225,7 +225,7 @@ export default function RecebimentoOT() {
       {message && (
         <div className={message.type === 'error' ? 'form-error' : 'tag tag-success'} style={{ display: 'block', padding: 12, marginBottom: 16 }}>
           {message.text}
-          {message.type === 'ok' && <> {' '}<Link to="/expedicao/armazenagem">Ir para a armazenagem →</Link></>}
+          {message.type === 'ok' && <> {' '}<Link to="/recebimento/armazenagem">Ir para a armazenagem →</Link></>}
         </div>
       )}
 

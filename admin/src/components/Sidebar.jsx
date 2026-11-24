@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { useWarehouse } from '../warehouse.jsx';
-import { EXPEDICAO_CODE } from '../utils/sea.js';
+import { RECEBIMENTO_CODE } from '../utils/sea.js';
 import { isTerminalAccount } from '../utils/permissions.js';
 
 // Cada item tem as permissões que o liberam. O menu só esconde; quem barra de verdade é a API.
@@ -13,7 +13,7 @@ const NAV = [
     items: [
       { to: '/', label: 'Painel' },
       { to: '/estoque', label: 'Estoque', pageKeys: ['inventory', 'items', 'bins', 'audit-log'] },
-      { to: '/expedicao', label: 'Expedição', pageKeys: ['receiving', 'putaway', 'purchase-orders'], onlyAt: EXPEDICAO_CODE },
+      { to: '/recebimento', label: 'Recebimento', pageKeys: ['receiving', 'putaway', 'purchase-orders'], onlyAt: RECEBIMENTO_CODE },
       { to: '/retirada', label: 'Retirada', pageKeys: ['retirada', 'retirada-avaliar', 'retirada-fazer', 'terminal-retirada'] },
     ],
   },
@@ -54,7 +54,7 @@ export default function Sidebar() {
       if (!res || !res.ok) return;
       const data = await res.json();
       setCounts({
-        '/expedicao': data.unreceived_ots ?? data.open_ots ?? 0,
+        '/recebimento': data.unreceived_ots ?? data.open_ots ?? 0,
         // Pedidos de todos os locais do usuário, não só do selecionado.
         '/retirada': data.pending_withdrawals_all ?? data.pending_withdrawals ?? 0,
       });

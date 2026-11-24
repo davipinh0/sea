@@ -57,6 +57,9 @@ describe('Gerenciar Acessos', () => {
     const login = readFileSync(fileURLToPath(new URL('../../screens/LoginScreen.js', import.meta.url)), 'utf8');
     expect(login).toMatch(/Sistema de Entrada e Armazenamento/);
     expect(login).not.toMatch(/Expedição e Armazenamento/);
+    // A logo do aplicativo no lugar do texto "SEA".
+    expect(login).toMatch(/<Image source=\{require\('\.\.\/\.\.\/assets\/icon\.png'\)\}[^>]*accessibilityLabel="SEA"/);
+    expect(login).not.toMatch(/<Text style=\{styles\.logo\}>SEA<\/Text>/);
   });
 });
 

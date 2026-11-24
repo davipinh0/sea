@@ -1102,12 +1102,8 @@ a {
 .login-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 1px;
-  margin-bottom: 4px;
   justify-content: center;
+  margin-bottom: 10px;
 }
 
 .login-subtitle {

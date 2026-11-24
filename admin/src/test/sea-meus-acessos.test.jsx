@@ -17,6 +17,7 @@ vi.mock('../api.js', () => ({
 vi.mock('../auth.jsx', () => ({ useAuth: () => ({ user: currentUser, logout: vi.fn() }) }));
 
 import MeusAcessos from '../pages/MeusAcessos.jsx';
+import Login from '../pages/Login.jsx';
 
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -108,5 +109,14 @@ describe('Nome do sistema', () => {
     for (const p of ['../index.html', 'pages/Login.jsx', 'pages/Settings.jsx']) {
       expect(read(p)).not.toMatch(/Expedição e Armazenamento/);
     }
+  });
+
+  it('login shows the app logo instead of the SEA text', () => {
+    currentUser = null;
+    render(<MemoryRouter><Login /></MemoryRouter>);
+    const card = document.querySelector('.login-card');
+    expect(within(card).getByRole('img', { name: 'SEA' })).toBeInTheDocument();
+    expect(within(card).queryByText('SEA')).toBeNull();
+    expect(within(card).getByText('Sistema de Entrada e Armazenamento')).toBeInTheDocument();
   });
 });

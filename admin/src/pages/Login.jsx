@@ -79,7 +79,7 @@ export default function Login() {
     return (
       <div className="login-page">
         <div className="login-card" role="status" aria-live="polite">
-          <div className="login-logo"><SeaLogo size={32} />SEA</div>
+          <div className="login-logo"><SeaLogo size={72} /></div>
           <div className="login-approval">
             <div className="login-approval-icon" aria-hidden="true">📱</div>
             <h2>Confirme no seu celular</h2>
@@ -99,8 +99,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <SeaLogo size={32} />
-          SEA
+          <SeaLogo size={72} />
         </div>
         <div className="login-subtitle">Sistema de Entrada e Armazenamento</div>
         {flashMessage && (

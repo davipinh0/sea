@@ -480,7 +480,7 @@ material novo e a falta do índice do estoque pelo lote (migração `101`). Os d
 
 Uma VM Linux (Ubuntu 24.04, 2 vCPU, 4 GB) roda o mesmo `docker compose` do ambiente local.
 Em produção: VM `SEA` (grupo `SEA_group`, East US), endereço
-`https://sea-expedicao.eastus.cloudapp.azure.com`, usuário de implantação `seaadmin`
+`https://sea-recebimento.eastus.cloudapp.azure.com`, usuário de implantação `seaadmin`
 (chave `~/.ssh/sea_azure`). Arquivos em `deploy/azure/`:
 
 | Arquivo | Função |
@@ -495,7 +495,7 @@ Em produção: VM `SEA` (grupo `SEA_group`, East US), endereço
 | `backup.sh` | `pg_dump` diário às 03:00 UTC em `/var/backups/sea`, guardando 14 dias |
 
 API, painel, banco, Redis e Mailpit só escutam no `127.0.0.1` da VM; a única entrada é o Caddy.
-Atualizar o sistema: `git commit` e `sh deploy/azure/deploy.sh sea-expedicao.eastus.cloudapp.azure.com`
+Atualizar o sistema: `git commit` e `sh deploy/azure/deploy.sh sea-recebimento.eastus.cloudapp.azure.com`
 (sem o dump, o banco da VM é mantido). Se o IP deste PC mudar, a regra `ssh-admin` do
 grupo de segurança `SEA-nsg` precisa do IP novo.
 O Mailpit não entrega e-mail para fora: para e-mails reais, configure `SEA_SMTP_*` no `.env` da VM.

@@ -3,7 +3,7 @@
 #   sh deploy/azure/provision.sh <rótulo-dns>
 # O endereço fica <rótulo>.centralus.cloudapp.azure.com.
 set -eu
-LABEL=${1:?informe o rótulo DNS, ex.: sea-expedicao}
+LABEL=${1:?informe o rótulo DNS, ex.: sea-recebimento}
 AZ=${AZ:-az}
 RG=rg-sea
 VM=vm-sea

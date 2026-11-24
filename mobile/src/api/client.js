@@ -5,6 +5,13 @@ import { identityHeaders } from '../auth/identityProof';
 // Build-time default from .env / eas.json env
 const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 const API_URL_KEY = 'sea_api_url';
+// O servidor se chamava sea-expedicao; quem salvou esse endereço passa a usar o atual.
+const RENAMED_HOSTS = { 'sea-expedicao.eastus.cloudapp.azure.com': 'sea-recebimento.eastus.cloudapp.azure.com' };
+
+export function currentServerUrl(stored) {
+  if (!stored) return stored;
+  return Object.entries(RENAMED_HOSTS).reduce((url, [old, now]) => url.replace(`//${old}`, `//${now}`), stored);
+}
 
 // Runtime-configurable API URL (cached in memory after first load)
 let _cachedApiUrl = null;
@@ -17,7 +24,9 @@ let _initPromise = null;
 export async function initApiUrl() {
   if (_initPromise) return _initPromise;
   _initPromise = (async () => {
-    const stored = await AsyncStorage.getItem(API_URL_KEY).catch(() => null);
+    const saved = await AsyncStorage.getItem(API_URL_KEY).catch(() => null);
+    const stored = currentServerUrl(saved);
+    if (stored !== saved) await AsyncStorage.setItem(API_URL_KEY, stored).catch(() => {});
     _cachedApiUrl = stored || DEFAULT_API_URL;
   })();
   return _initPromise;

@@ -372,7 +372,16 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   por exemplo o da tela de bloqueio ao abrir o app pela notificação de um login no terminal. Todo
   pedido de digital passa por `authenticate` (`appLock.js`), que encerra o pedido antigo e tenta
   de novo uma vez; a tela de bloqueio não pede a digital se o app já foi desbloqueado.
-- A sessão continua expirando em 8 horas; depois disso o login volta a ser com senha.
+- A sessão continua expirando em 8 horas.
+- **Login pela digital** (`mobile/src/auth/savedLogin.js`): ao ativar o bloqueio, a senha do login
+  vai para o cofre do Android (`expo-secure-store`, criptografado pelo keystore do aparelho). Na
+  tela de login (sessão expirada ou "Sair"), o app pede a digital ou o PIN do celular e entra com
+  ela; cancelar deixa digitar a senha, e o botão **ENTRAR COM DIGITAL OU PIN** tenta de novo. O
+  login continua passando pelo servidor (senha conferida, celular cadastrado).
+  - "Sair" mantém o login salvo. Ele é apagado quando o servidor recusa a senha (ela mudou: o app
+    pede a senha nova e salva de novo) e quando outro usuário entra no mesmo celular.
+  - Desbloquear com a senha da conta e a troca obrigatória de senha atualizam a senha salva.
+  - A versão para navegador não salva a senha.
 
 **Login confirmado no celular** (migração `092`, `api/services/login_approval.py`):
 

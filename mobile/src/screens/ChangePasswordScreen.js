@@ -61,7 +61,7 @@ export default function ChangePasswordScreen({ navigation }) {
       // Backend cleared must_change_password + password_changed_at in a
       // single transaction. Mirror that in the local user dict so the
       // navigator swaps out of forced mode.
-      await completePasswordChange();
+      await completePasswordChange(newPassword);
       // Navigator will render Home automatically now that the flag is
       // false. No explicit navigate needed.
     } catch (err) {

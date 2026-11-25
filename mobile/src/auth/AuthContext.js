@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import client, { setLogoutHandler, initApiUrl } from '../api/client';
 import { BIOMETRIC_USER_KEY, authenticate, sameUser, shouldLock, withoutLock } from './appLock';
+import { clearSavedLogin, forgetOtherUser, loadSavedLogin, saveLogin } from './savedLogin';
 import { clearIdentityConfirmed } from './identityProof';
 import { getDeviceToken } from '../notifications';
 import {
@@ -33,23 +35,35 @@ export function AuthProvider({ children }) {
   useEffect(() => { lockedRef.current = locked; }, [locked]);
   const [needsEnrollment, setNeedsEnrollment] = useState(false);
   const lockEnabled = useRef(false);
+  // Senha digitada no último login, só na memória, até ir para o login salvo (savedLogin.js): na
+  // hora, se o bloqueio já está ativo neste celular; senão, quando o usuário ativar.
+  const pendingPassword = useRef(null);
 
   // Depois de iniciar a sessão: trava se este usuário já cadastrou a digital aqui; senão, pede o
   // cadastro.
   const startLock = useCallback(async (username, { lockNow }) => {
-    if (!LOCK_SUPPORTED) return;
+    if (!LOCK_SUPPORTED) return false;
     const registered = sameUser(await getAuthItem(BIOMETRIC_USER_KEY), username);
     lockEnabled.current = registered;
     setNeedsEnrollment(!registered);
     setLocked(registered && lockNow);
+    return registered;
+  }, []);
+
+  const savePendingPassword = useCallback(async (username) => {
+    const password = pendingPassword.current;
+    pendingPassword.current = null;
+    if (LOCK_SUPPORTED && password) await saveLogin(SecureStore, username, password);
   }, []);
 
   const logout = useCallback(async () => {
     // A sessão também termina no servidor, então uma cópia do token para de funcionar. Sem conexão,
     // ela morre com o token.
     await client.post('/api/auth/logout', {}, { keepSession: true, timeout: 4000 }).catch(() => {});
+    // O login salvo continua: o próximo login pode ser com a digital ou o PIN.
     await clearAllAuth();
     clearIdentityConfirmed();
+    pendingPassword.current = null;
     lockEnabled.current = false;
     setLocked(false);
     setNeedsEnrollment(false);
@@ -113,6 +127,7 @@ export function AuthProvider({ children }) {
 
   // Retorna { approval } quando o login espera a confirmação no celular cadastrado.
   const login = async (username, password) => {
+    pendingPassword.current = LOCK_SUPPORTED ? password : null;
     const deviceToken = await getDeviceToken();
     const resp = await client.post('/api/auth/login', {
       username, password, ...(deviceToken ? { device_token: deviceToken } : {}),
@@ -131,9 +146,43 @@ export function AuthProvider({ children }) {
     await setAuthItem('login_timestamp', String(Date.now()));
     // A senha acabou de ser digitada: não trava agora, mas pede a digital se o usuário ainda não
     // cadastrou neste celular.
-    await startLock(userData.username, { lockNow: false });
+    const registered = await startLock(userData.username, { lockNow: false });
+    if (LOCK_SUPPORTED) {
+      // Outro usuário entrou neste celular: o login salvo do anterior não vale mais.
+      await forgetOtherUser(SecureStore, userData.username);
+      // Bloqueio já ativo: guarda (ou atualiza) a senha agora; senão, ao ativar.
+      if (registered) await savePendingPassword(userData.username);
+    }
     setUser(userData);
     // warehouseId stays null - HomeScreen will prompt for selection
+  };
+
+  // Usuário com login salvo neste celular (null se não houver). A tela de login usa para oferecer
+  // a entrada com a digital ou o PIN.
+  const savedLoginUser = useCallback(async () => {
+    if (!LOCK_SUPPORTED) return null;
+    const saved = await loadSavedLogin(SecureStore, await getAuthItem(BIOMETRIC_USER_KEY));
+    return saved?.username ?? null;
+  }, []);
+
+  // Entra com o login salvo depois da digital ou do PIN. Retorna { biometric } quando a confirmação
+  // não passou, { missing } sem login salvo, ou o mesmo que login(). Senha recusada pelo servidor
+  // (ela mudou) apaga o login salvo e o erro segue para a tela, que pede para digitar.
+  const loginWithSavedPassword = async () => {
+    const result = await withoutLock(() => authenticate(LocalAuthentication, {
+      promptMessage: 'Entrar no SEA',
+      cancelLabel: 'Digitar a senha',
+      disableDeviceFallback: false,
+    }));
+    if (!result.success) return { biometric: result };
+    const saved = await loadSavedLogin(SecureStore, await getAuthItem(BIOMETRIC_USER_KEY));
+    if (!saved) return { missing: true };
+    try {
+      return await login(saved.username, saved.password);
+    } catch (err) {
+      if (err.response?.status === 401) await clearSavedLogin(SecureStore);
+      throw err;
+    }
   };
 
   const enrollFingerprint = useCallback(async () => {
@@ -146,8 +195,9 @@ export function AuthProvider({ children }) {
     await setAuthItem(BIOMETRIC_USER_KEY, user?.username || '');
     lockEnabled.current = true;
     setNeedsEnrollment(false);
+    if (user?.username) await savePendingPassword(user.username);
     return { success: true };
-  }, [user]);
+  }, [user, savePendingPassword]);
 
   const unlockWithFingerprint = useCallback(async () => {
     if (!lockedRef.current) return { success: true };
@@ -178,6 +228,10 @@ export function AuthProvider({ children }) {
     }
     await setAuthItem('jwt_token', resp.data.token);
     await setAuthItem('login_timestamp', String(Date.now()));
+    // A senha acabou de ser aceita pelo servidor: atualiza o login salvo (pode ter mudado).
+    if (LOCK_SUPPORTED && lockEnabled.current && user?.username) {
+      await saveLogin(SecureStore, user.username, password);
+    }
     setLocked(false);
   }, [user]);
 
@@ -189,7 +243,12 @@ export function AuthProvider({ children }) {
   // Called by ChangePasswordScreen after a successful forced password
   // change. Backend has already cleared must_change_password; we mirror
   // that in state + SecureStore so the navigator exits forced mode.
-  const completePasswordChange = useCallback(async () => {
+  const completePasswordChange = useCallback(async (newPassword) => {
+    // A senha temporária do login não serve mais: o login salvo passa a usar a nova.
+    if (LOCK_SUPPORTED && newPassword) {
+      if (lockEnabled.current && user?.username) await saveLogin(SecureStore, user.username, newPassword);
+      else pendingPassword.current = newPassword;
+    }
     setUser((prev) => {
       if (!prev) return prev;
       const next = { ...prev, must_change_password: false };
@@ -198,7 +257,7 @@ export function AuthProvider({ children }) {
       setAuthItem('user_data', JSON.stringify(next)).catch(() => {});
       return next;
     });
-  }, []);
+  }, [user]);
 
   return (
     <AuthContext.Provider
@@ -211,6 +270,8 @@ export function AuthProvider({ children }) {
         switchWarehouse,
         completePasswordChange,
         completeLogin,
+        savedLoginUser,
+        loginWithSavedPassword,
         locked,
         needsEnrollment,
         enrollFingerprint,

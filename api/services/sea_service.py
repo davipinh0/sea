@@ -1588,8 +1588,12 @@ def log_orders(db, rows):
         ot = d.get("ot") or d.get("po_number") or d.get("lot_number")
         if po_id is None and not ot:
             continue
+        # "materials" é a lista de materiais da OT na criação, mas a contagem (um número) na
+        # exclusão (OT_DELETED); só a lista tem SKUs.
+        materials = d.get("materials")
         skus = {d["sku"]} if d.get("sku") else {
-            m.get("sku") for m in d.get("materials") or [] if isinstance(m, dict) and m.get("sku")
+            m.get("sku") for m in (materials if isinstance(materials, list) else [])
+            if isinstance(m, dict) and m.get("sku")
         }
         wanted[r.log_id] = (po_id, str(ot) if ot else None, d.get("item_id"), skus)
         if po_id:

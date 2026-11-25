@@ -75,7 +75,8 @@ export default function HistoricoScreen({ navigation }) {
         <Message message={message} />
         {tab === 'mov' && !warehouseId && <Text style={ui.empty}>Selecione um local na tela inicial.</Text>}
         {items === null && (tab === 'log' || warehouseId) && <Text style={ui.empty}>Carregando…</Text>}
-        {items && items.length === 0 && <Text style={ui.empty}>Nada registrado.</Text>}
+        {/* Falha ao carregar não é lista vazia: aí só aparece a mensagem de erro. */}
+        {items && items.length === 0 && message?.type !== 'error' && <Text style={ui.empty}>Nada registrado.</Text>}
         {(items || []).map((e) => {
           const expanded = open === e.log_id;
           const order = orderText(e);

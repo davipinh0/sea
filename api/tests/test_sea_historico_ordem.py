@@ -106,3 +106,22 @@ class TestAuthenticationOnTheLog:
         # Pedir no terminal não exige autenticação extra, nem com o cabeçalho.
         _request(client, {**auth_headers, **APP_CONFIRMED}, stored_ot["inventory_id"], 1)
         assert "autenticacao" not in _last(stored_ot["conn"], "WITHDRAWAL_REQUESTED")
+
+
+class TestDeletedOtInHistory:
+    """Regressão: excluir uma OT grava "materials" como contagem (um número). O histórico e o log
+    esperavam uma lista ali e respondiam 500, e o app mostrava "Não foi possível carregar".
+    """
+
+    def test_history_and_log_load_after_an_ot_is_deleted(self, client, auth_headers, sp12):  # noqa: F811
+        po_id = _create_ot(client, auth_headers, "OT-HIST-DEL", [(sp12["small"], 3)])
+        resp = client.delete(f"/api/sea/ots/{po_id}", headers=auth_headers)
+        assert resp.status_code == 200, resp.get_json()
+        assert _last(sp12["conn"], "OT_DELETED")["materials"] == 1
+
+        deleted = [m for m in _history(client, auth_headers) if m["action_type"] == "OT_DELETED"]
+        assert len(deleted) == 1
+
+        log = client.get("/api/admin/audit-log?page=1&per_page=30", headers=auth_headers)
+        assert log.status_code == 200, log.get_json()
+        assert any(e["action_type"] == "OT_DELETED" for e in log.get_json()["entries"])

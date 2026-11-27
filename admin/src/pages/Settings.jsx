@@ -23,6 +23,7 @@ export default function Settings() {
   const [warehouse, setWarehouse] = useState(null);
   const [whForm, setWhForm] = useState({});
   const [editingWh, setEditingWh] = useState(false);
+  const [whError, setWhError] = useState('');
   const [savedSettings, setSavedSettings] = useState({});
   const [draftSettings, setDraftSettings] = useState({});
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -37,7 +38,8 @@ export default function Settings() {
     if (!warehouseId) return;
     api.get(`/admin/warehouses/${warehouseId}`).then(async (res) => {
       if (res?.ok) {
-        const data = await res.json();
+        // A API responde { warehouse, zones }.
+        const { warehouse: data } = await res.json();
         setWarehouse(data);
         setWhForm(data);
       }
@@ -85,11 +87,23 @@ export default function Settings() {
   }
 
   async function saveWarehouse() {
+    setWhError('');
     const res = await api.put(`/admin/warehouses/${warehouseId}`, { warehouse_name: whForm.warehouse_name, address: whForm.address });
     if (res?.ok) {
-      setWarehouse(await res.json());
+      const data = await res.json();
+      setWarehouse(data);
+      setWhForm(data);
       setEditingWh(false);
+      return;
     }
+    const data = await res?.json().catch(() => null);
+    setWhError(data?.error || 'Falha ao salvar o local');
+  }
+
+  function cancelWarehouse() {
+    setWhForm(warehouse);
+    setWhError('');
+    setEditingWh(false);
   }
 
   return (
@@ -119,9 +133,10 @@ export default function Settings() {
               <input id="wh-address" className="form-input" value={whForm.address || ''} onChange={(e) => setWhForm({ ...whForm, address: e.target.value })} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => setEditingWh(false)}>Cancelar</button>
+              <button className="btn" onClick={cancelWarehouse}>Cancelar</button>
               <button className="btn btn-primary" onClick={saveWarehouse}>Salvar</button>
             </div>
+            {whError && <p role="alert" style={{ fontSize: 12, color: 'var(--danger)' }}>{whError}</p>}
           </div>
         )}
       </div>

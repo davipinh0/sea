@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { withoutLock } from './auth/appLock';
 import client from './api/client';
+import { pickNew } from './utils/notificationPolling';
 
 // Notificações no celular.
 // - App aberto: o app consulta a API de tempos em tempos e mostra o que é novo.
@@ -115,20 +116,16 @@ export function startPolling(onNew) {
     try {
       const first = last === null;
       const resp = await client.get(`/api/sea/notificacoes${first ? '' : `?after=${last}`}`);
-      const list = resp.data?.notifications || [];
+      const picked = pickNew(resp.data?.notifications, last);
+      last = picked.last;
       if (first) {
-        last = list[0]?.notification_id ?? 0;
-        // Na primeira vez neste celular nada é anunciado como novo.
-        const seen = await readSeen();
-        if (seen === null) { await writeSeen(last); return; }
-        const missed = list.filter((n) => n.notification_id > seen);
-        if (missed.length) { announce(missed); onNew?.(missed); }
+        // Na primeira vez neste celular o contador do sino começa do zero.
+        if ((await readSeen()) === null) await writeSeen(last);
         return;
       }
-      if (list.length === 0) return;
-      last = list[0].notification_id;
-      announce(list);
-      onNew?.(list);
+      if (picked.fresh.length === 0) return;
+      announce(picked.fresh);
+      onNew?.(picked.fresh);
     } catch {
       // Sem conexão ou sessão encerrada: a próxima consulta tenta de novo.
     }

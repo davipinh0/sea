@@ -447,7 +447,8 @@ usuário e senha válidos no novo endereço. O APK já sai com o endereço de `e
 (`EXPO_PUBLIC_API_URL`).
 
 **Notificações no celular.** Com o app aberto, ele consulta a API e mostra os avisos novos como
-notificação do aparelho. Com o app **fechado**, o aviso depende do serviço de push do Expo/Google:
+notificação do aparelho. Ao abrir o app, nada do que já existia é anunciado de novo: o que chegou
+com o app fechado já veio pelo push e aparece no contador do sino da tela inicial. Com o app **fechado**, o aviso depende do serviço de push do Expo/Google:
 (1) criar um projeto no Firebase e enviar a chave ao Expo (`eas credentials`, Android > FCM V1),
 colocando o `google-services.json` em `mobile/`; (2) definir `SEA_PUSH=expo` no `.env`. Com isso o
 título e o texto de cada aviso passam pelos servidores do Expo e do Google; por isso vem desligado.

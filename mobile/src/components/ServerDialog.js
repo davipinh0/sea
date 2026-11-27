@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, StyleSheet } from 'react-native';
 import { setApiUrl } from '../api/client';
 import { Button } from './ui';
 import { colors, radii } from '../theme/styles';
+import { devBuild, serverUrlAllowed } from '../utils/serverUrl';
 
 // Troca o endereço do servidor. Só um administrador: o usuário e a senha dele são conferidos NO
 // ENDEREÇO NOVO, o que funciona mesmo quando o endereço atual parou de responder. O endereço atual
@@ -46,7 +47,12 @@ export default function ServerDialog({ visible, onClose, onChanged }) {
 
   async function save() {
     const clean = url.replace(/\/+$/, '').trim();
-    if (!/^https?:\/\/.+/i.test(clean)) { setError('Informe o endereço começando com http:// ou https://.'); return; }
+    if (!serverUrlAllowed(clean)) {
+      setError(devBuild()
+        ? 'Informe o endereço começando com http:// ou https://.'
+        : 'Informe o endereço começando com https://.');
+      return;
+    }
     if (!username.trim() || !password) { setError('Informe o usuário e a senha de um administrador.'); return; }
     setBusy(true);
     setError('');

@@ -103,7 +103,10 @@ class TestManagerLimits:
 
     def test_still_manages_ordinary_users(self, client, _db_transaction):
         conn = _db_transaction
-        manager = _user(client, conn, "sea.gest.5", ["users"], [WAREHOUSE])
+        # Auditoria de 27/11/2026: o gestor só concede o que ele mesmo tem
+        # (test_sea_auditoria_seguranca.py).
+        manager = _user(client, conn, "sea.gest.5", ["users", "retirada", "retirada-fazer"],
+                        [WAREHOUSE])
         _user(client, conn, "sea.gest.alvo", ["retirada"], [WAREHOUSE])
         target = _uid(conn, "sea.gest.alvo")
         assert (

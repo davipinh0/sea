@@ -29,6 +29,7 @@ from services import web_sessions
 from services import notification_service
 from services.audit_service import write_audit_log
 from services.identity_provider import get_identity_provider
+from services.rate_limit import limiter
 from utils.validation import validate_body
 
 ALL_FUNCTIONS = ["receive", "putaway", "pick", "pack", "ship", "count", "transfer"]
@@ -43,6 +44,15 @@ LOCKOUT_MINUTES = int(os.getenv("LOGIN_LOCKOUT_MINUTES", "15"))
 LOGIN_ATTEMPT_KEY_MAX_LEN = 64
 
 auth_bp = Blueprint("auth", __name__)
+
+# Auditoria 27/11/2026: o bloqueio por (IP, usuário) não freia quem testa uma senha comum em
+# muitas contas. Este limite vale por IP para o login; na rede da empresa todos saem pelo mesmo IP,
+# por isso a folga (ajuste com SEA_LOGIN_RATE_LIMIT).
+LOGIN_RATE_LIMIT = os.getenv("SEA_LOGIN_RATE_LIMIT", "60 per minute")
+
+
+def _login_rate_key() -> str:
+    return f"login-ip:{request.remote_addr or 'unknown'}"
 
 
 def _normalize_rate_limit_key(key: str) -> str:
@@ -118,6 +128,7 @@ def _reset_attempts(db, key):
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit(LOGIN_RATE_LIMIT, key_func=_login_rate_key)
 @validate_body(LoginRequest)
 @with_db
 def login(validated):

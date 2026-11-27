@@ -95,6 +95,8 @@ services:
       SEA_PUSH: ${SEA_PUSH:-}
       # Minutos sem uso até o painel pedir login de novo.
       SEA_WEB_IDLE_MINUTES: ${SEA_WEB_IDLE_MINUTES:-15}
+      # Tentativas de login por minuto vindas do mesmo IP (todos os erros e acertos).
+      SEA_LOGIN_RATE_LIMIT: ${SEA_LOGIN_RATE_LIMIT:-60 per minute}
       # Identificação do funcionário (local = usuários do SEA).
       SEA_IDENTITY_PROVIDER: ${SEA_IDENTITY_PROVIDER:-local}
       # Onde o recebimento procura a OT (base = base do SAP dentro do SEA).

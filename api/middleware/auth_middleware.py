@@ -100,7 +100,7 @@ def require_auth(f):
                 allowed_pages = [r.page_key for r in page_rows]
             # A sessão precisa continuar aberta no servidor e, no painel, ter sido usada há pouco.
             session_problem = (
-                web_sessions.check(db, payload.get("jti"), web=source == "cookie")
+                web_sessions.check(db, payload.get("jti"), web=source == "cookie", channel=source)
                 if row and row.is_active else None
             )
         finally:
@@ -110,6 +110,10 @@ def require_auth(f):
             return jsonify({"error": "Unauthorized"}), 401
         if session_problem == "idle":
             return jsonify({"error": "Sessão encerrada por inatividade"}), 401
+        if session_problem == "channel":
+            return jsonify({
+                "error": "Esta sessão não pode ser usada por este meio. Entre de novo.",
+            }), 401
         if session_problem:
             return jsonify({"error": "Sessão encerrada"}), 401
 

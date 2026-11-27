@@ -37,6 +37,7 @@ from constants import (
     ROLE_ADMIN,
 )
 from middleware.auth_middleware import (
+    check_warehouse_access,
     has_override,
     require_admin_or_page_permission,
     require_auth,
@@ -1988,6 +1989,7 @@ def update_sales_order(so_id, validated):
 
 @admin_bp.route("/sales-orders/<int:so_id>/address", methods=["PATCH"])
 @require_auth
+@require_admin_or_page_permission("sales-orders")
 @validate_body(UpdateSalesOrderAddressRequest)
 @with_db
 def update_sales_order_address(so_id, validated):
@@ -2008,7 +2010,8 @@ def update_sales_order_address(so_id, validated):
         """),
         {"sid": so_id},
     ).fetchone()
-    if not so:
+    # Auditoria 27/11/2026: só pedidos de locais em que a pessoa trabalha.
+    if not so or not check_warehouse_access(so.warehouse_id)[0]:
         return jsonify({"error": "Pedido de venda não encontrado"}), 404
     if role != ROLE_ADMIN and so.status != SO_OPEN:
         return jsonify({

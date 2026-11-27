@@ -175,6 +175,19 @@ Limites conhecidos do protótipo:
 * **Exportar CSV**: os botões "Exportar CSV" das listas aparecem para o administrador e para o
   usuário com a permissão extra `export-csv` (Sistema > Usuários > Permissões extras). O arquivo é
   montado no navegador com os dados que o usuário já vê na tela; a permissão controla o botão.
+  Texto que começa com `=`, `+`, `-` ou `@` sai com um apóstrofo na frente, para a planilha não o
+  tratar como fórmula (`admin/src/utils/csv.js`).
+* **Quem gerencia usuários sem ser administrador** (permissão **Usuários**): não mexe em
+  administradores nem nas próprias permissões, e só dá a outra conta as permissões e os locais
+  que ele mesmo tem; manter ou tirar o que a pessoa já tem é livre. Também não troca a senha nem
+  desliga a confirmação no celular de quem tem uma permissão que ele não tem.
+* **Rotas herdadas do Sentry**: `GET /api/admin/dashboard` exige a permissão `dashboard` (e o
+  local, para quem não é administrador); a edição do endereço de pedido de venda exige a permissão
+  de pedidos de venda e o local do pedido; a separação de transferências só abre ordens dos locais
+  de quem separa.
+* **Busca da barra superior** (`GET /api/admin/search`): quem não é administrador só encontra
+  endereços, ordens e pedidos dos próprios locais, mesmo sem escolher um local; contas sem nenhuma
+  página do painel (como a do terminal) não usam a busca.
 * **Cadastro de usuário**: o formulário lista o que falta ou está errado (campos obrigatórios,
   e-mail inválido, senha fraca com o motivo, local e acessos) antes de enviar.
 
@@ -415,6 +428,11 @@ aparelho. Ícone e abertura usam a marca do SEA (`mobile/assets/make_icons.py` g
   encerra a sessão no servidor: uma cópia do cookie ou do token deixa de valer na hora. Vale também
   para o terminal de retirada e para o app.
 - O cookie do painel é de sessão do navegador: fechar o navegador apaga o cookie.
+- O login aceita até 60 tentativas por minuto de um mesmo IP (`SEA_LOGIN_RATE_LIMIT`), além do
+  bloqueio de 15 minutos depois de 5 erros na mesma conta pelo mesmo IP.
+- Cada sessão vale só pelo meio do primeiro uso (migração `105`): cookie no painel, token Bearer
+  no app e no terminal. O token do cookie do painel não funciona como Bearer (que não pede a
+  confirmação no celular nem o motivo da alteração), e o token do app não funciona como cookie.
 - A sessão pertence à aba que fez o login e o painel funciona **em uma aba por vez**. Uma aba
   duplicada pelo navegador ou uma aba nova com o link copiado vai para o login ("O SEA já está
   aberto em outra aba"), sem a sessão nem os processos liberados no celular, e sem derrubar a
@@ -453,8 +471,12 @@ com o app fechado já veio pelo push e aparece no contador do sino da tela inici
 colocando o `google-services.json` em `mobile/`; (2) definir `SEA_PUSH=expo` no `.env`. Com isso o
 título e o texto de cada aviso passam pelos servidores do Expo e do Google; por isso vem desligado.
 
-**Servidor.** O celular acessa o painel pela rede: defina `ADMIN_BIND_HOST=0.0.0.0` no `.env`,
-recrie os serviços e informe no app (tela de login, "URL do servidor") `http://IP-DO-COMPUTADOR:8080`.
+**Servidor.** O APK (perfis `preview` e `production`) só fala HTTPS: não aceita endereço `http://`, e
+um endereço `http://` salvo antes volta ao servidor padrão. Também não faz backup automático dos dados
+do app (`allowBackup: false`) e não pede microfone, sobreposição de tela nem armazenamento. Para testar
+com o servidor do computador na rede local, use o Expo Go ou o perfil `development` do EAS, que
+aceitam `http://`: defina `ADMIN_BIND_HOST=0.0.0.0` no `.env`, recrie os serviços e informe no app
+(tela de login, "URL do servidor") `http://IP-DO-COMPUTADOR:8080`.
 
 **Rodar e gerar.** Em `mobile/`: `npm install`; `npm test` (testes); `npx expo start` (abrir no
 celular com o Expo Go); `npx eas-cli login`, `npx eas-cli init` e `npm run build:apk` (gerar o APK).

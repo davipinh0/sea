@@ -111,6 +111,40 @@ def _manager_refusal(target_role=None, target_id=None, new_role=None, own_permis
     return None
 
 
+def _target_page_keys(user_id) -> set[str]:
+    rows = g.db.execute(
+        text("SELECT page_key FROM user_page_permissions WHERE user_id = :uid"), {"uid": user_id}
+    ).fetchall()
+    return {r.page_key for r in rows}
+
+
+def _beyond_manager(*, pages=(), warehouses=(), target_id=None):
+    """Quem só tem a permissão "Usuários" não dá a outra conta o que ele mesmo não tem
+    (permissões e locais), nem assume a conta de quem tem mais acesso que ele. Sem isso, bastava
+    criar uma conta comum, dar a ela qualquer permissão e entrar com ela. Retorna a resposta de
+    recusa, ou None.
+    """
+    me = g.current_user
+    if me.get("role") == "ADMIN":
+        return None
+    own_pages = set(me.get("allowed_pages") or [])
+    missing_pages = sorted(set(pages) - own_pages)
+    if target_id is not None:
+        missing_pages = sorted(set(missing_pages) | (_target_page_keys(target_id) - own_pages))
+    if missing_pages:
+        return jsonify({
+            "error": "Você não pode dar nem assumir permissões que não tem: "
+                     + ", ".join(missing_pages),
+            "user_facing": True,
+        }), 403
+    missing_wh = sorted(set(warehouses) - set(me.get("warehouse_ids") or []))
+    if missing_wh:
+        return jsonify({
+            "error": "Você não pode dar acesso a locais que não tem.", "user_facing": True,
+        }), 403
+    return None
+
+
 @admin_bp.route("/users", methods=["POST"])
 @require_auth
 @require_admin_or_page_permission("users")
@@ -118,7 +152,10 @@ def _manager_refusal(target_role=None, target_id=None, new_role=None, own_permis
 @with_db
 def create_user(validated):
     data = validated.model_dump()
-    refused = _manager_refusal(new_role=data.get("role"))
+    new_warehouses = set(data.get("warehouse_ids") or []) | (
+        {data["warehouse_id"]} if data.get("warehouse_id") else set())
+    refused = _manager_refusal(new_role=data.get("role")) or _beyond_manager(
+        warehouses=new_warehouses)
     if refused:
         return refused
 
@@ -173,7 +210,8 @@ def update_user(user_id, validated):
     data = validated.model_dump(exclude_unset=True)
 
     existing = g.db.execute(
-        text("SELECT user_id, role, is_active FROM users WHERE user_id = :uid"), {"uid": user_id}
+        text("SELECT user_id, role, is_active, warehouse_ids FROM users WHERE user_id = :uid"),
+        {"uid": user_id},
     ).fetchone()
     if not existing:
         return jsonify({"error": "Usuário não encontrado"}), 404
@@ -182,6 +220,14 @@ def update_user(user_id, validated):
         return refused
     if "role" in data and data["role"] != existing.role and g.current_user.get("role") != "ADMIN":
         return jsonify({"error": "Só um administrador muda o papel de um usuário.", "user_facing": True}), 403
+    # Trocar a senha ou desligar a confirmação no celular de alguém é assumir a conta dele.
+    takes_over = bool(data.get("password")) or "web_login_approval" in data
+    new_warehouses = set(data.get("warehouse_ids") or []) | (
+        {data["warehouse_id"]} if data.get("warehouse_id") else set())
+    refused = _beyond_manager(warehouses=new_warehouses - set(existing.warehouse_ids or []),
+                              target_id=user_id if takes_over else None)
+    if refused:
+        return refused
 
     # Prevent admin from deactivating themselves or downgrading their own role
     is_self = g.current_user["user_id"] == user_id
@@ -518,6 +564,10 @@ def replace_user_permissions(user_id, validated):
     if refused:
         return refused
     requested = list(dict.fromkeys(validated.page_keys))  # de-dup, preserve order
+    # Manter ou tirar o que a pessoa já tem é livre; acrescentar, só o que quem salva tem.
+    refused = _beyond_manager(pages=set(requested) - _target_page_keys(user_id))
+    if refused:
+        return refused
     # Override grants (mig 062) ride on the same junction
     # table so the multi-select can write them in one PUT. The full
     # acceptable set is ALL_PAGE_KEYS ∪ ALL_OVERRIDE_KEYS.
@@ -738,10 +788,14 @@ def list_audit_log():
 
 @admin_bp.route("/dashboard", methods=["GET"])
 @require_auth
-# /dashboard is reachable by any authenticated user so the sidebar can show badges; the response shape is non-sensitive (just counts).
+# Auditoria 27/11/2026: era aberto a qualquer usuário logado e devolvia contagens de todos os locais
+# e as últimas entradas do log de auditoria. O painel do SEA usa /api/sea/painel para os números.
+@require_admin_or_page_permission("dashboard")
 @with_db
 def dashboard():
     warehouse_id = request.args.get("warehouse_id", type=int)
+    if not warehouse_id and g.current_user.get("role") != "ADMIN":
+        return jsonify({"error": "Informe o local (warehouse_id)."}), 400
     wh_filter = "AND warehouse_id = :wid" if warehouse_id else ""
     wh_params = {"wid": warehouse_id} if warehouse_id else {}
 

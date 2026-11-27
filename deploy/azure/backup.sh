@@ -1,6 +1,8 @@
 #!/bin/sh
 # Backup diário do banco (cron da VM). Guarda 14 dias.
 set -eu
+# Os dumps têm os dados de todos os usuários: só o dono lê (auditoria 27/11/2026).
+umask 077
 DEST=/var/backups/sea
 STAMP=$(date +%Y-%m-%d_%H%M)
 docker exec sea-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$DEST/sea-$STAMP.dump"

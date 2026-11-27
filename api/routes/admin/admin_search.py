@@ -2,7 +2,8 @@
 
 Single GET that fans out across items, bins, purchase_orders,
 sales_orders and the denormalized customer columns on sales_orders.
-Bins, POs and SOs are warehouse-scoped when warehouse_id is supplied;
+Bins, POs and SOs are warehouse-scoped: to warehouse_id when supplied,
+otherwise (non-admin) to the caller's own warehouses (audit 2026-11-27);
 items are global by design (no warehouse_id column). Customers come
 from a DISTINCT projection over sales_orders.customer_name within
 warehouse scope; selection routes to the SO list filtered by name
@@ -18,6 +19,7 @@ from routes.admin import admin_bp
 
 
 _MIN_QUERY_LENGTH = 2
+_TERMINAL_PAGE = "terminal-retirada"
 _PER_TYPE_LIMIT = 10
 _TOTAL_LIMIT = 50
 
@@ -57,12 +59,12 @@ def _search_items(pattern: str) -> list[dict]:
     ]
 
 
-def _search_bins(pattern: str, warehouse_id: int | None) -> list[dict]:
+def _search_bins(pattern: str, warehouse_ids: list[int] | None) -> list[dict]:
     params: dict = {"p": pattern, "limit": _PER_TYPE_LIMIT}
     where = "(b.bin_code ILIKE :p OR b.bin_barcode ILIKE :p)"
-    if warehouse_id is not None:
-        where += " AND b.warehouse_id = :wid"
-        params["wid"] = warehouse_id
+    if warehouse_ids is not None:
+        where += " AND b.warehouse_id = ANY(:wids)"
+        params["wids"] = list(warehouse_ids)
     rows = g.db.execute(
         text(
             f"""
@@ -88,12 +90,12 @@ def _search_bins(pattern: str, warehouse_id: int | None) -> list[dict]:
     ]
 
 
-def _search_purchase_orders(pattern: str, warehouse_id: int | None) -> list[dict]:
+def _search_purchase_orders(pattern: str, warehouse_ids: list[int] | None) -> list[dict]:
     params: dict = {"p": pattern, "limit": _PER_TYPE_LIMIT}
     where = "(po_number ILIKE :p OR vendor_name ILIKE :p)"
-    if warehouse_id is not None:
-        where += " AND warehouse_id = :wid"
-        params["wid"] = warehouse_id
+    if warehouse_ids is not None:
+        where += " AND warehouse_id = ANY(:wids)"
+        params["wids"] = list(warehouse_ids)
     rows = g.db.execute(
         text(
             f"""
@@ -119,12 +121,12 @@ def _search_purchase_orders(pattern: str, warehouse_id: int | None) -> list[dict
     ]
 
 
-def _search_sales_orders(pattern: str, warehouse_id: int | None) -> list[dict]:
+def _search_sales_orders(pattern: str, warehouse_ids: list[int] | None) -> list[dict]:
     params: dict = {"p": pattern, "limit": _PER_TYPE_LIMIT}
     where = "(so_number ILIKE :p OR customer_name ILIKE :p)"
-    if warehouse_id is not None:
-        where += " AND warehouse_id = :wid"
-        params["wid"] = warehouse_id
+    if warehouse_ids is not None:
+        where += " AND warehouse_id = ANY(:wids)"
+        params["wids"] = list(warehouse_ids)
     rows = g.db.execute(
         text(
             f"""
@@ -150,15 +152,15 @@ def _search_sales_orders(pattern: str, warehouse_id: int | None) -> list[dict]:
     ]
 
 
-def _search_customers(pattern: str, warehouse_id: int | None) -> list[dict]:
+def _search_customers(pattern: str, warehouse_ids: list[int] | None) -> list[dict]:
     """Customer is a denormalized field on sales_orders, not a first-class
     table. Project DISTINCT customer_name within the search and route
     the UI to the SO list filtered by that name."""
     params: dict = {"p": pattern, "limit": _PER_TYPE_LIMIT}
     where = "customer_name ILIKE :p AND customer_name IS NOT NULL"
-    if warehouse_id is not None:
-        where += " AND warehouse_id = :wid"
-        params["wid"] = warehouse_id
+    if warehouse_ids is not None:
+        where += " AND warehouse_id = ANY(:wids)"
+        params["wids"] = list(warehouse_ids)
     rows = g.db.execute(
         text(
             f"""
@@ -211,15 +213,29 @@ def global_search():
             400,
         )
 
+    user = g.current_user
+    allowed_pages = user.get("allowed_pages")
+    # A busca é do painel: quem não tem nenhuma página dele (ex.: a conta do terminal) não busca.
+    if allowed_pages is not None and not (set(allowed_pages) - {_TERMINAL_PAGE}):
+        return jsonify({"error": "Permission denied", "page_key": "search"}), 403
+
     warehouse_id = _warehouse_id_or_none()
+    # Sem warehouse_id, quem não é administrador busca só nos próprios locais (o middleware já
+    # recusa um warehouse_id fora deles).
+    if warehouse_id is not None:
+        warehouse_ids = [warehouse_id]
+    elif user.get("role") == "ADMIN":
+        warehouse_ids = None
+    else:
+        warehouse_ids = list(user.get("warehouse_ids") or [])
     pattern = f"%{raw_q}%"
 
     results: list[dict] = []
     results.extend(_search_items(pattern))
-    results.extend(_search_bins(pattern, warehouse_id))
-    results.extend(_search_purchase_orders(pattern, warehouse_id))
-    results.extend(_search_sales_orders(pattern, warehouse_id))
-    results.extend(_search_customers(pattern, warehouse_id))
+    results.extend(_search_bins(pattern, warehouse_ids))
+    results.extend(_search_purchase_orders(pattern, warehouse_ids))
+    results.extend(_search_sales_orders(pattern, warehouse_ids))
+    results.extend(_search_customers(pattern, warehouse_ids))
 
     return jsonify(
         {

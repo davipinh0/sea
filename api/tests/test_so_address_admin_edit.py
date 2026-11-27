@@ -74,8 +74,13 @@ def _seed_so(status="OPEN", **address):
     return so_id
 
 
-def _seed_user(role="USER", username=None):
-    """Create a USER (or ADMIN) so we can log in as that role."""
+def _seed_user(role="USER", username=None, pages=("sales-orders",), warehouse_ids=(1,)):
+    """Create a USER (or ADMIN) so we can log in as that role.
+
+    Auditoria 27/11/2026: a edição do endereço passou a exigir a permissão
+    de pedidos de venda e acesso ao local do pedido (antes, qualquer usuário
+    logado editava pedidos de qualquer local).
+    """
     username = username or f"u288-{uuid.uuid4().hex[:6]}"
     pw_hash = bcrypt.hashpw(b"pw", bcrypt.gensalt(rounds=4)).decode()
     conn = db_test_context.get_raw_connection()
@@ -83,11 +88,16 @@ def _seed_user(role="USER", username=None):
     try:
         cur.execute(
             "INSERT INTO users "
-            "(username, password_hash, full_name, role, external_id) "
-            "VALUES (%s, %s, 't288', %s, %s) RETURNING user_id",
-            (username, pw_hash, role, str(uuid.uuid4())),
+            "(username, password_hash, full_name, role, external_id, warehouse_ids) "
+            "VALUES (%s, %s, 't288', %s, %s, %s) RETURNING user_id",
+            (username, pw_hash, role, str(uuid.uuid4()), list(warehouse_ids)),
         )
-        cur.fetchone()
+        user_id = cur.fetchone()[0]
+        for page in pages:
+            cur.execute(
+                "INSERT INTO user_page_permissions (user_id, page_key) VALUES (%s, %s)",
+                (user_id, page),
+            )
     finally:
         cur.close()
     return username
@@ -145,6 +155,18 @@ class TestStatusGate:
             "billing_address_city": "User-edit OK at OPEN",
         })
         assert resp.status_code == 200, resp.get_json()
+
+    def test_non_admin_without_the_sales_orders_permission_is_refused(self, client):
+        so_id = _seed_so(status="OPEN")
+        headers = _login(client, _seed_user(role="USER", pages=()))
+        resp = _patch(client, headers, so_id, {"billing_address_city": "Sem permissão"})
+        assert resp.status_code == 403
+
+    def test_non_admin_from_another_location_is_refused(self, client):
+        so_id = _seed_so(status="OPEN")
+        headers = _login(client, _seed_user(role="USER", warehouse_ids=(999,)))
+        resp = _patch(client, headers, so_id, {"billing_address_city": "Outro local"})
+        assert resp.status_code == 404
 
 
 class TestAuditDelta:

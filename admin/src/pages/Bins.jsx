@@ -8,6 +8,7 @@ import { useLiveRefresh } from '../utils/useLiveRefresh.js';
 import DataTable from '../components/DataTable.jsx';
 import PageHeader from '../components/PageHeader.jsx';
 import Modal from '../components/Modal.jsx';
+import { csvCell } from '../utils/csv.js';
 
 const BIN_TYPES = ['Staging', 'PickableStaging', 'Pickable'];
 const BIN_TYPE_LABELS = {
@@ -73,11 +74,7 @@ export default function Bins() {
         p += 1;
       }
       const headers = ['bin_code','bin_barcode','zone','warehouse_id','bin_type','aisle','pick_sequence','putaway_sequence','description'];
-      const csvEscape = (v) => {
-        if (v == null) return '';
-        const s = String(v);
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-      };
+      const csvEscape = csvCell;
       const lines = [headers.join(',')];
       for (const b of all) {
         lines.push([

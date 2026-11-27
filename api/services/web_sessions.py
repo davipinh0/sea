@@ -57,9 +57,11 @@ def _valid_uuid(value) -> bool:
     return True
 
 
-def check(db, jti, *, web: bool) -> str | None:
+def check(db, jti, *, web: bool, channel: str | None = None) -> str | None:
     """Por que a sessão não pode ser usada, ou None se pode. No painel a sessão precisa existir e
     não estar inativa. Tokens Bearer sem linha (anteriores a este controle) valem até vencer.
+    Com ``channel`` ('cookie' ou 'header'), a sessão fica presa ao meio do primeiro uso (mig 105):
+    o token do cookie do painel não serve como Bearer, que pula a confirmação no celular.
     """
     if not jti or not _valid_uuid(jti):
         return "unknown" if web else None
@@ -74,7 +76,8 @@ def check(db, jti, *, web: bool) -> str | None:
                    EXISTS (SELECT 1 FROM users u
                            JOIN user_page_permissions pp ON pp.user_id = u.user_id
                            WHERE u.user_id = s.user_id AND u.role <> 'ADMIN'
-                             AND pp.page_key = 'terminal-retirada') AS kiosk
+                             AND pp.page_key = 'terminal-retirada') AS kiosk,
+                   s.channel
             FROM sea_sessions s WHERE s.jti = :jti
         """),
         {"jti": jti, "idle": WEB_IDLE_MINUTES, "touch": TOUCH_EVERY_SECONDS},
@@ -83,6 +86,8 @@ def check(db, jti, *, web: bool) -> str | None:
         return "unknown" if web else None
     if row.ended:
         return "ended"
+    if channel is not None and _bind_channel(db, jti, row.channel, channel) != channel:
+        return "channel"
     if web and row.idle and not row.kiosk:
         end(db, jti, IDLE)
         db.commit()
@@ -93,6 +98,24 @@ def check(db, jti, *, web: bool) -> str | None:
         )
         db.commit()
     return None
+
+
+def _bind_channel(db, jti, current: str | None, channel: str) -> str | None:
+    """O meio da sessão: o já gravado, ou ``channel`` se este é o primeiro uso."""
+    if current is not None:
+        return current
+    bound = db.execute(
+        text("UPDATE sea_sessions SET channel = :c WHERE jti = :jti AND channel IS NULL "
+             "RETURNING channel"),
+        {"c": channel, "jti": jti},
+    ).scalar()
+    db.commit()
+    if bound is not None:
+        return bound
+    # Outro pedido gravou primeiro.
+    return db.execute(
+        text("SELECT channel FROM sea_sessions WHERE jti = :jti"), {"jti": jti}
+    ).scalar()
 
 
 def public_id(jti) -> str:

@@ -2531,3 +2531,7 @@ ALTER TABLE sea_step_up DROP CONSTRAINT IF EXISTS sea_step_up_purpose_check;
 ALTER TABLE sea_step_up ADD CONSTRAINT sea_step_up_purpose_check
     CHECK (purpose IN ('recebimento', 'armazenagem', 'retirada', 'exclusao-usuario',
                        'historico', 'aprovacao-retirada', 'alteracao'));
+
+-- 105: cada sessão vale só pelo meio em que foi usada primeiro (cookie do painel ou Bearer).
+ALTER TABLE sea_sessions ADD COLUMN IF NOT EXISTS channel VARCHAR(10)
+    CHECK (channel IS NULL OR channel IN ('cookie', 'header'));

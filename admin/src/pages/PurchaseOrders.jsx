@@ -13,6 +13,7 @@ import { useAuth } from '../auth.jsx';
 import { readError } from '../utils/sea.js';
 import { canDeleteOt, canExportCsv } from '../utils/permissions.js';
 import { useLiveRefresh } from '../utils/useLiveRefresh.js';
+import { csvCell } from '../utils/csv.js';
 
 const STATUS_OPTIONS = ['All', 'OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
 const ALL_PO_STATUSES = ['OPEN', 'PARTIAL', 'RECEIVED', 'CLOSED', 'ARCHIVED'];
@@ -341,11 +342,7 @@ export default function PurchaseOrders() {
   // an exported CSV slots directly into that workflow.
   function exportPOCsv() {
     if (!selectedPO || poLines.length === 0) return;
-    const csvEscape = (v) => {
-      if (v == null) return '';
-      const s = String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
+    const csvEscape = csvCell;
     const headers = ['Código', 'Descrição', 'Previsto', 'Recebido', 'Divergência'];
     const lines = [headers.join(',')];
     for (const l of poLines) {

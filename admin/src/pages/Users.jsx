@@ -150,6 +150,9 @@ export default function Users() {
   // the rest of the user form and saved via a follow-up PUT once the
   // user record itself lands.
   const [pagePermissions, setPagePermissions] = useState([]);
+  // Na edição, as permissões chegam depois de abrir a janela. Salvar antes disso regravava as
+  // permissões da pessoa editada antes, ou nenhuma (auditoria de 27/11/2026).
+  const [permissionsReady, setPermissionsReady] = useState(true);
 
   useEffect(() => {
     loadUsers();
@@ -176,6 +179,7 @@ export default function Users() {
     setEditId(null);
     setForm({ role: 'USER', warehouse_ids: [], allowed_functions: [], is_active: true });
     setPagePermissions([]);
+    setPermissionsReady(true);
     setError('');
     setProblems({});
     setShowModal(true);
@@ -191,6 +195,8 @@ export default function Users() {
     });
     setError('');
     setProblems({});
+    setPagePermissions([]);
+    setPermissionsReady(false);
     setShowModal(true);
     // Fetch the user's existing per-page grants so the modal can
     // populate the checkboxes. ADMINs return is_full_access=true
@@ -199,8 +205,10 @@ export default function Users() {
     if (res?.ok) {
       const data = await res.json();
       setPagePermissions(data.page_keys || []);
+      setPermissionsReady(true);
     } else {
-      setPagePermissions([]);
+      // Sem as permissões atuais, salvar apagaria todas: o botão fica bloqueado.
+      setError('Não foi possível carregar as permissões deste usuário. Feche e abra de novo.');
     }
   }
 
@@ -234,6 +242,7 @@ export default function Users() {
   }
 
   async function save() {
+    if (!permissionsReady) return;
     setError('');
     const found = userFormProblems(form, { creating: !editId, pagePermissions });
     setProblems(found);
@@ -427,7 +436,9 @@ export default function Users() {
           footer={
             <>
               <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={save}>Salvar</button>
+              <button className="btn btn-primary" onClick={save} disabled={!permissionsReady}>
+                {permissionsReady ? 'Salvar' : 'Carregando…'}
+              </button>
             </>
           }
         >

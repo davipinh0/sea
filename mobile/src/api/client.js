@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthItem } from '../auth/secureStorage';
 import { identityHeaders } from '../auth/identityProof';
+import { serverUrlAllowed } from '../utils/serverUrl';
 
 // Build-time default from .env / eas.json env
 const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
@@ -27,12 +28,13 @@ export async function initApiUrl() {
     const saved = await AsyncStorage.getItem(API_URL_KEY).catch(() => null);
     const stored = currentServerUrl(saved);
     if (stored !== saved) await AsyncStorage.setItem(API_URL_KEY, stored).catch(() => {});
-    _cachedApiUrl = stored || DEFAULT_API_URL;
+    // Um endereço HTTP salvo antes não vale no APK: volta ao servidor padrão (HTTPS).
+    _cachedApiUrl = (stored && serverUrlAllowed(stored)) ? stored : DEFAULT_API_URL;
   })();
   return _initPromise;
 }
 
-async function getApiUrl() {
+export async function getApiUrl() {
   if (_cachedApiUrl) return _cachedApiUrl;
   // Ensure init has run
   await initApiUrl();

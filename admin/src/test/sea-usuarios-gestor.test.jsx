@@ -58,7 +58,7 @@ describe('Usuários para quem não é administrador', () => {
     await screen.findByText('Gestor Fictício');
     fireEvent.click(screen.getAllByLabelText('Editar')[0]);
     expect(await screen.findByText(/próprias permissões só podem ser mudadas por um administrador/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     await waitFor(() => expect(apiPut).toHaveBeenCalledWith('/admin/users/5', expect.objectContaining({ role: 'USER' })));
     expect(apiPut.mock.calls.some(([path]) => path.endsWith('/permissions'))).toBe(false);
   });

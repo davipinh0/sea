@@ -91,7 +91,7 @@ describe('Cadastro de usuário', () => {
 
   it('lists every missing field and sends nothing', async () => {
     await openForm();
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     expect(await screen.findByText('O usuário não foi salvo. Corrija:')).toBeInTheDocument();
     expect(screen.getByText('Informe o nome de usuário.')).toBeInTheDocument();
     expect(screen.getByText('Informe o nome completo.')).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe('Cadastro de usuário', () => {
   ])('says why the password %s is too weak', async (password, message) => {
     await openForm();
     fill({ username: 'novo', name: 'Novo Usuário', password });
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     await waitFor(() => expect(screen.getAllByText(message).length).toBeGreaterThan(0));
     expect(apiPost).not.toHaveBeenCalled();
   });
@@ -118,7 +118,7 @@ describe('Cadastro de usuário', () => {
     await openForm();
     fill({ username: 'novo', name: 'Novo', password: 'Senha1234' });
     fireEvent.change(screen.getByLabelText('E-mail corporativo'), { target: { value: 'sem-arroba' } });
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     await waitFor(() => expect(screen.getAllByText(/E-mail inválido/).length).toBeGreaterThan(0));
     expect(apiPost).not.toHaveBeenCalled();
   });
@@ -130,7 +130,7 @@ describe('Cadastro de usuário', () => {
     fireEvent.click(screen.getByLabelText(/SP12/));
     fireEvent.click(screen.getByLabelText('Visão Geral'));
     fireEvent.click(screen.getByLabelText('Exportar CSV'));
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     await waitFor(() => expect(apiPut).toHaveBeenCalled());
     expect(apiPost).toHaveBeenCalledWith('/admin/users', expect.objectContaining({ username: 'novo', warehouse_ids: [7] }));
     expect(apiPut).toHaveBeenCalledWith('/admin/users/9/permissions', { page_keys: ['inventory', 'export-csv'] });
@@ -142,7 +142,7 @@ describe('Cadastro de usuário', () => {
     fill({ username: 'novo', name: 'Novo Usuário', password: 'Senha1234' });
     fireEvent.click(screen.getByLabelText(/SP12/));
     fireEvent.click(screen.getByLabelText('Visão Geral'));
-    fireEvent.click(screen.getByText('Salvar'));
+    fireEvent.click(await screen.findByText('Salvar'));
     await waitFor(() => expect(screen.getAllByText(/Já existe um usuário com esse nome/).length).toBeGreaterThan(0));
   });
 });

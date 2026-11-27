@@ -32,7 +32,11 @@ from constants import (
     ACTION_TO_REJECTED,
     ACTION_TO_SUBMITTED,
 )
-from middleware.auth_middleware import require_admin_or_page_permission, require_auth
+from middleware.auth_middleware import (
+    check_warehouse_access,
+    require_admin_or_page_permission,
+    require_auth,
+)
 from middleware.db import with_db
 from routes.admin import admin_bp
 from schemas.csv_import import TransferOrderImportRow
@@ -951,7 +955,8 @@ def picker_get_transfer_order(to_id):
         ),
         {"tid": to_id},
     ).fetchone()
-    if not header:
+    # Auditoria 27/11/2026: só quem trabalha no local de origem (404, sem revelar que existe).
+    if not header or not check_warehouse_access(header.source_warehouse_id)[0]:
         return jsonify({"error": "Ordem de transferência não encontrada"}), 404
 
     lines = g.db.execute(
@@ -990,6 +995,11 @@ def submit_transfer_order_picks(to_id):
     per TO are normal: each batch is approved or rejected
     independently. Inventory does not move at submit time.
     """
+    source = g.db.execute(
+        text("SELECT source_warehouse_id FROM transfer_orders WHERE to_id = :tid"), {"tid": to_id}
+    ).fetchone()
+    if source is not None and not check_warehouse_access(source.source_warehouse_id)[0]:
+        return jsonify({"error": "Ordem de transferência não encontrada"}), 404
     result = submit_picks(g.db, to_id, g.current_user["username"])
     if not result["ok"]:
         reason = result["reason"]
